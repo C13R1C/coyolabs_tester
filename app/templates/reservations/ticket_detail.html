@@ -157,6 +157,13 @@
             </td>
           </tr>
           {% endfor %}
+          {% if ticket.items|length == 0 %}
+          <tr>
+            <td colspan="7" style="text-align:center; opacity:.8;">
+              Este ticket no tiene materiales registrados. Puedes cerrarlo si no requiere préstamo.
+            </td>
+          </tr>
+          {% endif %}
         </tbody>
       </table>
 

@@ -22,7 +22,7 @@ class RegisterConfirmPasswordTests(unittest.TestCase):
         self.app.register_blueprint(auth_bp)
         self.client = self.app.test_client()
 
-    @patch("app.controllers.auth_controller.send_email")
+    @patch("app.controllers.auth_controller.send_verification_email")
     @patch("app.controllers.auth_controller.generate_verify_token", return_value="tok123")
     @patch("app.controllers.auth_controller.db")
     @patch("app.controllers.auth_controller.User")
@@ -79,7 +79,7 @@ class RegisterConfirmPasswordTests(unittest.TestCase):
     def test_infer_role_from_email_assigns_pending_for_nominal_email(self):
         self.assertEqual(infer_role_from_email("wendy.nevarez@utpn.edu.mx"), ROLE_PENDING)
 
-    @patch("app.controllers.auth_controller.send_email")
+    @patch("app.controllers.auth_controller.send_verification_email")
     @patch("app.controllers.auth_controller.generate_verify_token", return_value="tok123")
     @patch("app.controllers.auth_controller.db")
     @patch("app.controllers.auth_controller.User")
