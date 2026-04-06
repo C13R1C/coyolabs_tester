@@ -479,7 +479,7 @@
         <i class="ph ph-user search-icon"></i>
         <input
           type="text"
-          value="{{ ((current_user.first_name or '') ~ ' ' ~ (current_user.last_name or ''))|trim or current_user.email }}"
+          value="{{ (current_user.full_name or '')|trim or current_user.email }}"
           readonly
         >
       </div>

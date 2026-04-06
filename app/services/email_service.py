@@ -1,19 +1,31 @@
 import os
-import resend
+try:
+    import resend
+except ModuleNotFoundError:  # pragma: no cover - depende del entorno
+    resend = None
 
-resend.api_key = (os.getenv("RESEND_API_KEY") or "").strip()
+
+def _get_resend_client():
+    if resend is None:
+        return None
+    resend.api_key = (os.getenv("RESEND_API_KEY") or "").strip()
+    return resend
 
 
 def send_verification_email(to_email: str, verify_url: str):
+    client = _get_resend_client()
     from_email = (os.getenv("MAIL_DEFAULT_SENDER") or "").strip()
 
-    if not resend.api_key:
+    if client is None:
+        raise RuntimeError("Proveedor de correo no disponible (resend no instalado).")
+
+    if not client.api_key:
         raise RuntimeError("RESEND_API_KEY no está configurada.")
 
     if not from_email:
         raise RuntimeError("MAIL_DEFAULT_SENDER no está configurado.")
 
-    params: resend.Emails.SendParams = {
+    params = {
         "from": f"CoyoLabs <{from_email}>",
         "to": [to_email],
         "subject": "Verifica tu cuenta - Sistema de Laboratorios",
@@ -41,19 +53,23 @@ def send_verification_email(to_email: str, verify_url: str):
         ),
     }
 
-    return resend.Emails.send(params)
+    return client.Emails.send(params)
 
 
 def send_password_reset_email(to_email: str, reset_url: str):
+    client = _get_resend_client()
     from_email = (os.getenv("MAIL_DEFAULT_SENDER") or "").strip()
 
-    if not resend.api_key:
+    if client is None:
+        raise RuntimeError("Proveedor de correo no disponible (resend no instalado).")
+
+    if not client.api_key:
         raise RuntimeError("RESEND_API_KEY no está configurada.")
 
     if not from_email:
         raise RuntimeError("MAIL_DEFAULT_SENDER no está configurado.")
 
-    params: resend.Emails.SendParams = {
+    params = {
         "from": f"CoyoLabs <{from_email}>",
         "to": [to_email],
         "subject": "Recuperación de contraseña - CoyoLabs",
@@ -83,13 +99,17 @@ def send_password_reset_email(to_email: str, reset_url: str):
         ),
     }
 
-    return resend.Emails.send(params)
+    return client.Emails.send(params)
 
 
 def send_print3d_ready_email(to_email: str, *, job_id: int, job_title: str, jobs_url: str):
+    client = _get_resend_client()
     from_email = (os.getenv("MAIL_DEFAULT_SENDER") or "").strip()
 
-    if not resend.api_key:
+    if client is None:
+        raise RuntimeError("Proveedor de correo no disponible (resend no instalado).")
+
+    if not client.api_key:
         raise RuntimeError("RESEND_API_KEY no está configurada.")
 
     if not from_email:
@@ -97,7 +117,7 @@ def send_print3d_ready_email(to_email: str, *, job_id: int, job_title: str, jobs
 
     safe_title = (job_title or "").strip() or f"Trabajo #{job_id}"
 
-    params: resend.Emails.SendParams = {
+    params = {
         "from": f"CoyoLabs <{from_email}>",
         "to": [to_email],
         "subject": "Tu impresión 3D está lista",
@@ -123,4 +143,4 @@ def send_print3d_ready_email(to_email: str, *, job_id: int, job_title: str, jobs
         ),
     }
 
-    return resend.Emails.send(params)
+    return client.Emails.send(params)

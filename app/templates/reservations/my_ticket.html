@@ -98,7 +98,7 @@
             <td>{{ item.quantity_delivered }}</td>
             <td>{{ item.quantity_returned }}</td>
             <td>
-              <span class="status-badge {% if item.status == 'READY_FOR_PICKUP' %}status-ok{% elif item.status in ['REQUESTED', 'DELIVERED'] %}status-warn{% else %}status-bad{% endif %}">
+              <span class="status-badge {% if item.status == 'READY_FOR_PICKUP' %}status-ok{% elif item.status in ['PENDING', 'REQUESTED', 'DELIVERED'] %}status-warn{% else %}status-bad{% endif %}">
                 {{ item.status|status_label }}
               </span>
             </td>
