@@ -83,8 +83,16 @@ def _professor_assignments(teacher_id: int) -> list[TeacherAcademicLoad]:
 
 
 def _build_requester_name() -> str:
-    full_name = f"{(current_user.first_name or '').strip()} {(current_user.last_name or '').strip()}".strip()
-    return full_name or (current_user.email or "").strip()
+    full_name = (getattr(current_user, "full_name", "") or "").strip()
+    if full_name:
+        return full_name
+
+    email = (getattr(current_user, "email", "") or "").strip()
+    if email:
+        return email
+
+    user_id = getattr(current_user, "id", None)
+    return f"Usuario #{user_id}" if user_id is not None else "Usuario"
 
 
 def _save_signature_image(signature_data_url: str) -> tuple[str | None, str | None]:
