@@ -1077,7 +1077,7 @@ def admin_ticket_item_mark_ready(item_id: int):
         flash("No hay pendientes por preparar en este material.", "warning")
         return redirect(url_for("reservations.admin_ticket_detail", ticket_id=ticket.id))
 
-    if item.status == TicketItemStatus.READY_FOR_PICKUP:
+    if ticket.status == LabTicketStatus.READY_FOR_PICKUP:
         flash("Este material ya está marcado como listo para recoger.", "warning")
         return redirect(url_for("reservations.admin_ticket_detail", ticket_id=ticket.id))
 
@@ -1085,8 +1085,8 @@ def admin_ticket_item_mark_ready(item_id: int):
         flash("No se puede marcar como listo un material ya devuelto.", "error")
         return redirect(url_for("reservations.admin_ticket_detail", ticket_id=ticket.id))
 
-    item.status = TicketItemStatus.READY_FOR_PICKUP
-    sync_ticket_ready_status(ticket)
+    item.status = TicketItemStatus.PENDING
+    ticket.status = LabTicketStatus.READY_FOR_PICKUP
 
     notif = Notification(
         user_id=ticket.owner_user_id,

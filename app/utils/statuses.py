@@ -18,10 +18,10 @@ class LabTicketStatus:
 class TicketItemStatus:
     PENDING = "PENDING"
     REQUESTED = PENDING  # alias legacy para compatibilidad en código existente
-    READY_FOR_PICKUP = "READY_FOR_PICKUP"
     DELIVERED = "DELIVERED"
-    MISSING = "MISSING"
     RETURNED = "RETURNED"
+    READY_FOR_PICKUP = PENDING  # alias legacy: ya no se persiste como estado de ítem
+    MISSING = DELIVERED  # alias legacy: faltante se infiere por cantidades, no por estado DB
 
 
 class DebtStatus:
