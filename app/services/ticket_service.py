@@ -70,21 +70,17 @@ def validate_ticket_active(ticket: LabTicket | None) -> ServiceResult:
 
 
 def sync_ticket_ready_status(ticket: LabTicket) -> None:
-    has_ready_items = any((item.status or "").upper() == TicketItemStatus.READY_FOR_PICKUP for item in ticket.items)
-    if has_ready_items and ticket.status == LabTicketStatus.OPEN:
-        ticket.status = LabTicketStatus.READY_FOR_PICKUP
-    elif not has_ready_items and ticket.status == LabTicketStatus.READY_FOR_PICKUP:
+    has_pending_delivery = any(item.quantity_requested > item.quantity_delivered for item in ticket.items)
+    if not has_pending_delivery and ticket.status == LabTicketStatus.READY_FOR_PICKUP:
         ticket.status = LabTicketStatus.OPEN
     return None
 
 
 def apply_ticket_item_status(item: TicketItem, delivered: int, returned: int) -> None:
     if delivered == 0:
-        item.status = TicketItemStatus.REQUESTED
+        item.status = TicketItemStatus.PENDING
     elif returned == 0:
         item.status = TicketItemStatus.DELIVERED
-    elif returned < delivered:
-        item.status = TicketItemStatus.MISSING
     else:
         item.status = TicketItemStatus.RETURNED
     return None
@@ -285,7 +281,7 @@ def close_ticket(ticket: LabTicket, actor_user: User) -> ServiceResult:
             missing_qty = item.quantity_delivered - item.quantity_returned
             if missing_qty > 0:
                 has_missing = True
-                item.status = TicketItemStatus.MISSING
+                item.status = TicketItemStatus.DELIVERED
                 debt_result = create_debt_for_ticket(
                     ticket=ticket,
                     item=item,
