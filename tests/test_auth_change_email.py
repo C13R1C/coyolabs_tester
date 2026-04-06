@@ -31,7 +31,7 @@ class ChangeEmailTests(unittest.TestCase):
         self.assertEqual(response.get_json(), {"error": "No hay una cuenta pendiente de verificación en esta sesión."})
 
     @patch("app.controllers.auth_controller.db")
-    @patch("app.controllers.auth_controller.send_email")
+    @patch("app.controllers.auth_controller.send_verification_email")
     @patch("app.controllers.auth_controller.generate_verify_token", return_value="tok123")
     @patch("app.controllers.auth_controller.User")
     @patch("app.controllers.auth_controller._get_pending_verify_user")
@@ -60,7 +60,7 @@ class ChangeEmailTests(unittest.TestCase):
         response = self.client.post("/auth/change-email", json={"email": "24310116@utpn.edu.mx"})
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.get_json(), {"message": "Correo actualizado y código reenviado."})
+        self.assertEqual(response.get_json(), {"message": "Correo actualizado y verificación reenviada."})
         self.assertEqual(user.email, "24310116@utpn.edu.mx")
         self.assertEqual(user.verify_token_version, 3)
         token_mock.assert_called_once_with("24310116@utpn.edu.mx", 3)
