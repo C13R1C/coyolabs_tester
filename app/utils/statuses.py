@@ -16,7 +16,8 @@ class LabTicketStatus:
 
 
 class TicketItemStatus:
-    REQUESTED = "REQUESTED"
+    PENDING = "PENDING"
+    REQUESTED = PENDING  # alias legacy para compatibilidad en código existente
     READY_FOR_PICKUP = "READY_FOR_PICKUP"
     DELIVERED = "DELIVERED"
     MISSING = "MISSING"
