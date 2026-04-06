@@ -1,0 +1,487 @@
+{% extends "layouts/student_base.html" %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Reportes", url_for('reports.reports_home'))] %}
+{% block title %}Reportes{% endblock %}
+
+{% block extra_css %}
+<style>
+  .reports-page{
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .reports-header{
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 4px;
+  }
+
+  .reports-header-copy{
+    min-width: 0;
+  }
+
+  .report-help{
+    color: var(--text-dim);
+    font-size: 0.96rem;
+    margin-top: 10px;
+    max-width: 920px;
+  }
+
+  .reports-grid{
+    display: grid;
+    grid-template-columns: minmax(340px, 1fr) minmax(340px, 1fr);
+    gap: 18px;
+    align-items: start;
+  }
+
+  .reports-column{
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .report-panel{
+    background: linear-gradient(180deg, var(--panel-2), var(--panel));
+    border: 1px solid var(--stroke);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+  }
+
+  .report-panel-header{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 18px 20px;
+    background: linear-gradient(180deg, rgba(226,193,90,0.16), rgba(199,159,51,0.08));
+    border-bottom: 1px solid var(--stroke);
+  }
+
+  .report-panel-title{
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .report-panel-title i{
+    color: var(--gold-dark);
+    font-size: 1.08rem;
+    flex-shrink: 0;
+  }
+
+  .report-panel-title h3{
+    margin: 0;
+    color: var(--text);
+    font-size: 1.12rem;
+    font-weight: 800;
+    line-height: 1.2;
+  }
+
+  .report-panel-meta{
+    color: var(--text-dim);
+    font-size: 0.92rem;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .report-panel-body{
+    padding: 14px 16px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .report-row{
+    display: grid;
+    grid-template-columns: minmax(160px, 1fr) auto;
+    align-items: center;
+    gap: 12px 14px;
+    padding: 14px 16px;
+    border: 1px solid var(--stroke);
+    border-radius: 18px;
+    background: rgba(255,255,255,0.32);
+  }
+
+  .report-row-title{
+    min-width: 0;
+  }
+
+  .report-row-title strong{
+    display: block;
+    color: var(--text);
+    font-size: 1rem;
+    margin: 0;
+    line-height: 1.25;
+  }
+
+  .report-row-actions{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+
+  .lab-row{
+    display: grid;
+    grid-template-columns: minmax(140px, 1fr) auto;
+    align-items: center;
+    gap: 12px 14px;
+    padding: 14px 16px;
+    border: 1px solid var(--stroke);
+    border-radius: 18px;
+    background: rgba(255,255,255,0.32);
+  }
+
+  .lab-name{
+    color: var(--text);
+    font-weight: 800;
+    font-size: 1rem;
+    line-height: 1.25;
+    min-width: 0;
+  }
+
+  .lab-actions{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+
+  .report-panel:hover{
+    box-shadow: 0 18px 38px rgba(77, 58, 29, 0.12);
+  }
+
+  .report-note{
+    padding: 14px 16px;
+    border: 1px dashed var(--stroke-strong);
+    border-radius: 16px;
+    background: rgba(255,255,255,0.18);
+    color: var(--text-soft);
+    font-size: 0.92rem;
+    line-height: 1.5;
+  }
+
+  .metrics-grid{
+    display:grid;
+    grid-template-columns: repeat(3, minmax(220px, 1fr));
+    gap:12px;
+  }
+
+  .metric-card{
+    border:1px solid var(--stroke);
+    border-radius:14px;
+    padding:12px 14px;
+    background: rgba(255,255,255,0.34);
+  }
+
+  .metric-label{ color: var(--text-dim); font-size:.86rem; }
+  .metric-value{ font-size:1.4rem; font-weight:800; color:var(--text); }
+
+  .mini-table{
+    width:100%;
+    border-collapse: collapse;
+    font-size:.92rem;
+  }
+  .mini-table th, .mini-table td{
+    border-bottom:1px solid var(--stroke);
+    padding:8px 6px;
+    text-align:left;
+  }
+
+  .reports-metrics-grid{
+    grid-template-columns: repeat(2, minmax(320px, 1fr));
+  }
+
+  @media (max-width: 1180px){
+    .reports-grid{
+      grid-template-columns: 1fr;
+    }
+    .metrics-grid{
+      grid-template-columns: 1fr;
+    }
+
+    .reports-metrics-grid{
+      grid-template-columns: 1fr !important;
+    }
+  }
+
+  @media (max-width: 768px){
+    .report-panel-header{
+      padding: 16px;
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    .report-row,
+    .lab-row{
+      grid-template-columns: 1fr;
+      padding: 12px;
+      border-radius: 16px;
+    }
+
+    .report-row-actions,
+    .lab-actions{
+      justify-content: flex-start;
+    }
+
+    .report-row-actions .btn,
+    .lab-actions .btn{
+      width: 100%;
+      justify-content: center;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="reports-page">
+  <header class="topbar reports-header">
+    <div class="reports-header-copy">
+      <p class="page-kicker">Reportes</p>
+      <h1>Centro de reportes</h1>
+      <p class="page-subtitle">Consulta reportes.</p>
+      <p class="report-help">
+        Entra a la vista completa con <strong>Ver</strong> o descarga el archivo con <strong>Descargar</strong>.
+      </p>
+    </div>
+    <div class="topbar-actions">
+      <a class="btn btn-ghost" href="{{ url_for('root_home') }}">Volver</a>
+    </div>
+  </header>
+
+  <section class="reports-grid">
+    <!-- COLUMNA IZQUIERDA -->
+    <div class="reports-column">
+      <section class="report-panel">
+        <div class="report-panel-header">
+          <div class="report-panel-title">
+            <i class="ph ph-files"></i>
+            <h3>Reportes generales</h3>
+          </div>
+          <div class="report-panel-meta">6 reportes</div>
+        </div>
+
+        <div class="report-panel-body">
+          <div class="report-row">
+            <div class="report-row-title">
+              <strong>Inventario (general)</strong>
+            </div>
+            <div class="report-row-actions">
+              <a class="btn btn-ghost" href="{{ url_for('reports.report_inventory_view') }}">
+                Ver
+              </a>
+              <a class="btn btn-ghost" href="{{ url_for('reports.report_inventory') }}">
+                Descargar
+              </a>
+            </div>
+          </div>
+
+          <div class="report-row">
+            <div class="report-row-title">
+              <strong>Adeudos</strong>
+            </div>
+            <div class="report-row-actions">
+              <a class="btn btn-ghost" href="{{ url_for('reports.report_debts_view') }}">
+                Ver
+              </a>
+              <a class="btn btn-ghost" href="{{ url_for('reports.report_debts') }}">
+                Descargar
+              </a>
+            </div>
+          </div>
+
+          <div class="report-row">
+            <div class="report-row-title">
+              <strong>Bitácora</strong>
+            </div>
+            <div class="report-row-actions">
+              <a class="btn btn-ghost" href="{{ url_for('reports.report_logbook_view') }}">
+                Ver
+              </a>
+              <a class="btn btn-ghost" href="{{ url_for('reports.report_logbook') }}">
+                Descargar
+              </a>
+            </div>
+          </div>
+
+          <div class="report-row">
+            <div class="report-row-title">
+              <strong>Reservaciones</strong>
+            </div>
+            <div class="report-row-actions">
+              <a class="btn btn-ghost" href="{{ url_for('reports.report_reservations_view') }}">
+                Ver
+              </a>
+              <a class="btn btn-ghost" href="{{ url_for('reports.report_reservations') }}">
+                Descargar
+              </a>
+            </div>
+          </div>
+
+          <div class="report-row">
+            <div class="report-row-title">
+              <strong>Objetos perdidos</strong>
+            </div>
+            <div class="report-row-actions">
+              <a class="btn btn-ghost" href="{{ url_for('reports.report_lostfound_view') }}">
+                Ver
+              </a>
+              <a class="btn btn-ghost" href="{{ url_for('reports.report_lostfound') }}">
+                Descargar
+              </a>
+            </div>
+          </div>
+
+          <div class="report-row">
+            <div class="report-row-title">
+              <strong>Software</strong>
+            </div>
+            <div class="report-row-actions">
+              <a class="btn btn-ghost" href="{{ url_for('reports.report_software_view') }}">
+                Ver
+              </a>
+              <a class="btn btn-ghost" href="{{ url_for('reports.report_software') }}">
+                Descargar
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- COLUMNA DERECHA -->
+    <div class="reports-column">
+      <section class="report-panel">
+        <div class="report-panel-header">
+          <div class="report-panel-title">
+            <i class="ph ph-buildings"></i>
+            <h3>Inventario por laboratorio</h3>
+          </div>
+          <div class="report-panel-meta">{{ labs|length }} laboratorios</div>
+        </div>
+
+        <div class="report-panel-body">
+          {% for lab in labs %}
+          <div class="lab-row">
+            <div class="lab-name">{{ lab.name }}</div>
+            <div class="lab-actions">
+              <a class="btn btn-ghost" href="{{ url_for('reports.report_inventory_view', lab_id=lab.id) }}">
+                Ver
+              </a>
+              <a class="btn btn-ghost" href="{{ url_for('reports.report_inventory', lab_id=lab.id) }}">
+                Descargar
+              </a>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </section>
+    </div>
+  </section>
+
+  <section class="report-panel">
+    <div class="report-panel-header">
+      <div class="report-panel-title">
+        <i class="ph ph-chart-bar"></i>
+        <h3>Métricas administrativas</h3>
+      </div>
+      <div class="report-panel-meta">Resumen operativo</div>
+    </div>
+    <div class="report-panel-body" style="gap:14px;">
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-label">Reservaciones registradas</div>
+          <div class="metric-value">{{ reservations_total }}</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Pedidos diarios registrados</div>
+          <div class="metric-value">{{ inventory_daily_total }}</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Adeudos abiertos</div>
+          <div class="metric-value">{{ open_debts_count }}</div>
+        </div>
+      </div>
+
+      <div class="reports-grid reports-metrics-grid">
+        <div class="report-note">
+          <strong>Reservaciones por estado</strong>
+          <table class="mini-table" style="margin-top:8px;">
+            <thead><tr><th>Estado</th><th>Total</th></tr></thead>
+            <tbody>
+              {% for status, total in reservations_by_status %}
+              <tr><td>{{ status }}</td><td>{{ total }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="report-note">
+          <strong>Uso de laboratorios (top)</strong>
+          <table class="mini-table" style="margin-top:8px;">
+            <thead><tr><th>Laboratorio</th><th>Total</th></tr></thead>
+            <tbody>
+              {% for room, total in room_usage %}
+              <tr><td>{{ room }}</td><td>{{ total }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="report-note">
+          <strong>Pedidos diarios de inventario</strong>
+          <table class="mini-table" style="margin-top:8px;">
+            <thead><tr><th>Estado</th><th>Total</th></tr></thead>
+            <tbody>
+              {% for status, total in inventory_daily_by_status %}
+              <tr><td>{{ status }}</td><td>{{ total }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="report-note">
+          <strong>Adeudos abiertos por usuario (top)</strong>
+          <table class="mini-table" style="margin-top:8px;">
+            <thead><tr><th>User ID</th><th>Total</th></tr></thead>
+            <tbody>
+              {% for user_id, total in open_debts_by_user %}
+              <tr><td>{{ user_id }}</td><td>{{ total }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="report-note">
+          <strong>Acciones críticas por estado</strong>
+          <table class="mini-table" style="margin-top:8px;">
+            <thead><tr><th>Estado</th><th>Total</th></tr></thead>
+            <tbody>
+              {% for status, total in critical_actions_by_status %}
+              <tr><td>{{ status }}</td><td>{{ total }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="report-note">
+          <strong>Eventos de bitácora por módulo</strong>
+          <table class="mini-table" style="margin-top:8px;">
+            <thead><tr><th>Módulo</th><th>Total</th></tr></thead>
+            <tbody>
+              {% for module_name, total in logbook_by_module %}
+              <tr><td>{{ module_name }}</td><td>{{ total }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+</section>
+{% endblock %}

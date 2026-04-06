@@ -1,0 +1,37 @@
+{% extends "layouts/student_base.html" %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Adeudos", url_for('debts.admin_list')), ("Crear", url_for('debts.admin_create'))] %}
+{% block title %}Crear adeudo{% endblock %}
+
+{% block content %}
+<header class="topbar">
+  <div class="topbar-left">
+    <p class="page-kicker">Adeudos</p>
+    <h1>Crear adeudo</h1>
+    <p class="page-subtitle">Registra un adeudo para un alumno a partir de su correo.</p>
+  </div>
+</header>
+
+<section class="toolbar-card">
+  <form method="post" class="toolbar" style="grid-template-columns: repeat(2, minmax(280px, 1fr));">
+    <div class="toolbar-group">
+      <label for="email">Email del alumno</label>
+      <div class="search-box"><i class="ph ph-envelope-simple search-icon"></i><input type="email" id="email" name="email" required placeholder="alumno@correo.edu.mx"></div>
+    </div>
+
+    <div class="toolbar-group">
+      <label for="material_id">ID de material (opcional)</label>
+      <div class="search-box"><i class="ph ph-hash search-icon"></i><input type="number" id="material_id" name="material_id" placeholder="Ej. 152"></div>
+    </div>
+
+    <div class="toolbar-group" style="grid-column: 1 / -1;">
+      <label for="reason">Razón / comentario</label>
+      <textarea class="form-control" id="reason" name="reason" rows="4" placeholder="Describe el motivo del adeudo"></textarea>
+    </div>
+
+    <div class="toolbar-actions" style="grid-column: 1 / -1;">
+      <button type="submit" class="btn btn-gold"><i class="ph ph-plus-circle"></i><span>Crear adeudo</span></button>
+      <a href="{{ url_for('debts.admin_list') }}" class="btn btn-ghost"><i class="ph ph-arrow-left"></i><span>Volver</span></a>
+    </div>
+  </form>
+</section>
+{% endblock %}

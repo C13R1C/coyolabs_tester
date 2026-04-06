@@ -1,0 +1,65 @@
+{% extends "layouts/student_base.html" %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Pedidos diarios admin", url_for('inventory_requests.admin_daily_requests'))] %}
+{% block title %}Pedidos diarios (Administración){% endblock %}
+
+{% block content %}
+<style>
+@media (max-width: 768px){
+  .inventory-admin-list-actions .btn{
+    width: 100%;
+  }
+}
+</style>
+<header class="topbar">
+  <div class="topbar-left">
+    <p class="page-kicker">Inventario</p>
+    <h1>Pedidos diarios pendientes</h1>
+    <p class="page-subtitle">Pedidos consolidados por usuario y fecha.</p>
+  </div>
+</header>
+
+<section class="toolbar-card">
+  <div class="toolbar-actions inventory-admin-list-actions">
+    <a href="{{ url_for('inventory_requests.my_daily_request') }}" class="btn btn-ghost">Volver</a>
+  </div>
+</section>
+
+{% if tickets|length == 0 %}
+<section class="empty-state">
+  <i class="ph ph-check-circle empty-icon"></i>
+  <h3>Sin pedidos pendientes</h3>
+  <p>No hay tickets OPEN o READY_FOR_PICKUP.</p>
+</section>
+{% else %}
+<section class="table-card">
+  <div class="table-wrap">
+    <table class="inventory-table" style="min-width: 1000px;">
+      <thead>
+        <tr>
+          <th>Ticket</th>
+          <th>Usuario</th>
+          <th>Fecha pedido</th>
+          <th>Estado</th>
+          <th>Items</th>
+          <th>Acción</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for t in tickets %}
+        <tr>
+          <td>#{{ t.id }}</td>
+          <td>{{ t.user.email if t.user else '-' }}</td>
+          <td>{{ t.request_date }}</td>
+          <td>
+            <span class="status-badge {% if t.status == 'OPEN' %}status-warn{% elif t.status == 'READY_FOR_PICKUP' %}status-ok{% else %}status-bad{% endif %}">{{ t.status|status_label }}</span>
+          </td>
+          <td>{{ t.items|length }}</td>
+          <td><a href="{{ url_for('inventory_requests.admin_ticket_detail', ticket_id=t.id) }}" class="btn btn-ghost">Revisar</a></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

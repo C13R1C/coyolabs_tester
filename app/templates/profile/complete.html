@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Completar perfil | CoyoLabs</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f3f6fb;
+      --card: #ffffff;
+      --card-border: #e7ebf3;
+      --text: #111827;
+      --text-soft: #5b6475;
+      --primary: #204eea;
+      --primary-hover: #163dc0;
+      --primary-soft: #e9efff;
+      --success-soft: #eefaf2;
+      --success-border: #cfe8d7;
+      --warning-soft: #fff8d5;
+      --warning-border: #f1e09f;
+      --input-border: #cfd6e4;
+      --input-bg: #fdfdff;
+      --shadow: 0 14px 42px rgba(16, 24, 40, 0.08);
+      --radius-xl: 18px;
+      --radius-lg: 12px;
+      --radius-md: 10px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Poppins', sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(32, 78, 234, 0.06), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(32, 78, 234, 0.04), transparent 24%),
+        var(--bg);
+      color: var(--text);
+    }
+
+    .page {
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 760px;
+      margin: 0 auto;
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-xl);
+      padding: 32px;
+      box-shadow: var(--shadow);
+    }
+
+    .hero {
+      margin-bottom: 28px;
+    }
+
+    .role-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--primary-soft);
+      color: var(--primary);
+      border: 1px solid rgba(32, 78, 234, 0.15);
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 14px;
+    }
+
+    .role-badge::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--primary);
+      box-shadow: 0 0 0 4px rgba(32, 78, 234, 0.12);
+    }
+
+    h1 {
+      margin: 0 0 10px 0;
+      font-size: clamp(2rem, 4vw, 2.7rem);
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--text-soft);
+      font-size: 1rem;
+      line-height: 1.65;
+      max-width: 640px;
+    }
+
+    .flash {
+      background: var(--warning-soft);
+      border: 1px solid var(--warning-border);
+      border-radius: var(--radius-lg);
+      padding: 14px 16px;
+      margin-bottom: 20px;
+      color: #554400;
+    }
+
+    .panel {
+      background: linear-gradient(180deg, #ffffff 0%, #fcfdff 100%);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 22px;
+    }
+
+    .panel-header {
+      margin-bottom: 18px;
+    }
+
+    .panel-title {
+      margin: 0 0 8px 0;
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+
+    .panel-text {
+      margin: 0;
+      color: var(--text-soft);
+      line-height: 1.6;
+      font-size: 0.95rem;
+    }
+
+    .tip {
+      margin-top: 14px;
+      background: var(--success-soft);
+      border: 1px solid var(--success-border);
+      border-radius: var(--radius-lg);
+      padding: 12px 14px;
+      color: #1f5130;
+      font-size: 0.92rem;
+      line-height: 1.55;
+    }
+
+    form {
+      margin-top: 22px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .field-full {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      font-weight: 600;
+      font-size: 0.98rem;
+      color: var(--text);
+    }
+
+    .field-hint {
+      margin-top: -2px;
+      color: var(--text-soft);
+      font-size: 0.84rem;
+    }
+
+    input,
+    textarea,
+    select {
+      width: 100%;
+      min-height: 52px;
+      padding: 13px 14px;
+      border: 1px solid var(--input-border);
+      border-radius: var(--radius-md);
+      background: var(--input-bg);
+      color: var(--text);
+      font: inherit;
+      transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+    }
+
+    input::placeholder,
+    textarea::placeholder {
+      color: #7a8395;
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(32, 78, 234, 0.14);
+      background: #fff;
+    }
+
+    select {
+      cursor: pointer;
+    }
+
+    .confirm-box {
+      margin-top: 2px;
+      padding: 14px 16px;
+      border: 1px dashed #ccd4e4;
+      border-radius: var(--radius-lg);
+      background: #fafcff;
+    }
+
+    .checkbox-inline {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-weight: 500;
+      line-height: 1.5;
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .checkbox-inline input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      min-height: 18px;
+      margin-top: 2px;
+      flex: 0 0 auto;
+      accent-color: var(--primary);
+    }
+
+    .actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-top: 24px;
+      flex-wrap: wrap;
+    }
+
+    .actions-note {
+      color: var(--text-soft);
+      font-size: 0.9rem;
+      line-height: 1.5;
+      max-width: 460px;
+    }
+
+    button {
+      appearance: none;
+      border: none;
+      border-radius: 12px;
+      background: var(--primary);
+      color: #fff;
+      padding: 14px 20px;
+      font-weight: 700;
+      font-size: 0.97rem;
+      cursor: pointer;
+      transition: background 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+      box-shadow: 0 10px 24px rgba(32, 78, 234, 0.22);
+    }
+
+    button:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    @media (max-width: 720px) {
+      .page {
+        padding: 20px 12px;
+      }
+
+      .container {
+        padding: 22px 18px;
+        border-radius: 16px;
+      }
+
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="container">
+      <header class="hero">
+        <div class="role-badge">
+          {% if is_professor %}
+            Perfil de profesor
+          {% else %}
+            Perfil de estudiante
+          {% endif %}
+        </div>
+
+        <h1>Completa tu perfil</h1>
+
+        {% if is_professor %}
+          <p class="subtitle">
+            Antes de continuar en CoyoLabs, registra tu información de contacto y los datos básicos de tu perfil como profesor.
+          </p>
+        {% else %}
+          <p class="subtitle">
+            Antes de continuar en CoyoLabs, registra tu información académica y de contacto para habilitar correctamente tu acceso al sistema.
+          </p>
+        {% endif %}
+      </header>
+
+      {% with messages = get_flashed_messages() %}
+        {% if messages %}
+          <div class="flash" role="alert" aria-live="polite">
+            {% for message in messages %}
+              <div>{{ message }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2 class="panel-title">Información requerida</h2>
+
+          {% if is_professor %}
+            <p class="panel-text">
+              Completa estos datos para activar tu cuenta docente. Después podrás registrar tus materias y grupos desde tu perfil.
+            </p>
+            <div class="tip">
+              Siguiente paso: una vez completado tu perfil, podrás cargar tu asignación académica y gestionar tus reservaciones.
+            </div>
+          {% else %}
+            <p class="panel-text">
+              Completa tus datos académicos para que el sistema pueda asignarte correctamente materiales, permisos y opciones de reservación.
+            </p>
+          {% endif %}
+        </div>
+
+        <form method="post" action="{{ url_for('profile.complete_profile') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+          <div class="form-grid">
+            <div class="field field-full">
+              <label for="full_name">Nombre completo *</label>
+              <input
+                id="full_name"
+                name="full_name"
+                placeholder="Ejemplo: María Fernanda López Díaz"
+                required
+              >
+            </div>
+
+            {% if is_student %}
+            <div class="field field-full">
+              <label for="matricula">Matrícula *</label>
+              <input
+                id="matricula"
+                name="matricula"
+                placeholder="Ejemplo: 24310116"
+                required
+              >
+            </div>
+            {% endif %}
+
+            <div class="field field-full">
+              <label for="career_id">
+                {% if is_professor %}Área académica / Carrera{% else %}Carrera *{% endif %}
+              </label>
+              <select id="career_id" name="career_id" {% if is_student %}required{% endif %}>
+                <option value="">
+                  {% if is_professor %}Selecciona un área o carrera{% else %}Selecciona una carrera{% endif %}
+                </option>
+                {% for career in careers %}
+                <option value="{{ career.id }}">{{ career.name }}</option>
+                {% endfor %}
+              </select>
+              {% if is_professor %}
+              <span class="field-hint">Selecciona el área académica con la que trabajarás dentro del sistema.</span>
+              {% endif %}
+            </div>
+
+            {% if is_student %}
+            <div class="field field-full">
+              <label for="academic_level_id">Nivel académico *</label>
+              <select id="academic_level_id" name="academic_level_id" required>
+                <option value="">Selecciona nivel</option>
+                {% for level in academic_levels %}
+                <option value="{{ level.id }}">{{ level.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            {% endif %}
+
+            <div class="field field-full">
+              <label for="phone">Teléfono *</label>
+              <input
+                id="phone"
+                name="phone"
+                placeholder="Ejemplo: 656-123-4567"
+                required
+              >
+            </div>
+          </div>
+
+          <div class="confirm-box">
+            <label class="checkbox-inline">
+              <input type="checkbox" name="confirm_data" value="1" required>
+              <span>Confirmo que mis datos son correctos y autorizo su uso dentro de CoyoLabs para fines académicos y administrativos.</span>
+            </label>
+          </div>
+
+          <div class="actions">
+            <p class="actions-note">
+              Verifica cuidadosamente tu información antes de guardar. Algunos datos podrían requerir revisión administrativa para ser modificados después.
+            </p>
+            <button type="submit" class="btn btn-gold">Guardar perfil</button>
+          </div>
+        </form>
+      </section>
+    </section>
+  </main>
+
+  {% if is_student %}
+  <script id="career-level-map" type="application/json">
+    {{ career_level_map | tojson }}
+  </script>
+
+  <script>
+    (function () {
+      const careerSelect = document.getElementById("career_id");
+      const levelSelect = document.getElementById("academic_level_id");
+      const mapNode = document.getElementById("career-level-map");
+
+      if (!careerSelect || !levelSelect || !mapNode) return;
+
+      let careerLevelMap = {};
+      try {
+        careerLevelMap = JSON.parse(mapNode.textContent || "{}");
+      } catch (error) {
+        console.error("No se pudo parsear career_level_map:", error);
+        careerLevelMap = {};
+      }
+
+      const allLevelOptions = Array.from(levelSelect.querySelectorAll("option"))
+        .filter(option => option.value)
+        .map(option => ({
+          value: String(option.value),
+          label: option.textContent
+        }));
+
+      function renderLevelOptions() {
+        const selectedCareerId = String(careerSelect.value || "");
+        const allowedLevelIds = (careerLevelMap[selectedCareerId] || []).map(String);
+        const previousValue = String(levelSelect.value || "");
+
+        levelSelect.innerHTML = "";
+
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = "Selecciona nivel";
+        levelSelect.appendChild(placeholder);
+
+        allLevelOptions
+          .filter(option => allowedLevelIds.includes(option.value))
+          .forEach(option => {
+            const opt = document.createElement("option");
+            opt.value = option.value;
+            opt.textContent = option.label;
+            levelSelect.appendChild(opt);
+          });
+
+        if (allowedLevelIds.includes(previousValue)) {
+          levelSelect.value = previousValue;
+        } else {
+          levelSelect.value = "";
+        }
+      }
+
+      careerSelect.addEventListener("change", renderLevelOptions);
+      renderLevelOptions();
+    })();
+  </script>
+  {% endif %}
+</body>
+</html>

@@ -1,0 +1,16 @@
+{% set _path = request.path or '/' %}
+{% set _segments = _path.strip('/').split('/') if _path != '/' else [] %}
+{% set _parent_from_path = '/' ~ (_segments[:-1] | join('/')) if (_segments | length) > 0 else '/' %}
+{% set _parent_from_path = _parent_from_path if _parent_from_path != '' else '/' %}
+{% set _parent_from_crumbs = (crumbs[-2][1] if crumbs is defined and (crumbs | length) > 1 else None) %}
+{% set _resolved_back_href = back_href if back_href is defined else (_parent_from_crumbs or _parent_from_path) %}
+
+<section class="toolbar-card toolbar-card--compact back-nav">
+  <a
+    class="btn btn-ghost btn-back"
+    href="{{ _resolved_back_href }}"
+  >
+    <i class="ph ph-arrow-left"></i>
+    <span>{{ back_label if back_label is defined else "Volver" }}</span>
+  </a>
+</section>

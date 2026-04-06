@@ -1,0 +1,1301 @@
+{% extends "layouts/student_base.html" %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Mis reservas", url_for('reservations.my_reservations')), ("Solicitar", url_for('reservations.request_reservation'))] %}
+{% block title %}Solicitar reserva{% endblock %}
+
+{% block content %}
+<header class="topbar">
+  <div class="topbar-left">
+    <p class="page-kicker">Reservaciones</p>
+    <h1>Solicitar reserva</h1>
+    <p class="page-subtitle">Completa todos los datos para enviar tu solicitud. Debajo puedes consultar la ocupación semanal de los salones.</p>
+  </div>
+</header>
+
+<style>
+.material-search {
+  position: relative;
+  margin-bottom: 12px;
+}
+
+#materialSearch { min-height: 54px; }
+
+.autocomplete-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 100%;
+  background: white;
+  border-radius: 10px;
+  max-height: 220px;
+  overflow: auto;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+  z-index: 20;
+  border: 1px solid rgba(0,0,0,0.06);
+}
+
+.autocomplete-item {
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background .15s ease;
+}
+
+.autocomplete-item:hover {
+  background: #f1ede4;
+}
+
+.autocomplete-item.out-of-stock {
+  cursor: not-allowed;
+  background: rgba(207, 77, 77, 0.06);
+}
+
+.autocomplete-item.out-of-stock:hover {
+  background: rgba(207, 77, 77, 0.1);
+}
+
+.cart-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cart-empty {
+  padding: 14px;
+  border: 1px dashed rgba(0,0,0,0.12);
+  border-radius: 10px;
+  color: var(--text-dim, #728078);
+  background: rgba(255,255,255,0.5);
+}
+
+.cart-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 10px;
+  background: #f7f4ec;
+  margin-bottom: 2px;
+  animation: fadeIn .2s ease;
+  border: 1px solid rgba(0,0,0,0.05);
+}
+
+.cart-item-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.cart-item-name {
+  font-weight: 600;
+  color: var(--text);
+  word-break: break-word;
+}
+
+.cart-item-meta {
+  font-size: 12px;
+  color: var(--text-dim, #728078);
+}
+
+.cart-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.qty-btn {
+  width: 32px;
+  min-height: 32px;
+  height: 32px;
+  border-radius: 10px;
+  padding: 0;
+  cursor: pointer;
+  font-weight: 800;
+  transition: transform .12s ease;
+}
+
+.qty-btn:hover {
+  transform: translateY(-1px);
+}
+
+.qty-btn:active {
+  transform: scale(0.96);
+}
+
+.qty-value {
+  min-width: 24px;
+  text-align: center;
+  font-weight: 700;
+}
+
+.cart-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.65);
+  border: 1px solid rgba(0,0,0,0.05);
+}
+
+.cart-summary strong {
+  color: var(--text);
+}
+
+.toast {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  background: #1f7a4f;
+  color: white;
+  padding: 10px 16px;
+  border-radius: 8px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(8px);
+  transition: .25s ease;
+  z-index: 50;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.datetime-helper {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.82rem;
+  color: var(--text-dim, #728078);
+}
+
+.time-range-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.signature-pad {
+  border: 1px dashed var(--stroke-strong, rgba(0,0,0,0.2));
+  border-radius: 12px;
+  background: rgba(255,255,255,0.7);
+  width: 100%;
+  min-height: 180px;
+  touch-action: none;
+}
+
+.signature-hint {
+  margin-top: 6px;
+  font-size: .82rem;
+  color: var(--text-dim, #728078);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+
+
+.res-occupancy-card {
+  margin-top: 24px;
+}
+
+.res-occupancy-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.res-occupancy-title h2 {
+  margin: 0;
+}
+
+.res-occupancy-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.res-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.res-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: .82rem;
+  border: 1px solid rgba(0,0,0,.08);
+  background: #fff;
+}
+
+.res-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.res-dot-available { background: #5aa56f; }
+.res-dot-occupied { background: #d68c4b; }
+.res-dot-pending { background: #d4a63d; }
+.res-dot-progress { background: #4c8fd9; }
+
+.res-occupancy-table {
+  min-width: 1160px;
+  border-collapse: separate;
+  border-spacing: 0 8px;
+}
+
+.res-room-label {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.res-cell {
+  vertical-align: top;
+  min-width: 168px;
+}
+
+.res-cell-shell {
+  border: 1px solid var(--stroke);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(255,255,255,.9), rgba(255,255,255,.65));
+  padding: 8px;
+  min-height: 98px;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.res-cell-shell:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0,0,0,.08);
+}
+
+.res-cell-shell.is-available {
+  border-style: dashed;
+  border-color: rgba(90,165,111,.35);
+  background: rgba(90,165,111,.08);
+}
+
+.res-cell-shell.is-occupied {
+  border-color: rgba(214,140,75,.35);
+  background: rgba(214,140,75,.08);
+}
+
+.res-cell-shell.is-pending {
+  border-color: rgba(212,166,61,.35);
+  background: rgba(212,166,61,.1);
+}
+
+.res-cell-shell.is-progress {
+  border-color: rgba(76,143,217,.38);
+  background: rgba(76,143,217,.1);
+}
+
+.res-empty {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  opacity: .8;
+  font-weight: 600;
+  font-size: .88rem;
+}
+
+.res-booking-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.res-booking-item {
+  border-radius: 10px;
+  background: rgba(255,255,255,.75);
+  border: 1px solid rgba(0,0,0,.08);
+  padding: 8px;
+}
+
+.res-booking-item-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.res-booking-hour {
+  font-weight: 700;
+  font-size: .85rem;
+}
+
+.res-chip {
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: .72rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.res-chip-occupied {
+  color: #8b5a2e;
+  border-color: rgba(214,140,75,.4);
+  background: rgba(214,140,75,.15);
+}
+
+.res-chip-pending {
+  color: #7e651f;
+  border-color: rgba(212,166,61,.45);
+  background: rgba(212,166,61,.16);
+}
+
+.res-chip-progress {
+  color: #255f9e;
+  border-color: rgba(76,143,217,.45);
+  background: rgba(76,143,217,.14);
+}
+
+.res-booking-subject {
+  font-size: .86rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.res-booking-meta {
+  margin-top: 2px;
+  font-size: .76rem;
+  opacity: .82;
+}
+
+
+.time-slot {
+  font-size: 11px;
+  padding: 4px;
+  border-radius: 6px;
+  margin-bottom: 4px;
+  text-align: center;
+  transition: 0.2s;
+  border: 1px solid transparent;
+}
+
+.time-slot.available {
+  background: rgba(76, 175, 80, 0.15);
+  color: #4CAF50;
+}
+
+.time-slot.occupied {
+  background: rgba(244, 67, 54, 0.15);
+  color: #F44336;
+}
+
+.time-slot.pending {
+  background: rgba(255, 193, 7, 0.2);
+  color: #B8860B;
+}
+
+.time-slot.in_progress {
+  background: rgba(33, 150, 243, 0.2);
+  color: #2196F3;
+}
+
+.time-slot:hover {
+  transform: scale(1.03);
+}
+
+@media (max-width: 900px) {
+  .reservation-request-form {
+    grid-template-columns: 1fr !important;
+  }
+
+  .reservation-calendar-filter {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .reservation-calendar-filter .toolbar-group,
+  .reservation-calendar-filter .btn {
+    width: 100%;
+  }
+
+  .time-range-row {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+
+<section class="toolbar-card">
+  <form method="post" class="toolbar reservation-request-form" style="grid-template-columns: repeat(2, minmax(280px, 1fr));">
+    <div class="toolbar-group">
+      <label>Salón/Laboratorio</label>
+      <div class="select-wrap">
+        <select name="room" required>
+          <option value="">-- Selecciona --</option>
+          {% for r in rooms %}
+          <option value="{{ r }}">{{ r }}</option>
+          {% endfor %}
+        </select>
+        <i class="ph ph-caret-down select-arrow"></i>
+      </div>
+    </div>
+
+    <div class="toolbar-group">
+      <label>Grupo</label>
+      {% if is_professor %}
+        {% if professor_subjects %}
+          <div class="select-wrap">
+            <select name="group_name" id="groupSelect" required>
+              <option value="">Selecciona un grupo</option>
+            </select>
+            <i class="ph ph-caret-down select-arrow"></i>
+          </div>
+        {% else %}
+          <div class="search-box">
+            <i class="ph ph-warning-circle search-icon"></i>
+            <input type="text" value="No tienes grupos asignados" readonly>
+          </div>
+        {% endif %}
+      {% else %}
+        <div class="search-box">
+          <i class="ph ph-users search-icon"></i>
+          <input type="text" name="group_name" placeholder="Ejemplo: 3A" required>
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="toolbar-group">
+      <label>Solicitante</label>
+      <div class="search-box">
+        <i class="ph ph-user search-icon"></i>
+        <input
+          type="text"
+          value="{{ ((current_user.first_name or '') ~ ' ' ~ (current_user.last_name or ''))|trim or current_user.email }}"
+          readonly
+        >
+      </div>
+    </div>
+
+    <div class="toolbar-group">
+      <label>Materia</label>
+      {% if is_professor %}
+        {% if professor_subjects %}
+          <div class="select-wrap">
+            <select name="subject" id="subjectSelect" required>
+              <option value="">Selecciona una materia</option>
+              {% for professor_subject in professor_subjects %}
+              <option value="{{ professor_subject }}">{{ professor_subject }}</option>
+              {% endfor %}
+            </select>
+            <i class="ph ph-caret-down select-arrow"></i>
+          </div>
+        {% else %}
+          <div class="search-box">
+            <i class="ph ph-warning-circle search-icon"></i>
+            <input type="text" value="No tienes materias asignadas" readonly>
+          </div>
+          <small style="display:block; margin-top:6px; opacity:.8;">
+            Completa/actualiza tus materias para poder reservar como profesor.
+          </small>
+        {% endif %}
+      {% else %}
+        <div class="search-box">
+          <i class="ph ph-book search-icon"></i>
+          <input type="text" name="subject" placeholder="Ejemplo: Programación Web" required>
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="toolbar-group">
+      <label>Fecha de uso</label>
+      <div class="search-box">
+        <i class="ph ph-calendar search-icon"></i>
+        <input type="date" id="reservationDateInput" name="date" required aria-describedby="reservationDateHelp">
+      </div>
+      <small id="reservationDateHelp" class="datetime-helper">Selecciona la fecha en formato local del navegador.</small>
+    </div>
+
+    <div class="toolbar-group time-range-row">
+      <div>
+        <label>Hora de inicio</label>
+        <div class="search-box time-picker-input-wrap">
+          <i class="ph ph-clock search-icon"></i>
+          <input type="time" id="startTimeInput" name="start_time" required min="08:00" max="21:00" step="1800" aria-describedby="reservationTimeHelp" class="clock-time-input">
+          <button type="button" class="time-picker-open-btn" data-target="startTimeInput" aria-label="Abrir selector radial de hora de inicio">
+            <i class="ph ph-clock-afternoon"></i>
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <label>Hora de finalización</label>
+        <div class="search-box time-picker-input-wrap">
+          <i class="ph ph-clock-countdown search-icon"></i>
+          <input type="time" id="endTimeInput" name="end_time" required min="08:00" max="21:00" step="1800" aria-describedby="reservationTimeHelp" class="clock-time-input">
+          <button type="button" class="time-picker-open-btn" data-target="endTimeInput" aria-label="Abrir selector radial de hora de finalización">
+            <i class="ph ph-clock-afternoon"></i>
+          </button>
+        </div>
+      </div>
+      <small id="reservationTimeHelp" class="datetime-helper">Rango sugerido: 08:00 a 21:00 (formato 24 horas).</small>
+    </div>
+
+    <div class="toolbar-group" style="grid-column:1/-1;">
+      <label>Motivo (opcional)</label>
+      <textarea class="form-control" name="purpose" rows="3" placeholder="Objetivo de la práctica o actividad"></textarea>
+    </div>
+
+    <div class="toolbar-group" style="grid-column:1/-1;">
+      <label class="form-check">
+        <input type="checkbox" id="toggleMaterials">
+        Solicitar materiales para esta práctica
+      </label>
+    </div>
+
+    <div id="materialsSection" style="display:none; grid-column:1/-1;">
+      <h3 style="margin-top:10px;">Materiales</h3>
+
+      <div class="material-search">
+        <div class="search-box">
+          <i class="ph ph-magnifying-glass search-icon"></i>
+          <input type="text" id="materialSearch" placeholder="Buscar material por nombre, código o ubicación">
+        </div>
+        <div id="autocompleteList" class="autocomplete-list"></div>
+      </div>
+
+      <div id="cartContainer" class="cart-container">
+        <div class="cart-empty">Aún no agregas materiales.</div>
+      </div>
+
+      <div class="cart-summary">
+        <span><strong id="cartKinds">0</strong> materiales distintos</span>
+        <strong id="cartTotal">0 piezas</strong>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; margin-top:10px;">
+        <button type="button" id="clearCartBtn" class="btn btn-ghost">Vaciar carrito</button>
+      </div>
+
+      <div id="cartHiddenInputs"></div>
+    </div>
+
+    <div class="toolbar-group" style="grid-column:1/-1;">
+      <label>Firma digital del solicitante</label>
+      <canvas id="signaturePad" class="signature-pad" width="900" height="200"></canvas>
+      <input type="hidden" id="signatureDataInput" name="signature_data">
+      <div class="toolbar-actions" style="margin-top:8px;">
+        <button type="button" id="clearSignatureBtn" class="btn btn-ghost">Limpiar firma</button>
+      </div>
+      <small class="signature-hint">La reservación requiere firma digital. Dibuja tu firma antes de enviar.</small>
+    </div>
+
+    <div class="toolbar-actions" style="grid-column:1/-1;">
+      <button type="submit" id="submitReservationBtn" class="btn btn-gold" {% if is_professor and not professor_subjects %}disabled title="No tienes materias asignadas"{% endif %}>Enviar solicitud</button>
+      <a href="{{ url_for('reservations.my_reservations') }}" class="btn btn-ghost">Cancelar</a>
+    </div>
+  </form>
+</section>
+
+<section class="table-card res-occupancy-card">
+  <div class="res-occupancy-head">
+    <div class="res-occupancy-title">
+      <p class="page-kicker">Calendario semanal</p>
+      <h2>Ocupación de salones</h2>
+      <p class="page-subtitle" style="margin-top:6px;">
+        Semana del {{ week_start.strftime('%d/%m/%Y') }} al {{ week_end.strftime('%d/%m/%Y') }}
+      </p>
+    </div>
+
+    <form method="get" class="reservation-calendar-filter" style="display:flex; gap:10px; align-items:end; flex-wrap:wrap;">
+      <div class="toolbar-group" style="min-width:220px; margin:0;">
+        <label>Filtrar por salón</label>
+        <div class="select-wrap">
+          <select name="calendar_room">
+            <option value="">Todos</option>
+            {% for r in rooms %}
+            <option value="{{ r }}" {% if selected_calendar_room == r %}selected{% endif %}>{{ r }}</option>
+            {% endfor %}
+          </select>
+          <i class="ph ph-caret-down select-arrow"></i>
+        </div>
+      </div>
+
+      <input type="hidden" name="week_start" value="{{ week_start.isoformat() }}">
+      <button type="submit" class="btn btn-ghost">Aplicar</button>
+    </form>
+  </div>
+
+  <div class="res-occupancy-controls">
+    <a class="btn btn-ghost" href="{{ url_for('reservations.request_reservation', week_start=prev_week.isoformat(), calendar_room=selected_calendar_room) }}">
+      ← Semana anterior
+    </a>
+
+    <div class="res-legend" aria-label="Leyenda de estados">
+      <span class="res-legend-item"><span class="res-legend-dot res-dot-available"></span>Disponible</span>
+      <span class="res-legend-item"><span class="res-legend-dot res-dot-occupied"></span>Ocupado</span>
+      <span class="res-legend-item"><span class="res-legend-dot res-dot-pending"></span>Pendiente</span>
+      <span class="res-legend-item"><span class="res-legend-dot res-dot-progress"></span>En progreso</span>
+    </div>
+
+    <a class="btn btn-ghost" href="{{ url_for('reservations.request_reservation', week_start=next_week.isoformat(), calendar_room=selected_calendar_room) }}">
+      Semana siguiente →
+    </a>
+  </div>
+
+  <div style="overflow-x:auto;">
+    <table class="data-table res-occupancy-table">
+      <thead>
+        <tr>
+          <th style="min-width:110px;">Salón</th>
+          {% for day in week_days %}
+          <th style="min-width:160px;">
+            {{ day.strftime('%A')|capitalize }}<br>
+            <span style="font-weight:400; opacity:.8;">{{ day.strftime('%d/%m') }}</span>
+          </th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for room in calendar_rooms %}
+        <tr>
+          <td class="res-room-label">{{ room }}</td>
+
+          {% for day in week_days %}
+          <td class="res-cell">
+            {% set cell = week_schedule[room][day] %}
+            {% set cell_state = 'available' %}
+            {% if cell.slots %}
+              {% set slot_states = cell.slots | map(attribute='state') | list %}
+              {% if 'pending' in slot_states %}
+                {% set cell_state = 'pending' %}
+              {% elif 'in_progress' in slot_states %}
+                {% set cell_state = 'progress' %}
+              {% elif 'occupied' in slot_states %}
+                {% set cell_state = 'occupied' %}
+              {% endif %}
+            {% endif %}
+
+            <div class="res-cell-shell is-{{ cell_state }}">
+              {% for slot in cell.slots %}
+                <div class="time-slot {{ slot.state }}" title="{{ slot.start }} - {{ slot.end }}">
+                  <span class="time">{{ slot.start }} - {{ slot.end }}</span>
+                </div>
+              {% endfor %}
+            </div>
+          </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<div id="toast" class="toast">Material agregado</div>
+
+<div id="clockPickerModal" class="clock-picker-modal" aria-hidden="true">
+  <div class="clock-picker-backdrop" data-clock-close="1"></div>
+  <div class="clock-picker-dialog" role="dialog" aria-modal="true" aria-labelledby="clockPickerTitle">
+    <div class="clock-picker-header">
+      <p class="page-kicker">Selector de hora</p>
+      <h3 id="clockPickerTitle">Selecciona una hora</h3>
+      <div class="clock-picker-current" id="clockPickerCurrent">12:00 AM</div>
+    </div>
+    <div class="clock-picker-face-wrap">
+      <div class="clock-picker-face" id="clockPickerFace">
+        <div class="clock-picker-hand" id="clockPickerHand"></div>
+        <div class="clock-picker-center-dot"></div>
+      </div>
+    </div>
+    <div class="clock-picker-period">
+      <button type="button" class="clock-period-btn is-active" id="clockPeriodAM" data-period="AM">AM</button>
+      <button type="button" class="clock-period-btn" id="clockPeriodPM" data-period="PM">PM</button>
+    </div>
+    <small class="datetime-helper" id="clockPickerHelp">Rango permitido del campo: 08:00 a 21:00.</small>
+    <div class="clock-picker-actions">
+      <button type="button" class="btn btn-ghost" id="clockCancelBtn">Cancelar</button>
+      <button type="button" class="btn btn-gold" id="clockConfirmBtn">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const materials = {{ materials_json | safe }};
+const professorGroupsBySubject = {{ professor_groups_by_subject | tojson if is_professor else "{}" }};
+let cart = JSON.parse(localStorage.getItem("reservation_cart") || "{}");
+
+const toggle = document.getElementById("toggleMaterials");
+const section = document.getElementById("materialsSection");
+const search = document.getElementById("materialSearch");
+const list = document.getElementById("autocompleteList");
+const cartContainer = document.getElementById("cartContainer");
+const cartHiddenInputs = document.getElementById("cartHiddenInputs");
+const cartTotal = document.getElementById("cartTotal");
+const cartKinds = document.getElementById("cartKinds");
+const clearCartBtn = document.getElementById("clearCartBtn");
+const subjectSelect = document.getElementById("subjectSelect");
+const groupSelect = document.getElementById("groupSelect");
+const reservationDateInput = document.getElementById("reservationDateInput");
+const startTimeInput = document.getElementById("startTimeInput");
+const endTimeInput = document.getElementById("endTimeInput");
+const reservationForm = document.querySelector(".reservation-request-form");
+const signaturePad = document.getElementById("signaturePad");
+const signatureDataInput = document.getElementById("signatureDataInput");
+const clearSignatureBtn = document.getElementById("clearSignatureBtn");
+const submitReservationBtn = document.getElementById("submitReservationBtn");
+
+const clockPickerModal = document.getElementById("clockPickerModal");
+const clockPickerFace = document.getElementById("clockPickerFace");
+const clockPickerHand = document.getElementById("clockPickerHand");
+const clockPickerCurrent = document.getElementById("clockPickerCurrent");
+const clockPickerHelp = document.getElementById("clockPickerHelp");
+const clockConfirmBtn = document.getElementById("clockConfirmBtn");
+const clockCancelBtn = document.getElementById("clockCancelBtn");
+const clockPeriodButtons = document.querySelectorAll(".clock-period-btn");
+let clockPickerTargetInput = null;
+let clockPickerStepIndex = 0; // 0..23 (cada paso = 30 minutos)
+let clockPickerPeriod = "AM";
+let clockPointerActive = false;
+let lastSnappedStep = 0;
+let signatureDrawing = false;
+let signatureHasStroke = false;
+
+function signaturePosition(evt) {
+  const rect = signaturePad.getBoundingClientRect();
+  const source = evt.touches ? evt.touches[0] : evt;
+  return {
+    x: source.clientX - rect.left,
+    y: source.clientY - rect.top,
+  };
+}
+
+function initSignaturePad() {
+  if (!signaturePad) return;
+  const ctx = signaturePad.getContext("2d");
+  ctx.lineWidth = 2.2;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = "#2c2c2c";
+
+  function startDraw(evt) {
+    evt.preventDefault();
+    signatureDrawing = true;
+    const pos = signaturePosition(evt);
+    ctx.beginPath();
+    ctx.moveTo(pos.x, pos.y);
+  }
+
+  function moveDraw(evt) {
+    if (!signatureDrawing) return;
+    evt.preventDefault();
+    const pos = signaturePosition(evt);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.stroke();
+    signatureHasStroke = true;
+  }
+
+  function endDraw() {
+    signatureDrawing = false;
+  }
+
+  signaturePad.addEventListener("mousedown", startDraw);
+  signaturePad.addEventListener("mousemove", moveDraw);
+  window.addEventListener("mouseup", endDraw);
+  signaturePad.addEventListener("touchstart", startDraw, { passive: false });
+  signaturePad.addEventListener("touchmove", moveDraw, { passive: false });
+  window.addEventListener("touchend", endDraw, { passive: true });
+
+  clearSignatureBtn?.addEventListener("click", () => {
+    ctx.clearRect(0, 0, signaturePad.width, signaturePad.height);
+    signatureHasStroke = false;
+    signatureDataInput.value = "";
+  });
+}
+
+function validateAndSerializeSignature() {
+  if (!signaturePad || !signatureDataInput) return true;
+  if (!signatureHasStroke) return false;
+  signatureDataInput.value = signaturePad.toDataURL("image/png");
+  return true;
+}
+
+function toClockStep(hour24, minute) {
+  const normalizedMinute = minute >= 30 ? 30 : 0;
+  const hour12 = (hour24 % 12) || 12;
+  let step = hour12 === 12 ? 0 : hour12 * 2;
+  if (normalizedMinute === 30) step += 1;
+  return step;
+}
+
+function stepToHourMinute(step) {
+  const safeStep = ((step % 24) + 24) % 24;
+  const baseHour = Math.floor(safeStep / 2);
+  const hour12 = baseHour === 0 ? 12 : baseHour;
+  const minute = safeStep % 2 === 0 ? 0 : 30;
+  return { hour12, minute };
+}
+
+function to24Hour(hour12, period) {
+  if (period === "AM") return hour12 === 12 ? 0 : hour12;
+  return hour12 === 12 ? 12 : hour12 + 12;
+}
+
+function hhmmFromClock(step, period) {
+  const { hour12, minute } = stepToHourMinute(step);
+  const hour24 = to24Hour(hour12, period);
+  return `${String(hour24).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
+function labelFromClock(step, period) {
+  const { hour12, minute } = stepToHourMinute(step);
+  return `${String(hour12).padStart(2, "0")}:${String(minute).padStart(2, "0")} ${period}`;
+}
+
+function updateClockPeriodButtons() {
+  clockPeriodButtons.forEach((btn) => {
+    btn.classList.toggle("is-active", btn.dataset.period === clockPickerPeriod);
+  });
+}
+
+function updateClockSelectionUI() {
+  const angle = (clockPickerStepIndex * 15) - 90;
+  clockPickerHand.style.transform = `translate(-50%, -100%) rotate(${angle}deg)`;
+  clockPickerCurrent.textContent = labelFromClock(clockPickerStepIndex, clockPickerPeriod);
+
+  if (!clockPickerTargetInput) return;
+  const candidate = hhmmFromClock(clockPickerStepIndex, clockPickerPeriod);
+  const minValue = clockPickerTargetInput.min || "00:00";
+  const maxValue = clockPickerTargetInput.max || "23:59";
+  const valid = candidate >= minValue && candidate <= maxValue;
+  clockConfirmBtn.disabled = !valid;
+  clockPickerHelp.textContent = valid
+    ? `Seleccionado: ${candidate} (24h).`
+    : `Fuera de rango para este campo (${minValue} a ${maxValue}).`;
+}
+
+function extractClockFromInputValue(value) {
+  if (!value || !value.includes(":")) return { step: 16, period: "AM" }; // 08:00 por defecto
+  const [hRaw, mRaw] = value.split(":");
+  const hour24 = Number(hRaw);
+  const minuteRaw = Number(mRaw);
+  if (Number.isNaN(hour24) || Number.isNaN(minuteRaw)) return { step: 16, period: "AM" };
+  const minute = minuteRaw >= 30 ? 30 : 0;
+  return {
+    step: toClockStep(hour24, minute),
+    period: hour24 >= 12 ? "PM" : "AM",
+  };
+}
+
+function openClockPickerForInput(inputEl) {
+  if (!inputEl || !clockPickerModal) return;
+  clockPickerTargetInput = inputEl;
+  const initial = extractClockFromInputValue(inputEl.value);
+  clockPickerStepIndex = initial.step;
+  lastSnappedStep = initial.step;
+  clockPickerPeriod = initial.period;
+  updateClockPeriodButtons();
+  updateClockSelectionUI();
+  clockPickerModal.classList.add("is-open");
+  clockPickerModal.setAttribute("aria-hidden", "false");
+}
+
+function closeClockPicker() {
+  if (!clockPickerModal) return;
+  clockPickerModal.classList.remove("is-open");
+  clockPickerModal.setAttribute("aria-hidden", "true");
+  clockPointerActive = false;
+}
+
+function clockStepFromPointer(clientX, clientY) {
+  const rect = clockPickerFace.getBoundingClientRect();
+  const cx = rect.left + (rect.width / 2);
+  const cy = rect.top + (rect.height / 2);
+  const dx = clientX - cx;
+  const dy = clientY - cy;
+  const angle = Math.atan2(dy, dx);
+  return (angle * 180 / Math.PI + 450) % 360; // 0° arriba
+}
+
+function angularDistance(a, b) {
+  const diff = Math.abs(a - b) % 360;
+  return diff > 180 ? 360 - diff : diff;
+}
+
+function snapStepFromDegrees(degrees, previousStep = null, forceNearest = false) {
+  const nearest = Math.round(degrees / 15) % 24;
+  if (forceNearest || previousStep === null || previousStep === undefined) return nearest;
+
+  const previousCenter = (previousStep % 24) * 15;
+  const distToPrevious = angularDistance(degrees, previousCenter);
+  // Pequeña histéresis para evitar rebotes al borde entre dos pasos.
+  if (distToPrevious <= 6) return previousStep % 24;
+  return nearest;
+}
+
+function onClockPointerMove(event) {
+  if (!clockPointerActive) return;
+  event.preventDefault();
+  const point = event.touches?.[0] || event;
+  const degrees = clockStepFromPointer(point.clientX, point.clientY);
+  const snapped = snapStepFromDegrees(degrees, lastSnappedStep, false);
+  clockPickerStepIndex = snapped;
+  lastSnappedStep = snapped;
+  updateClockSelectionUI();
+}
+
+function syncTimeRangeHints() {
+  if (!startTimeInput || !endTimeInput) return;
+
+  const start = startTimeInput.value || "";
+  endTimeInput.min = start || "08:00";
+
+  if (!start || !endTimeInput.value) return;
+  if (endTimeInput.value > start) return;
+
+  const [h, m] = start.split(":").map(Number);
+  const startMinutes = (h * 60) + m;
+  const suggested = Math.min(startMinutes + 60, 21 * 60);
+  const hh = String(Math.floor(suggested / 60)).padStart(2, "0");
+  const mm = String(suggested % 60).padStart(2, "0");
+  endTimeInput.value = `${hh}:${mm}`;
+}
+
+if (startTimeInput && endTimeInput) {
+  startTimeInput.addEventListener("input", syncTimeRangeHints);
+  endTimeInput.addEventListener("focus", syncTimeRangeHints);
+  startTimeInput.addEventListener("click", (event) => {
+    event.preventDefault();
+    openClockPickerForInput(startTimeInput);
+  });
+  endTimeInput.addEventListener("click", (event) => {
+    event.preventDefault();
+    openClockPickerForInput(endTimeInput);
+  });
+  startTimeInput.addEventListener("focus", () => openClockPickerForInput(startTimeInput));
+  endTimeInput.addEventListener("focus", () => openClockPickerForInput(endTimeInput));
+  document.querySelectorAll(".time-picker-open-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const targetId = btn.getAttribute("data-target");
+      const input = document.getElementById(targetId);
+      if (!input) return;
+      openClockPickerForInput(input);
+    });
+  });
+
+  if (clockPickerFace) {
+    for (let step = 0; step < 24; step++) {
+      const marker = document.createElement("button");
+      marker.type = "button";
+      marker.className = `clock-marker ${step % 2 === 0 ? "is-hour" : "is-half"}`;
+      marker.dataset.step = String(step);
+      const angle = (step * 15) - 90;
+      marker.style.setProperty("--angle", `${angle}deg`);
+
+      if (step % 2 === 0) {
+        const { hour12 } = stepToHourMinute(step);
+        marker.textContent = String(hour12);
+      } else {
+        marker.innerHTML = '<span class="half-dot"></span>';
+      }
+
+      marker.addEventListener("click", () => {
+        clockPickerStepIndex = step;
+        lastSnappedStep = step;
+        updateClockSelectionUI();
+      });
+      marker.addEventListener("pointerdown", (event) => {
+        event.stopPropagation();
+      });
+      clockPickerFace.appendChild(marker);
+    }
+
+    clockPickerFace.addEventListener("pointerdown", (event) => {
+      clockPointerActive = true;
+      const degrees = clockStepFromPointer(event.clientX, event.clientY);
+      const snapped = snapStepFromDegrees(degrees, lastSnappedStep, true);
+      clockPickerStepIndex = snapped;
+      lastSnappedStep = snapped;
+      updateClockSelectionUI();
+      if (typeof clockPickerFace.setPointerCapture === "function") {
+        try { clockPickerFace.setPointerCapture(event.pointerId); } catch (_) {}
+      }
+      event.preventDefault();
+    });
+    clockPickerFace.addEventListener("pointermove", onClockPointerMove);
+    const releasePointer = (event) => {
+      clockPointerActive = false;
+      if (typeof clockPickerFace.releasePointerCapture === "function") {
+        try { clockPickerFace.releasePointerCapture(event.pointerId); } catch (_) {}
+      }
+    };
+    clockPickerFace.addEventListener("pointerup", releasePointer);
+    clockPickerFace.addEventListener("pointercancel", releasePointer);
+  }
+
+  clockPeriodButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      clockPickerPeriod = btn.dataset.period || "AM";
+      updateClockPeriodButtons();
+      updateClockSelectionUI();
+    });
+  });
+
+  if (clockCancelBtn) {
+    clockCancelBtn.addEventListener("click", closeClockPicker);
+  }
+  if (clockConfirmBtn) {
+    clockConfirmBtn.addEventListener("click", () => {
+      if (!clockPickerTargetInput) return closeClockPicker();
+      const nextValue = hhmmFromClock(clockPickerStepIndex, clockPickerPeriod);
+      clockPickerTargetInput.value = nextValue;
+      clockPickerTargetInput.dispatchEvent(new Event("input", { bubbles: true }));
+      clockPickerTargetInput.dispatchEvent(new Event("change", { bubbles: true }));
+      closeClockPicker();
+    });
+  }
+  if (clockPickerModal) {
+    clockPickerModal.addEventListener("click", (event) => {
+      if (event.target?.dataset?.clockClose === "1") closeClockPicker();
+    });
+  }
+
+  syncTimeRangeHints();
+}
+
+if (reservationDateInput) {
+  reservationDateInput.title = "Selecciona la fecha de la reserva";
+}
+
+initSignaturePad();
+
+reservationForm?.addEventListener("submit", (event) => {
+  if (!validateAndSerializeSignature()) {
+    event.preventDefault();
+    if (submitReservationBtn) submitReservationBtn.disabled = false;
+    alert("Debes capturar tu firma digital para enviar la reservación.");
+    return;
+  }
+});
+
+function renderGroupOptionsForSelectedSubject() {
+  if (!subjectSelect || !groupSelect) return;
+
+  const selectedSubject = subjectSelect.value;
+  const groups = professorGroupsBySubject[selectedSubject] || [];
+  const previousValue = groupSelect.value;
+
+  groupSelect.innerHTML = "";
+
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = groups.length ? "Selecciona un grupo" : "Sin grupos para esta materia";
+  groupSelect.appendChild(placeholder);
+
+  groups.forEach((groupCode) => {
+    const option = document.createElement("option");
+    option.value = groupCode;
+    option.textContent = groupCode;
+    groupSelect.appendChild(option);
+  });
+
+  if (groups.includes(previousValue)) {
+    groupSelect.value = previousValue;
+  }
+}
+
+if (subjectSelect && groupSelect) {
+  subjectSelect.addEventListener("change", renderGroupOptionsForSelectedSubject);
+  renderGroupOptionsForSelectedSubject();
+}
+
+if (toggle && section) {
+  toggle.addEventListener("change", () => {
+    section.style.display = toggle.checked ? "block" : "none";
+  });
+}
+
+function persistCart() {
+  localStorage.setItem("reservation_cart", JSON.stringify(cart));
+}
+
+search.addEventListener("input", () => {
+  const value = search.value.trim().toLowerCase();
+  list.innerHTML = "";
+
+  if (!value) return;
+
+  materials
+    .filter(m => m.name.toLowerCase().includes(value))
+    .slice(0, 8)
+    .forEach(m => {
+      const item = document.createElement("div");
+      const available = parseInt(m.pieces_qty || 0, 10);
+      const inCart = cart[m.id]?.qty || 0;
+      const isOut = available <= 0;
+
+      item.className = "autocomplete-item";
+      if (isOut) item.classList.add("out-of-stock");
+
+      item.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+          <div style="${isOut ? 'opacity:.5;' : ''}">
+            <div>${m.name}</div>
+            <div style="font-size:12px; opacity:.7;">
+              ${available} disponibles${inCart > 0 ? ` · en carrito: ${inCart}` : ""}
+            </div>
+          </div>
+          <div style="font-size:12px; font-weight:600; ${isOut ? 'color:#cf4d4d;' : 'opacity:.7;'}">
+            ${isOut ? 'Sin stock' : 'Agregar'}
+          </div>
+        </div>
+      `;
+
+      if (!isOut) {
+        item.onclick = () => addToCart(m);
+      } else {
+        item.onclick = () => showToast("Material sin stock");
+      }
+
+      list.appendChild(item);
+    });
+});
+
+document.addEventListener("click", (e) => {
+  if (!e.target.closest(".material-search")) {
+    list.innerHTML = "";
+  }
+});
+
+function addToCart(material) {
+  const available = parseInt(material.pieces_qty || 0, 10);
+
+  if (available <= 0) {
+    showToast("No hay stock disponible");
+    return;
+  }
+
+  if (!cart[material.id]) {
+    cart[material.id] = { ...material, qty: 1 };
+    showToast("Material agregado");
+  } else {
+    if (cart[material.id].qty >= available) {
+      showToast(`Solo hay ${available} disponibles`);
+      return;
+    }
+    cart[material.id].qty++;
+    showToast("Cantidad actualizada");
+  }
+
+  persistCart();
+  renderCart();
+
+  search.value = "";
+  list.innerHTML = "";
+}
+
+function updateQty(id, delta) {
+  const item = cart[id];
+  if (!item) return;
+
+  const available = parseInt(item.pieces_qty || 0, 10);
+  const nextQty = item.qty + delta;
+
+  if (nextQty <= 0) {
+    delete cart[id];
+    persistCart();
+    renderCart();
+    showToast("Material eliminado");
+    return;
+  }
+
+  if (nextQty > available) {
+    showToast(`Solo hay ${available} disponibles`);
+    return;
+  }
+
+  item.qty = nextQty;
+  persistCart();
+  renderCart();
+}
+
+function clearCart() {
+  cart = {};
+  persistCart();
+  renderCart();
+  showToast("Carrito vaciado");
+}
+
+function renderCart() {
+  const items = Object.values(cart);
+  cartContainer.innerHTML = "";
+  cartHiddenInputs.innerHTML = "";
+
+  if (!items.length) {
+    cartContainer.innerHTML = '<div class="cart-empty">Aún no agregas materiales.</div>';
+    cartTotal.innerText = "0 piezas";
+    cartKinds.innerText = "0";
+    return;
+  }
+
+  let total = 0;
+
+  items.forEach(item => {
+    total += item.qty;
+
+    const row = document.createElement("div");
+    row.className = "cart-item";
+    row.innerHTML = `
+      <div class="cart-item-left">
+        <span class="cart-item-name">${item.name}</span>
+        <span class="cart-item-meta">${item.qty} seleccionados · ${item.pieces_qty} disponibles</span>
+      </div>
+
+      <div class="cart-controls">
+        <button type="button" class="btn btn-ghost qty-btn" onclick="updateQty(${item.id}, -1)">-</button>
+        <span class="qty-value">${item.qty}</span>
+        <button type="button" class="btn btn-ghost qty-btn" onclick="updateQty(${item.id}, 1)">+</button>
+      </div>
+    `;
+    cartContainer.appendChild(row);
+
+    const hiddenId = document.createElement("input");
+    hiddenId.type = "hidden";
+    hiddenId.name = "material_id[]";
+    hiddenId.value = item.id;
+
+    const hiddenQty = document.createElement("input");
+    hiddenQty.type = "hidden";
+    hiddenQty.name = "quantity[]";
+    hiddenQty.value = item.qty;
+
+    cartHiddenInputs.appendChild(hiddenId);
+    cartHiddenInputs.appendChild(hiddenQty);
+  });
+
+  cartTotal.innerText = `${total} piezas`;
+  cartKinds.innerText = String(items.length);
+}
+
+function showToast(msg) {
+  const toast = document.getElementById("toast");
+  toast.innerText = msg;
+  toast.classList.add("show");
+  setTimeout(() => toast.classList.remove("show"), 1800);
+}
+
+if (clearCartBtn) {
+  clearCartBtn.addEventListener("click", clearCart);
+}
+
+renderCart();
+</script>
+{% endblock %}

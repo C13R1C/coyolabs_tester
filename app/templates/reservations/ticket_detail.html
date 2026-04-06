@@ -1,0 +1,248 @@
+{% extends "layouts/student_base.html" %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Reservas en curso", url_for('reservations.admin_approved')), ("Ticket #" ~ ticket.id, url_for('reservations.admin_ticket_detail', ticket_id=ticket.id))] %}
+{% block title %}Ticket #{{ ticket.id }}{% endblock %}
+
+{% block content %}
+
+<style>
+.row-ok { background: rgba(46, 163, 106, 0.08); transition: all .2s ease; }
+.row-missing { background: rgba(211, 47, 47, 0.08); transition: all .2s ease; }
+
+.input-mini input {
+  width: 78px; height: 42px; border-radius: 12px;
+  border: 1px solid var(--stroke);
+  background: rgba(255,255,255,0.48); text-align: center;
+  font-weight: 600; transition: all .2s ease;
+  color: var(--text);
+}
+.input-mini input:focus {
+  outline: none; border-color: rgba(199,159,51,0.35);
+  background: rgba(255,255,255,0.72); box-shadow: 0 0 0 4px rgba(199,159,51,0.08);
+}
+
+.input-notes {
+  width: 240px; height: 42px; border-radius: 12px;
+  border: 1px solid var(--stroke);
+  background: rgba(255,255,255,0.48); padding: 0 12px;
+  color: var(--text);
+}
+.input-notes:focus {
+  outline: none; border-color: rgba(199,159,51,0.35);
+  background: rgba(255,255,255,0.72); box-shadow: 0 0 0 4px rgba(199,159,51,0.08);
+}
+
+.input-notes::placeholder { color: var(--text-dim); }
+
+.fade-in { animation: fadeIn .3s ease; }
+@keyframes fadeIn { from {opacity:0; transform: translateY(5px);} to {opacity:1;} }
+
+@media (max-width: 768px) {
+  .input-notes { width: 100%; min-width: 180px; }
+}
+</style>
+
+<header class="topbar">
+  <div class="topbar-left">
+    <p class="page-kicker">Ticket de laboratorio</p>
+    <h1>Ticket #{{ ticket.id }}</h1>
+    <p class="page-subtitle">Gestiona entrega, devolución y cierre del ticket.</p>
+  </div>
+</header>
+
+<div id="ticket-detail-container">
+  <section class="table-card">
+    <div class="table-wrap" style="padding: 18px 22px;">
+      <div style="display:grid; grid-template-columns: repeat(3, minmax(240px, 1fr)); gap:14px;">
+        <div><strong>Reserva:</strong> {{ ticket.reservation_id or '-' }}</div>
+        <div><strong>Responsable:</strong> {{ ticket.owner_user.email if ticket.owner_user else '-' }}</div>
+        <div><strong>Salón/Lab:</strong> {{ ticket.room or '-' }}</div>
+        <div><strong>Fecha:</strong> {{ ticket.date or '-' }}</div>
+        <div><strong>Estado:</strong>
+          <span class="status-badge {% if ticket.status in ['OPEN', 'READY_FOR_PICKUP', 'CLOSURE_REQUESTED'] %}status-warn{% elif ticket.status == 'CLOSED' %}status-ok{% else %}status-bad{% endif %}">
+            {{ ticket.status|status_label }}
+          </span>
+        </div>
+        <div><strong>Abierto:</strong> {{ ticket.opened_at or '-' }}</div>
+
+  <div>
+    <strong>Abierto por:</strong>
+    {{ ticket.opened_by_user.email if ticket.opened_by_user else '-' }}
+  </div>
+
+  <div>
+    <strong>Cerrado:</strong>
+    {{ ticket.closed_at or '-' }}
+  </div>
+
+  <div>
+    <strong>Cerrado por:</strong>
+    {{ ticket.closed_by_user.email if ticket.closed_by_user else '-' }}
+  </div>
+  <div>
+    <strong>Firma de reservación:</strong>
+    {% if ticket.reservation and ticket.reservation.signature_ref %}
+      <a href="{{ url_for('static', filename=ticket.reservation.signature_ref) }}" target="_blank" rel="noopener noreferrer" class="item-link">Ver evidencia</a>
+    {% elif ticket.reservation and ticket.reservation.signed %}
+      Registrada (legacy)
+    {% else %}
+      Sin firma
+    {% endif %}
+  </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="table-card" style="margin-top: 20px;">
+    <div class="table-wrap">
+
+    <form id="mainForm" method="POST" action="{{ url_for('reservations.admin_ticket_update_all', ticket_id=ticket.id) }}">
+
+      <table class="inventory-table">
+        <thead>
+          <tr>
+            <th>Material</th>
+            <th>Solicitado</th>
+            <th>Entregado</th>
+            <th>Devuelto</th>
+            <th>Estado</th>
+            <th>Notas</th>
+            <th>Operación</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {% for item in ticket.items %}
+          <tr class="fade-in">
+            <td>
+              {{ item.material.name if item.material else ('ID ' ~ item.material_id) }}
+              <input type="hidden" name="item_id[]" value="{{ item.id }}">
+            </td>
+
+            <td>{{ item.quantity_requested }}</td>
+
+            <td>
+              <div class="input-mini">
+                <input type="number" name="quantity_delivered[]" value="{{ item.quantity_delivered }}" placeholder="0">
+              </div>
+            </td>
+
+            <td>
+              <div class="input-mini">
+                <input type="number" name="quantity_returned[]" value="{{ item.quantity_returned }}" placeholder="0">
+              </div>
+            </td>
+
+            <td>
+              <span class="status-badge">{{ item.status|status_label }}</span>
+              <div class="missing-label" style="font-size:12px; color:#D32F2F; display:none;"></div>
+            </td>
+
+            <td>
+              <input class="input-notes" name="notes[]" value="{{ item.notes or '' }}" placeholder="Notas del material">
+            </td>
+
+            <td>
+              {% if ticket.status in ['OPEN', 'READY_FOR_PICKUP'] and item.quantity_requested > item.quantity_delivered %}
+                <button
+                  type="submit"
+                  formaction="{{ url_for('reservations.admin_ticket_item_mark_ready', item_id=item.id) }}"
+                  formmethod="post"
+                  class="btn btn-ghost"
+                >
+                  Marcar listo
+                </button>
+              {% else %}
+                -
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <div style="padding:16px; display:flex; justify-content:space-between;">
+        <div id="debtWarning" style="display:none; padding:10px; background:#fff3cd; border-radius:8px;">
+          ⚠ Este ticket generará adeudos
+        </div>
+
+        <button type="submit" class="btn btn-gold">Guardar todo</button>
+      </div>
+
+    </form>
+
+        <form id="closeTicketForm" method="post" action="{{ url_for('reservations.admin_ticket_close', ticket_id=ticket.id) }}" style="display:none;"></form>
+  </div>
+  </section>
+
+  <section class="toolbar-card" style="margin-top: 20px;">
+    <div class="toolbar-actions">
+
+      {% if ticket.status in ['OPEN', 'READY_FOR_PICKUP', 'CLOSURE_REQUESTED'] %}
+      <button type="button" class="btn btn-gold" onclick="saveAndClose()">Guardar + Confirmar cierre</button>
+      {% endif %}
+
+      <a class="btn btn-ghost" href="{{ url_for('reservations.admin_approved') }}">Volver</a>
+    </div>
+  </section>
+</div>
+
+<script>
+function checkMissing() {
+  let hasMissing = false;
+
+  document.querySelectorAll("tbody tr").forEach(row => {
+    const d = parseInt(row.querySelector("[name='quantity_delivered[]']").value || 0);
+    const r = parseInt(row.querySelector("[name='quantity_returned[]']").value || 0);
+    const label = row.querySelector(".missing-label");
+
+    row.classList.remove("row-ok","row-missing");
+
+    if (d > r) {
+      row.classList.add("row-missing");
+      label.style.display = "block";
+      label.innerText = "Faltan " + (d - r);
+      hasMissing = true;
+    } else if (d > 0 && d === r) {
+      row.classList.add("row-ok");
+      label.style.display = "none";
+    } else {
+      label.style.display = "none";
+    }
+  });
+
+  document.getElementById("debtWarning").style.display = hasMissing ? "block" : "none";
+}
+
+document.querySelectorAll("input").forEach(i => i.addEventListener("input", checkMissing));
+checkMissing();
+
+async function saveAndClose() {
+  const form = document.getElementById("mainForm");
+  const closeForm = document.getElementById("closeTicketForm");
+
+  try {
+    const response = await fetch(form.action, {
+      method: "POST",
+      body: new FormData(form)
+    });
+
+    if (!response.ok) {
+      alert("No se pudieron guardar los cambios del ticket.");
+      return;
+    }
+
+    const hasMissing = document.querySelector(".row-missing");
+    const confirmed = hasMissing
+      ? confirm("Se generarán adeudos. ¿Deseas continuar?")
+      : confirm("¿Guardar cambios y cerrar ticket?");
+
+    if (!confirmed) return;
+
+    closeForm.submit();
+  } catch (error) {
+    alert("Ocurrió un error al guardar el ticket.");
+  }
+}
+</script>
+
+{% endblock %}

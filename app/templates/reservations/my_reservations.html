@@ -1,0 +1,129 @@
+{% extends "layouts/student_base.html" %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Mis reservas", url_for('reservations.my_reservations'))] %}
+{% block title %}Mis reservas{% endblock %}
+
+{% block content %}
+<header class="topbar">
+  <div class="topbar-left">
+    <p class="page-kicker">Reservaciones</p>
+    <h1>Mis reservas</h1>
+    <p class="page-subtitle">Seguimiento de solicitudes, materiales solicitados y estado del ticket asociado.</p>
+  </div>
+</header>
+
+<section class="toolbar-card">
+  <div class="toolbar-actions">
+    <a class="btn btn-gold" href="{{ url_for('reservations.request_reservation') }}">Solicitar reserva</a>
+    {% if is_admin_role(current_user.role) %}
+      <a class="btn btn-ghost" href="{{ url_for('reservations.admin_queue') }}">Cola admin</a>
+    {% endif %}
+  </div>
+</section>
+
+<div id="reservations-my-list-container">
+  {% if reservations|length == 0 %}
+    <section class="empty-state">
+      <i class="ph ph-calendar-x empty-icon"></i>
+      <h3>Sin reservas</h3>
+      <p>No tienes reservas registradas.</p>
+    </section>
+  {% else %}
+  <section class="table-card">
+    <div class="table-wrap">
+      <table class="inventory-table" style="min-width: 1400px;">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Salón/Lab</th>
+            <th>Fecha</th>
+            <th>Inicio</th>
+            <th>Fin</th>
+            <th>Materia</th>
+            <th>Grupo</th>
+            <th>Solicitante</th>
+            <th>Firma</th>
+            <th>Materiales</th>
+            <th>Ticket</th>
+            <th>Acciones ticket</th>
+            <th>Estado</th>
+            <th>Nota admin</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in reservations %}
+          {% set ticket = (r.lab_tickets|sort(attribute='opened_at', reverse=True)|first) if r.lab_tickets else None %}
+          <tr>
+            <td>{{ r.id }}</td>
+            <td>{{ r.room }}</td>
+            <td>{{ r.date }}</td>
+            <td>{{ r.start_time }}</td>
+            <td>{{ r.end_time }}</td>
+            <td>{{ r.subject }}</td>
+            <td>{{ r.group_name }}</td>
+            <td>{{ ((r.user.first_name or '') ~ ' ' ~ (r.user.last_name or ''))|trim or r.user.email }}</td>
+            <td>
+              {% if r.signature_ref %}
+                <a href="{{ url_for('static', filename=r.signature_ref) }}" target="_blank" rel="noopener noreferrer" class="btn btn-ghost">Ver firma</a>
+              {% elif r.signed %}
+                <span class="status-badge status-ok">Registrada (legacy)</span>
+              {% else %}
+                <span class="status-badge status-bad">Sin firma</span>
+              {% endif %}
+            </td>
+
+            <td>
+              {% if r.items %}
+                <ul style="padding-left:16px; margin:0;">
+                  {% for item in r.items[:3] %}
+                    <li>
+                      {{ item.material.name if item.material else ('ID ' ~ item.material_id) }}
+                      ({{ item.quantity_requested }})
+                    </li>
+                  {% endfor %}
+                  {% if r.items|length > 3 %}
+                    <li>+{{ r.items|length - 3 }} más...</li>
+                  {% endif %}
+                </ul>
+              {% else %}
+                -
+              {% endif %}
+            </td>
+
+            <td>
+              {% if ticket %}
+                <span class="status-badge {% if ticket.status in ['OPEN', 'READY_FOR_PICKUP', 'CLOSURE_REQUESTED'] %}status-warn{% elif ticket.status == 'CLOSED' %}status-ok{% else %}status-bad{% endif %}">
+                  {{ ticket.status|status_label }}
+                </span>
+              {% else %}
+                -
+              {% endif %}
+            </td>
+
+            <td>
+              {% if ticket and ticket.status in ['OPEN', 'READY_FOR_PICKUP', 'CLOSURE_REQUESTED'] %}
+                <a href="{{ url_for('reservations.my_active_ticket', reservation_id=r.id) }}" class="btn btn-ghost">
+                  Ver ticket activo
+                </a>
+              {% elif ticket %}
+                <span style="opacity:.7;">Cerrado</span>
+              {% else %}
+                -
+              {% endif %}
+            </td>
+
+            <td>
+              <span class="status-badge {% if r.status == 'APPROVED' %}status-ok{% elif r.status == 'PENDING' %}status-warn{% else %}status-bad{% endif %}">
+                {{ r.status|status_label }}
+              </span>
+            </td>
+
+            <td>{{ r.admin_note or '-' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

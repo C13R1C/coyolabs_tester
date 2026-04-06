@@ -1,0 +1,343 @@
+from datetime import datetime
+import json
+
+from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask_login import current_user
+from sqlalchemy import func
+from sqlalchemy.orm import joinedload
+
+from app.extensions import db
+from app.models.inventory_request_item import InventoryRequestItem
+from app.models.inventory_request_ticket import InventoryRequestTicket
+from app.models.material import Material
+from app.models.notification import Notification
+from app.models.user import User
+from app.services.audit_service import log_event
+from app.services.notification_realtime_service import publish_notification_created
+from app.utils.authz import min_role_required
+from app.utils.roles import ROLE_STUDENT, normalize_role
+from app.utils.statuses import InventoryRequestStatus
+
+
+inventory_requests_bp = Blueprint("inventory_requests", __name__, url_prefix="/inventory-requests")
+
+
+STATUS_OPEN = InventoryRequestStatus.OPEN
+STATUS_READY = InventoryRequestStatus.READY_FOR_PICKUP
+STATUS_CLOSED = InventoryRequestStatus.CLOSED
+
+
+def _is_student_role(role: str | None) -> bool:
+    return normalize_role(role) == ROLE_STUDENT
+
+
+def _notify_admins_for_ticket(ticket: InventoryRequestTicket, message: str) -> None:
+    admins = User.query.filter(User.role.in_(["ADMIN", "SUPERADMIN"])).all()
+    for admin in admins:
+        db.session.add(
+            Notification(
+                user_id=admin.id,
+                title="Pedido diario actualizado",
+                message=message,
+                link=url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id),
+            )
+        )
+
+
+def _close_stale_open_tickets() -> None:
+    today = datetime.now().date()
+    stale_tickets = (
+        InventoryRequestTicket.query
+        .filter(InventoryRequestTicket.status.in_([STATUS_OPEN, STATUS_READY]))
+        .filter(InventoryRequestTicket.request_date < today)
+        .all()
+    )
+
+    for ticket in stale_tickets:
+        ticket.status = STATUS_CLOSED
+        ticket.closed_at = datetime.now()
+
+    if stale_tickets:
+        db.session.commit()
+
+
+@inventory_requests_bp.route("/", methods=["GET"])
+@min_role_required("STUDENT")
+def my_daily_request():
+    _close_stale_open_tickets()
+
+    today = datetime.now().date()
+
+    today_ticket = (
+        InventoryRequestTicket.query
+        .options(joinedload(InventoryRequestTicket.items).joinedload(InventoryRequestItem.material))
+        .filter(InventoryRequestTicket.user_id == current_user.id)
+        .filter(InventoryRequestTicket.request_date == today)
+        .order_by(InventoryRequestTicket.created_at.desc())
+        .first()
+    )
+
+    history = (
+        InventoryRequestTicket.query
+        .filter(InventoryRequestTicket.user_id == current_user.id)
+        .order_by(InventoryRequestTicket.request_date.desc(), InventoryRequestTicket.created_at.desc())
+        .limit(20)
+        .all()
+    )
+
+    materials = (
+        Material.query
+        .filter(func.lower(func.coalesce(Material.status, "")) != "baja")
+        .filter(Material.career_id == current_user.career_id if _is_student_role(current_user.role) else True)
+        .order_by(Material.name.asc())
+        .all()
+    )
+    materials_json = json.dumps([
+        {
+            "id": m.id,
+            "name": m.name,
+            "pieces_qty": m.pieces_qty if m.pieces_qty is not None else 0,
+        }
+        for m in materials
+    ])
+
+    return render_template(
+        "inventory_requests/my_daily_request.html",
+        today_ticket=today_ticket,
+        history=history,
+        materials=materials,
+        materials_json=materials_json,
+        active_page="inventory_requests",
+    )
+
+
+@inventory_requests_bp.route("/add", methods=["POST"])
+@min_role_required("STUDENT")
+def add_to_daily_request():
+    _close_stale_open_tickets()
+
+    today = datetime.now().date()
+
+    material_ids = request.form.getlist("material_id[]")
+    quantities = request.form.getlist("quantity[]")
+
+    parsed_items = []
+    for i in range(len(material_ids)):
+        try:
+            material_id = int(material_ids[i])
+            qty = int(quantities[i])
+        except (ValueError, IndexError):
+            continue
+
+        if qty <= 0:
+            flash("Cantidad inválida: debe ser mayor a cero.", "error")
+            return redirect(url_for("inventory_requests.my_daily_request"))
+
+        material = Material.query.get(material_id)
+        if not material:
+            flash("Uno de los materiales seleccionados no existe.", "error")
+            return redirect(url_for("inventory_requests.my_daily_request"))
+        if (material.status or "").strip().lower() == "baja":
+            flash(f"{material.name}: el material está en baja y no se puede solicitar.", "error")
+            return redirect(url_for("inventory_requests.my_daily_request"))
+        if _is_student_role(current_user.role) and material.career_id != current_user.career_id:
+            flash(f"{material.name}: no pertenece a tu carrera.", "error")
+            return redirect(url_for("inventory_requests.my_daily_request"))
+
+        if material.pieces_qty is not None and qty > material.pieces_qty:
+            flash(f"{material.name}: solo hay {material.pieces_qty} disponibles.", "error")
+            return redirect(url_for("inventory_requests.my_daily_request"))
+
+        parsed_items.append((material, qty))
+
+    if not parsed_items:
+        flash("Agrega al menos un material válido con cantidad positiva.", "error")
+        return redirect(url_for("inventory_requests.my_daily_request"))
+
+    ticket = (
+        InventoryRequestTicket.query
+        .filter(InventoryRequestTicket.user_id == current_user.id)
+        .filter(InventoryRequestTicket.request_date == today)
+        .filter(InventoryRequestTicket.status.in_([STATUS_OPEN, STATUS_READY]))
+        .order_by(InventoryRequestTicket.created_at.desc())
+        .first()
+    )
+
+    created_new = False
+    if not ticket:
+        ticket = InventoryRequestTicket(
+            user_id=current_user.id,
+            request_date=today,
+            status=STATUS_OPEN,
+        )
+        db.session.add(ticket)
+        db.session.flush()
+        created_new = True
+
+    for material, qty in parsed_items:
+        existing_item = InventoryRequestItem.query.filter_by(
+            ticket_id=ticket.id,
+            material_id=material.id,
+        ).first()
+
+        if existing_item:
+            existing_item.quantity_requested += qty
+        else:
+            db.session.add(
+                InventoryRequestItem(
+                    ticket_id=ticket.id,
+                    material_id=material.id,
+                    quantity_requested=qty,
+                )
+            )
+
+    if ticket.status == STATUS_READY:
+        ticket.status = STATUS_OPEN
+        ticket.ready_at = None
+        _notify_admins_for_ticket(
+            ticket,
+            f"El usuario {current_user.email} actualizó el pedido diario #{ticket.id}; requiere nueva revisión.",
+        )
+    elif created_new:
+        _notify_admins_for_ticket(
+            ticket,
+            f"El usuario {current_user.email} creó el pedido diario #{ticket.id}.",
+        )
+
+    log_event(
+        module="INVENTORY_REQUESTS",
+        action="INVENTORY_DAILY_REQUEST_UPDATED" if not created_new else "INVENTORY_DAILY_REQUEST_CREATED",
+        user_id=current_user.id,
+        entity_label=f"InventoryRequestTicket #{ticket.id}",
+        description=f"Pedido diario {'actualizado' if not created_new else 'creado'}",
+        metadata={"ticket_id": ticket.id, "request_date": str(ticket.request_date)},
+    )
+
+    db.session.commit()
+
+    if created_new:
+        flash(f"Pedido del día creado (ticket #{ticket.id}).", "success")
+    else:
+        flash(f"Pedido actualizado en el ticket #{ticket.id}.", "success")
+
+    return redirect(url_for("inventory_requests.my_daily_request"))
+
+
+@inventory_requests_bp.route("/admin", methods=["GET"])
+@min_role_required("ADMIN")
+def admin_daily_requests():
+    _close_stale_open_tickets()
+
+    tickets = (
+        InventoryRequestTicket.query
+        .options(
+            joinedload(InventoryRequestTicket.user),
+            joinedload(InventoryRequestTicket.items).joinedload(InventoryRequestItem.material),
+        )
+        .filter(InventoryRequestTicket.status.in_([STATUS_OPEN, STATUS_READY]))
+        .order_by(InventoryRequestTicket.request_date.desc(), InventoryRequestTicket.created_at.asc())
+        .all()
+    )
+
+    return render_template(
+        "inventory_requests/admin_list.html",
+        tickets=tickets,
+        active_page="inventory_requests",
+    )
+
+
+@inventory_requests_bp.route("/admin/<int:ticket_id>", methods=["GET"])
+@min_role_required("ADMIN")
+def admin_ticket_detail(ticket_id: int):
+    _close_stale_open_tickets()
+
+    ticket = (
+        InventoryRequestTicket.query
+        .options(
+            joinedload(InventoryRequestTicket.user),
+            joinedload(InventoryRequestTicket.items).joinedload(InventoryRequestItem.material),
+        )
+        .filter(InventoryRequestTicket.id == ticket_id)
+        .first()
+    )
+
+    if not ticket:
+        flash("Pedido no encontrado.", "error")
+        return redirect(url_for("inventory_requests.admin_daily_requests"))
+
+    return render_template(
+        "inventory_requests/admin_detail.html",
+        ticket=ticket,
+        active_page="inventory_requests",
+    )
+
+
+@inventory_requests_bp.route("/admin/<int:ticket_id>/ready", methods=["POST"])
+@min_role_required("ADMIN")
+def admin_mark_ready(ticket_id: int):
+    _close_stale_open_tickets()
+
+    ticket = InventoryRequestTicket.query.get(ticket_id)
+    if not ticket:
+        flash("Pedido no encontrado.", "error")
+        return redirect(url_for("inventory_requests.admin_daily_requests"))
+
+    if ticket.status == STATUS_CLOSED:
+        flash("No puedes marcar como listo un pedido cerrado.", "error")
+        return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
+
+    ticket.status = STATUS_READY
+    ticket.ready_at = datetime.now()
+
+    notification = Notification(
+        user_id=ticket.user_id,
+        title="Pedido listo para recoger",
+        message=f"Tu pedido diario #{ticket.id} está listo para recoger.",
+        link=url_for("inventory_requests.my_daily_request"),
+    )
+    db.session.add(notification)
+    log_event(
+        module="INVENTORY_REQUESTS",
+        action="INVENTORY_DAILY_REQUEST_READY",
+        user_id=current_user.id,
+        entity_label=f"InventoryRequestTicket #{ticket.id}",
+        description=f"Ticket diario #{ticket.id} marcado listo para recoger",
+        metadata={"ticket_id": ticket.id, "target_user_id": ticket.user_id},
+    )
+
+    db.session.commit()
+    publish_notification_created(notification)
+
+    flash("Pedido marcado como listo y usuario notificado.", "success")
+    return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
+
+
+@inventory_requests_bp.route("/admin/<int:ticket_id>/close", methods=["POST"])
+@min_role_required("ADMIN")
+def admin_close_ticket(ticket_id: int):
+    _close_stale_open_tickets()
+
+    ticket = InventoryRequestTicket.query.get(ticket_id)
+    if not ticket:
+        flash("Pedido no encontrado.", "error")
+        return redirect(url_for("inventory_requests.admin_daily_requests"))
+
+    if ticket.status == STATUS_CLOSED:
+        flash("El pedido ya está cerrado.", "warning")
+        return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
+
+    ticket.status = STATUS_CLOSED
+    ticket.closed_at = datetime.now()
+    log_event(
+        module="INVENTORY_REQUESTS",
+        action="INVENTORY_DAILY_REQUEST_CLOSED",
+        user_id=current_user.id,
+        entity_label=f"InventoryRequestTicket #{ticket.id}",
+        description=f"Ticket diario #{ticket.id} cerrado",
+        metadata={"ticket_id": ticket.id, "target_user_id": ticket.user_id},
+    )
+
+    db.session.commit()
+
+    flash("Pedido cerrado correctamente.", "success")
+    return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))

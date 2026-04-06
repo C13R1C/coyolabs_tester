@@ -1,0 +1,51 @@
+{% extends "layouts/student_base.html" %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Foro", url_for('forum.forum_home'))] %}
+{% block title %}Foro{% endblock %}
+
+{% block content %}
+<header class="topbar">
+  <div class="topbar-left">
+    <p class="page-kicker">Comunidad</p>
+    <h1>Foro de discusión</h1>
+    <p class="page-subtitle">Comparte dudas y recomendaciones sobre laboratorios, materiales y software.</p>
+  </div>
+  <div class="topbar-actions" style="display:flex; gap:8px;">
+    <a class="btn btn-ghost" href="{{ url_for('forum.forum_home') }}">Todas</a>
+    <a class="btn btn-gold" href="{{ url_for('forum.create_post') }}">Nueva publicación</a>
+  </div>
+</header>
+
+<section class="toolbar-card" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+  <span class="text-dim">Categorías:</span>
+  {% for c in categories %}
+    <a class="btn {% if selected_category == c %}btn-gold{% else %}btn-ghost{% endif %}" href="{{ url_for('forum.forum_home', category=c) }}">{{ c }}</a>
+  {% endfor %}
+</section>
+
+{% if posts %}
+<section class="table-card" style="display:flex; flex-direction:column; gap:12px;">
+  {% for post in posts %}
+    <a class="toolbar-card" href="{{ url_for('forum.post_detail', post_id=post.id) }}" style="text-decoration:none; margin-bottom:0; {% if post.is_hidden %}opacity:.65;{% endif %}">
+      <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap;">
+        <div>
+          <div style="display:flex; gap:8px; align-items:center; margin-bottom:6px;">
+            <strong>{{ post.title }}</strong>
+            <span class="status-badge status-neutral">{{ post.category }}</span>
+            {% if post.is_anonymous %}<span class="status-badge status-warn">ANÓNIMO</span>{% endif %}
+            {% if post.is_hidden %}<span class="status-badge status-danger">OCULTA</span>{% endif %}
+          </div>
+          <div class="text-dim">{{ post.content[:180] }}{% if post.content|length > 180 %}...{% endif %}</div>
+          <div class="text-dim" style="margin-top:6px;">Autor: {{ author_label_fn(post.author, post.is_anonymous) }} · {{ post.created_at }}</div>
+        </div>
+      </div>
+    </a>
+  {% endfor %}
+</section>
+{% else %}
+<section class="empty-state">
+  <i class="ph ph-chat-circle-text empty-icon"></i>
+  <h3>Sin publicaciones</h3>
+  <p>Empieza la conversación creando la primera publicación.</p>
+</section>
+{% endif %}
+{% endblock %}

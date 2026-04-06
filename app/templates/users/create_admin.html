@@ -1,0 +1,46 @@
+{% extends "layouts/student_base.html" %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Administración usuarios", url_for('users.admin_panel')), ("Crear administrador", url_for('users.create_admin_account'))] %}
+{% block title %}Crear administrador{% endblock %}
+
+{% block content %}
+<header class="topbar">
+  <div class="topbar-left">
+    <p class="page-kicker">Administrador</p>
+    <h1>Crear cuenta de administrador</h1>
+    <p class="page-subtitle">Crea credenciales iniciales para un nuevo administrador.</p>
+  </div>
+</header>
+
+<section class="table-card">
+  <form method="post" class="toolbar" style="grid-template-columns: 1fr; max-width: 560px;">
+    <div class="toolbar-group">
+      <label>Email institucional</label>
+      <div class="search-box">
+        <i class="ph ph-envelope search-icon"></i>
+        <input type="email" name="email" required>
+      </div>
+    </div>
+
+    <div class="toolbar-group">
+      <label>Nombre (opcional)</label>
+      <div class="search-box">
+        <i class="ph ph-user search-icon"></i>
+        <input type="text" name="full_name">
+      </div>
+    </div>
+
+    <div class="toolbar-group">
+      <label>Contraseña inicial</label>
+      <div class="search-box">
+        <i class="ph ph-lock search-icon"></i>
+        <input type="password" name="password" required>
+      </div>
+    </div>
+
+    <div class="toolbar-actions">
+      <button type="submit" class="btn btn-gold">Crear administrador</button>
+      <a href="{{ url_for('users.admin_panel') }}" class="btn btn-ghost">Cancelar</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

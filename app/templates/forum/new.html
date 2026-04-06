@@ -1,0 +1,64 @@
+{% extends "layouts/student_base.html" %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Foro", url_for('forum.forum_home')), ("Nueva publicación", url_for('forum.create_post'))] %}
+{% block title %}Nueva publicación{% endblock %}
+
+{% block content %}
+<style>
+.forum-new-form{
+  display: grid;
+  gap: 12px;
+}
+
+.forum-new-actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+@media (max-width: 768px){
+  .forum-new-actions .btn{
+    width: 100%;
+  }
+}
+</style>
+<header class="topbar">
+  <div class="topbar-left">
+    <p class="page-kicker">Foro</p>
+    <h1>Nueva publicación</h1>
+  </div>
+</header>
+
+<section class="table-card">
+  <form method="post" class="forum-new-form">
+    <div class="toolbar-group">
+      <label for="post_title">Título</label>
+      <div class="search-box">
+        <i class="ph ph-note-pencil search-icon"></i>
+        <input id="post_title" type="text" name="title" maxlength="180" required>
+      </div>
+    </div>
+
+    <div class="toolbar-group">
+      <label for="post_category">Categoría</label>
+      <div class="select-wrap">
+      <select id="post_category" name="category">
+        {% for c in categories %}
+          <option value="{{ c }}">{{ c }}</option>
+        {% endfor %}
+      </select>
+      <i class="ph ph-caret-down select-arrow"></i>
+      </div>
+    </div>
+
+    <div class="toolbar-group">
+      <label for="post_content">Contenido</label>
+      <textarea id="post_content" class="form-control" name="content" rows="7" required></textarea>
+    </div>
+
+    <div class="forum-new-actions">
+      <button class="btn btn-gold" type="submit">Publicar</button>
+      <a class="btn btn-ghost" href="{{ url_for('forum.forum_home') }}">Cancelar</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

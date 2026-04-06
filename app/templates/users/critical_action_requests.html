@@ -1,0 +1,78 @@
+{% extends "layouts/student_base.html" %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Solicitudes críticas", url_for('users.critical_action_requests'))] %}
+{% block title %}Solicitudes críticas{% endblock %}
+
+{% block content %}
+<header class="topbar">
+  <div class="topbar-left">
+    <p class="page-kicker">Gobernanza</p>
+    <h1>Solicitudes de acciones críticas</h1>
+    <p class="page-subtitle">
+      {% if is_superadmin %}
+      El administrador principal puede aprobar o rechazar acciones críticas de administración.
+      {% else %}
+      Consulta el estado de tus solicitudes críticas enviadas a administración.
+      {% endif %}
+    </p>
+  </div>
+</header>
+
+<section class="table-card">
+  {% if requests|length == 0 %}
+    <p>No hay solicitudes críticas registradas.</p>
+  {% else %}
+  <div class="table-wrap">
+    <table class="inventory-table" style="min-width: 1080px;">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Solicitante</th>
+          <th>Usuario objetivo</th>
+          <th>Acción</th>
+          <th>Estado</th>
+          <th>Creada</th>
+          <th>Revisión</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for req in requests %}
+        <tr>
+          <td>#{{ req.id }}</td>
+          <td>{{ req.requester.email if req.requester else ('ID ' ~ req.requester_id) }}</td>
+          <td>{{ req.target_user.email if req.target_user else ('ID ' ~ req.target_user_id) }}</td>
+          <td>{{ action_labels.get(req.action_type, req.action_type) }}</td>
+          <td>
+            <span class="status-badge {% if req.status == 'PENDING' %}status-warn{% elif req.status == 'APPROVED' %}status-ok{% else %}status-bad{% endif %}">
+              {{ req.status|status_label }}
+            </span>
+          </td>
+          <td>{{ req.created_at }}</td>
+          <td>
+            {% if req.reviewed_at %}
+              {{ req.reviewed_at }}<br>
+              <small>{{ req.reviewer.email if req.reviewer else '-' }}</small>
+            {% else %}
+              -
+            {% endif %}
+          </td>
+          <td>
+            {% if is_superadmin and req.status == 'PENDING' %}
+              <form method="post" action="{{ url_for('users.approve_critical_action_request', request_id=req.id) }}" style="display:inline-block;">
+                <button type="submit" class="btn btn-gold">Aprobar</button>
+              </form>
+              <form method="post" action="{{ url_for('users.reject_critical_action_request', request_id=req.id) }}" style="display:inline-block; margin-left:6px;">
+                <button type="submit" class="btn btn-ghost">Rechazar</button>
+              </form>
+            {% else %}
+              -
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

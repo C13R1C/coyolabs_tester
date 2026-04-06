@@ -1,0 +1,279 @@
+{% extends "layouts/student_base.html" %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Reportes", url_for('reports.reports_home')), (report_title, request.path)] %}
+{% block title %}{{ report_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  .report-view-page{
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .report-view-header{
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .report-view-actions{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .report-view-filters{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 12px;
+    margin-top: 4px;
+  }
+  .report-view-filters .toolbar-group{
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .report-columns-card{
+    margin-top: 12px;
+    border: 1px dashed var(--stroke-strong);
+    border-radius: 14px;
+    background: rgba(255,255,255,0.2);
+    padding: 12px;
+  }
+  .report-columns-list{
+    margin-top: 10px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 8px;
+  }
+  .report-columns-list label{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: .9rem;
+    color: var(--text-soft);
+  }
+
+  .report-view-meta{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    color: var(--text-dim);
+    font-size: 0.95rem;
+  }
+
+  .report-view-card{
+    background: linear-gradient(180deg, var(--panel-2), var(--panel));
+    border: 1px solid var(--stroke);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-lg);
+    padding: 18px;
+  }
+
+  .report-view-topbar{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+
+  .report-view-topbar h3{
+    margin: 0;
+    color: var(--text);
+    font-size: 1.3rem;
+  }
+
+  .report-count{
+    color: var(--text-dim);
+    font-weight: 700;
+    font-size: 0.92rem;
+  }
+
+  .report-table-wrap{
+    overflow: auto;
+    border: 1px solid var(--stroke);
+    border-radius: 18px;
+    background: rgba(255,255,255,0.26);
+    max-height: 72vh;
+  }
+
+  .report-table{
+    width: 100%;
+    min-width: 1200px;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .report-table thead th{
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: linear-gradient(180deg, rgba(226,193,90,0.26), rgba(199,159,51,0.14));
+    color: #5b4410;
+    text-align: left;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--stroke-strong);
+    font-size: 0.92rem;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  .report-table tbody td{
+    padding: 16px 18px;
+    border-bottom: 1px solid rgba(102,81,45,0.08);
+    color: var(--text-soft);
+    vertical-align: top;
+    font-size: 0.95rem;
+    background: rgba(255,255,255,0.14);
+    line-height: 1.45;
+    word-break: break-word;
+  }
+
+  .report-table tbody tr:hover td{
+    background: rgba(255,255,255,0.28);
+  }
+
+  .report-table tbody tr:last-child td{
+    border-bottom: none;
+  }
+
+  .empty-report{
+    padding: 26px 20px;
+    border: 1px dashed var(--stroke-strong);
+    border-radius: 16px;
+    background: rgba(255,255,255,0.22);
+    color: var(--text-soft);
+  }
+
+  .empty-report strong{
+    display: block;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+
+  @media (max-width: 768px){
+    .report-view-card{
+      padding: 14px;
+    }
+
+    .report-view-topbar h3{
+      font-size: 1.1rem;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="report-view-page">
+  <header class="topbar report-view-header">
+    <div>
+      <p class="page-kicker">Reporte</p>
+      <h1>{{ report_title }}</h1>
+      {% if report_description %}
+        <p class="page-subtitle">{{ report_description }}</p>
+      {% endif %}
+    </div>
+
+    <div class="report-view-actions">
+      <a class="btn btn-ghost" href="{{ url_for('reports.reports_home') }}">
+        ← Volver a reportes
+      </a>
+      <a class="btn btn-ghost" href="{{ download_url }}">
+        Descargar CSV
+      </a>
+      {% if download_excel_url %}
+      <a class="btn btn-gold" href="{{ download_excel_url }}">
+        Descargar Excel
+      </a>
+      {% endif %}
+      {% if download_pdf_url %}
+      <a class="btn btn-ghost" href="{{ download_pdf_url }}">
+        Descargar PDF
+      </a>
+      {% endif %}
+    </div>
+  </header>
+
+  <section class="toolbar-card">
+    <form method="get" action="{{ request.path }}">
+      {% if filter_fields %}
+      <div class="report-view-filters">
+        {% for field in filter_fields %}
+          <div class="toolbar-group">
+            <label for="filter_{{ field.name }}">{{ field.label }}</label>
+            <input
+              class="form-control"
+              id="filter_{{ field.name }}"
+              type="{{ field.type or 'text' }}"
+              name="{{ field.name }}"
+              value="{{ field.value or '' }}"
+              {% if field.placeholder %}placeholder="{{ field.placeholder }}"{% endif %}
+            >
+          </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <details class="report-columns-card" open>
+        <summary><strong>Columnas visibles y exportables</strong></summary>
+        <div class="report-columns-list">
+          {% for col in all_columns %}
+            <label>
+              <input type="checkbox" name="cols" value="{{ col }}" {% if col in selected_columns %}checked{% endif %}>
+              <span>{{ col }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </details>
+
+      <div class="toolbar-actions" style="margin-top:12px;">
+        <button type="submit" class="btn btn-gold">Aplicar filtros</button>
+        <a class="btn btn-ghost" href="{{ request.path }}">Limpiar</a>
+      </div>
+    </form>
+  </section>
+
+  <div class="report-view-meta">
+    <span>{{ rows|length }} registros</span>
+    {% if extra_meta %}
+      <span>{{ extra_meta }}</span>
+    {% endif %}
+  </div>
+
+  <section class="report-view-card">
+    <div class="report-view-topbar">
+      <h3>Vista completa</h3>
+      <span class="report-count">{{ columns|length }} columnas</span>
+    </div>
+
+    {% if rows and columns %}
+      <div class="report-table-wrap">
+        <table class="report-table">
+          <thead>
+            <tr>
+              {% for col in columns %}
+                <th>{{ col }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in rows %}
+              <tr>
+                {% for value in row %}
+                  <td>{{ value if value is not none and value != "" else "-" }}</td>
+                {% endfor %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty-report">
+        <strong>Sin datos.</strong>
+        No hay información para mostrar en este reporte.
+      </div>
+    {% endif %}
+  </section>
+</section>
+{% endblock %}

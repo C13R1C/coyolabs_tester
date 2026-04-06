@@ -1,0 +1,146 @@
+{% extends "layouts/student_base.html" %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Adeudos", url_for('debts.admin_list'))] %}
+{% block title %}Adeudos (Administración){% endblock %}
+
+{% block content %}
+
+<header class="topbar">
+  <div class="topbar-left">
+    <p class="page-kicker">Adeudos</p>
+    <h1>Gestión de adeudos</h1>
+    <p class="page-subtitle">Control total de deudores, materiales y estados.</p>
+  </div>
+</header>
+
+<section class="toolbar-card">
+  <div class="toolbar-actions">
+    <a href="{{ url_for('root_home') }}" class="btn btn-ghost">
+      <i class="ph ph-arrow-left"></i><span>Volver</span>
+    </a>
+  </div>
+</section>
+
+<!-- 🔥 RESUMEN PRO -->
+<section class="stats-row">
+  <article class="stat-card">
+    <span class="stat-label">Adeudos abiertos</span>
+    <strong>{{ debts | selectattr("status","equalto","OPEN") | list | length }}</strong>
+  </article>
+
+  <article class="stat-card">
+    <span class="stat-label">Adeudos pagados</span>
+    <strong>{{ debts | selectattr("status","equalto","PAID") | list | length }}</strong>
+  </article>
+
+  <article class="stat-card">
+    <span class="stat-label">Usuarios con adeudos</span>
+    <strong>
+      {{ debts | map(attribute="user_id") | unique | list | length }}
+    </strong>
+  </article>
+</section>
+
+<!-- 🔥 ACCIONES -->
+<section class="toolbar-card">
+  <div class="toolbar-actions">
+    <a href="{{ url_for('debts.admin_create') }}" class="btn btn-gold">
+      <i class="ph ph-plus-circle"></i><span>Crear adeudo</span>
+    </a>
+
+    <a href="{{ url_for('debts.my_debts') }}" class="btn btn-ghost">
+      <i class="ph ph-user"></i><span>Vista usuario</span>
+    </a>
+  </div>
+</section>
+
+<!-- 🔥 FILTRO -->
+<section class="toolbar-card">
+  <div class="toolbar-actions" style="gap:10px;">
+    <button class="btn btn-ghost" onclick="filterTable('ALL')">Todos</button>
+    <button class="btn btn-ghost" onclick="filterTable('OPEN')">Abiertos</button>
+    <button class="btn btn-ghost" onclick="filterTable('PAID')">Pagados</button>
+  </div>
+</section>
+
+<div id="debts-admin-list-container">
+  {% if debts %}
+  <section class="table-card">
+    <div class="table-wrap">
+      <table class="inventory-table" id="debtTable" style="min-width: 1100px;">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Usuario</th>
+            <th>Estado</th>
+            <th>Material</th>
+            <th>Razón</th>
+            <th>Fecha</th>
+            <th>Acción</th>
+          </tr>
+        </thead>
+
+        <tbody>
+        {% for d in debts %}
+          <tr data-status="{{ d.status|status_label }}">
+            <td>{{ d.id }}</td>
+
+            <td>
+              <strong>{{ d.user.email }}</strong>
+            </td>
+
+            <td>
+              <span class="status-badge {% if d.status == 'OPEN' %}status-bad{% else %}status-ok{% endif %}">
+                {{ d.status|status_label }}
+              </span>
+            </td>
+
+            <td>
+              {% if d.material %}
+                {{ d.material.name }} ({{ d.material.id }})
+              {% else %}
+                -
+              {% endif %}
+            </td>
+
+            <td>{{ d.reason or '-' }}</td>
+
+            <td>{{ d.created_at }}</td>
+
+            <td>
+              {% if d.status == "OPEN" %}
+                <form method="post" action="{{ url_for('debts.admin_close', debt_id=d.id) }}">
+                  <button type="submit" class="btn btn-gold">Marcar pagado</button>
+                </form>
+              {% else %}
+                <span class="status-badge status-neutral">Pagado</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% else %}
+  <section class="empty-state">
+    <i class="ph ph-warning empty-icon"></i>
+    <h3>Sin adeudos</h3>
+    <p>No hay adeudos registrados.</p>
+  </section>
+  {% endif %}
+</div>
+
+<!-- 🔥 SCRIPT FILTRO -->
+<script>
+function filterTable(status) {
+  document.querySelectorAll("#debtTable tbody tr").forEach(row => {
+    if (status === "ALL") {
+      row.style.display = "";
+    } else {
+      row.style.display = row.dataset.status === status ? "" : "none";
+    }
+  });
+}
+</script>
+
+{% endblock %}

@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>RA en pantalla completa</title>
+
+  <style>
+    :root{
+      --bg: #000;
+      --panel: rgba(10, 18, 24, 0.76);
+      --panel-strong: rgba(8, 15, 20, 0.92);
+      --stroke: rgba(255,255,255,0.12);
+      --text: #eef7fb;
+      --text-soft: #b5c7d1;
+      --cyan: #63f3ff;
+      --green: #71f5aa;
+      --yellow: #f1ca5b;
+      --red: #ff7c8e;
+      --shadow: 0 16px 40px rgba(0,0,0,0.35);
+    }
+
+    *{
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body{
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: "Segoe UI", Inter, Arial, sans-serif;
+      color: var(--text);
+    }
+
+    .ar-app{
+      position: fixed;
+      inset: 0;
+      background: #000;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    #reader{
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      background: #000;
+    }
+
+    #reader video{
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: cover !important;
+      filter: saturate(1.06) contrast(1.03);
+    }
+
+    #reader__scan_region{
+      width: 100% !important;
+      height: 100% !important;
+      background: transparent !important;
+      border: none !important;
+    }
+
+    #reader img{
+      display: none !important;
+    }
+
+    .camera-fx{
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .camera-fx::before{
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at center, transparent 20%, rgba(0,0,0,0.10) 68%, rgba(0,0,0,0.34) 100%),
+        linear-gradient(180deg, rgba(99,243,255,0.02), transparent 18%, transparent 82%, rgba(99,243,255,0.02));
+    }
+
+    .camera-fx::after{
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.02) 0%, transparent 10%, transparent 90%, rgba(255,255,255,0.02) 100%);
+      mix-blend-mode: screen;
+    }
+
+    .hud{
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    .top-bar{
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      right: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .top-left,
+    .top-right{
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      pointer-events: auto;
+    }
+
+    .status-pill,
+    .action-pill,
+    .back-pill{
+      backdrop-filter: blur(12px);
+      background: var(--panel);
+      border: 1px solid var(--stroke);
+      border-radius: 999px;
+      padding: 10px 14px;
+      box-shadow: var(--shadow);
+      pointer-events: auto;
+    }
+
+    .status-pill{
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      max-width: min(60vw, 460px);
+      animation: floatSoft 3.6s ease-in-out infinite;
+    }
+
+    .back-pill{
+      position: relative;
+      overflow: hidden;
+    }
+
+    .back-pill::before{
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(99,243,255,0.12), transparent);
+      transform: translateX(-100%);
+      transition: transform .45s ease;
+    }
+
+    .back-pill:hover::before{
+      transform: translateX(100%);
+    }
+
+    .status-dot{
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--yellow);
+      box-shadow: 0 0 14px rgba(241,202,91,0.65);
+      flex-shrink: 0;
+      animation: pulseDot 1.8s ease-in-out infinite;
+    }
+
+    .status-text{
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.3;
+    }
+
+    .action-pill button,
+    .back-pill button{
+      border: none;
+      background: transparent;
+      color: var(--text);
+      font-weight: 800;
+      font-size: 0.92rem;
+      cursor: pointer;
+      letter-spacing: 0.03em;
+    }
+
+    .back-pill button{
+      color: var(--cyan);
+      text-shadow: 0 0 10px rgba(99,243,255,0.18);
+    }
+
+    .scan-frame{
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: min(72vw, 320px);
+      aspect-ratio: 1 / 1;
+      transform: translate(-50%, -50%);
+      z-index: 3;
+      pointer-events: none;
+      animation: reticleBreath 3s ease-in-out infinite;
+    }
+
+    .scan-ring{
+      position: absolute;
+      inset: 12%;
+      border-radius: 22px;
+      border: 1px solid rgba(99,243,255,0.18);
+      box-shadow: 0 0 18px rgba(99,243,255,0.10), inset 0 0 18px rgba(99,243,255,0.05);
+    }
+
+    .scan-corner{
+      position: absolute;
+      width: 48px;
+      height: 48px;
+      border-color: var(--cyan);
+      filter: drop-shadow(0 0 10px rgba(99,243,255,0.6));
+    }
+
+    .scan-corner.tl{
+      top: 0;
+      left: 0;
+      border-top: 4px solid;
+      border-left: 4px solid;
+      border-top-left-radius: 14px;
+    }
+
+    .scan-corner.tr{
+      top: 0;
+      right: 0;
+      border-top: 4px solid;
+      border-right: 4px solid;
+      border-top-right-radius: 14px;
+    }
+
+    .scan-corner.bl{
+      bottom: 0;
+      left: 0;
+      border-bottom: 4px solid;
+      border-left: 4px solid;
+      border-bottom-left-radius: 14px;
+    }
+
+    .scan-corner.br{
+      bottom: 0;
+      right: 0;
+      border-bottom: 4px solid;
+      border-right: 4px solid;
+      border-bottom-right-radius: 14px;
+    }
+
+    .scan-line{
+      position: absolute;
+      left: 8%;
+      right: 8%;
+      top: 12%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+      box-shadow:
+        0 0 10px rgba(99,243,255,0.85),
+        0 0 22px rgba(99,243,255,0.28);
+      animation: scanMove 2.6s linear infinite;
+    }
+
+    .scan-center-dot{
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--cyan);
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 14px rgba(99,243,255,0.65);
+    }
+
+    .scan-helper{
+      position: absolute;
+      left: 50%;
+      top: calc(50% + min(72vw, 320px) / 2 + 18px);
+      transform: translateX(-50%);
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(8,15,20,0.68);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: var(--text-soft);
+      font-size: 0.84rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      z-index: 3;
+      pointer-events: none;
+      backdrop-filter: blur(10px);
+      animation: helperBlink 2.8s ease-in-out infinite;
+    }
+
+    .bottom-panel{
+      position: absolute;
+      left: 14px;
+      right: 14px;
+      bottom: 14px;
+      display: grid;
+      gap: 12px;
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    .quick-info{
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .info-box{
+      backdrop-filter: blur(12px);
+      background: var(--panel);
+      border: 1px solid var(--stroke);
+      border-radius: 18px;
+      padding: 12px 14px;
+      box-shadow: var(--shadow);
+      min-height: 66px;
+      animation: floatSoft 4.8s ease-in-out infinite;
+    }
+
+    .info-box:nth-child(2){ animation-delay: .2s; }
+    .info-box:nth-child(3){ animation-delay: .35s; }
+    .info-box:nth-child(4){ animation-delay: .5s; }
+
+    .info-box span{
+      display: block;
+      color: var(--text-soft);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .info-box strong{
+      color: var(--text);
+      font-size: 0.95rem;
+      line-height: 1.35;
+      word-break: break-word;
+    }
+
+    #arCard{
+      position: absolute;
+      z-index: 4;
+      left: 50%;
+      top: 50%;
+      min-width: 220px;
+      max-width: 320px;
+      padding: 14px;
+      border-radius: 18px;
+      backdrop-filter: blur(14px);
+      background: var(--panel-strong);
+      border: 1px solid rgba(99,243,255,0.28);
+      box-shadow:
+        0 0 18px rgba(99,243,255,0.14),
+        0 18px 40px rgba(0,0,0,0.35);
+      display: none;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+
+    #arCard.show{
+      display: block;
+      animation: cardPop .38s ease;
+    }
+
+    #arCard h3{
+      margin: 0 0 10px;
+      font-size: 1.04rem;
+      color: var(--text);
+    }
+
+    .ar-row{
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      padding-bottom: 8px;
+      margin-bottom: 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .ar-row:last-of-type{
+      margin-bottom: 0;
+    }
+
+    .ar-row strong{
+      color: var(--text-soft);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .ar-row span{
+      color: var(--text);
+      text-align: right;
+      max-width: 58%;
+      font-size: 0.92rem;
+      word-break: break-word;
+    }
+
+    #arMessage{
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(99,243,255,0.10);
+      border: 1px solid rgba(99,243,255,0.18);
+      color: var(--cyan);
+      font-weight: 700;
+      font-size: 0.88rem;
+    }
+
+    .config-panel{
+      position: absolute;
+      top: 66px;
+      right: 14px;
+      width: min(92vw, 330px);
+      z-index: 5;
+      display: none;
+      backdrop-filter: blur(14px);
+      background: var(--panel-strong);
+      border: 1px solid var(--stroke);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      padding: 16px;
+    }
+
+    .config-panel.active{
+      display: grid;
+      gap: 12px;
+      animation: fadeUp .24s ease;
+    }
+
+    .config-panel h2{
+      font-size: 1rem;
+      color: var(--text);
+      margin-bottom: 2px;
+    }
+
+    .config-panel p{
+      color: var(--text-soft);
+      font-size: 0.88rem;
+      line-height: 1.45;
+    }
+
+    .field{
+      display: grid;
+      gap: 6px;
+    }
+
+    .field label{
+      color: var(--text-soft);
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    .field input{
+      width: 100%;
+      height: 46px;
+      border-radius: 12px;
+      border: 1px solid var(--stroke);
+      background: rgba(255,255,255,0.04);
+      color: var(--text);
+      padding: 0 12px;
+      outline: none;
+      font-size: 0.92rem;
+    }
+
+    .field input:focus{
+      border-color: rgba(99,243,255,0.35);
+      box-shadow: 0 0 0 4px rgba(99,243,255,0.08);
+    }
+
+    .config-actions{
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
+    .config-actions button{
+      height: 44px;
+      border: none;
+      border-radius: 12px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .btn-gold{
+      background: linear-gradient(180deg, #63f3ff, #2fd0dd);
+      color: #071116;
+    }
+
+    .btn-ghost{
+      background: rgba(255,255,255,0.04);
+      color: var(--text);
+      border: 1px solid var(--stroke);
+    }
+
+    .scan-flash{
+      position: absolute;
+      inset: 0;
+      z-index: 4;
+      pointer-events: none;
+      opacity: 0;
+      background: radial-gradient(circle at center, rgba(99,243,255,0.22), transparent 36%);
+    }
+
+    .scan-flash.active{
+      animation: flashScan .45s ease;
+    }
+
+    .ripple-layer{
+      position: absolute;
+      inset: 0;
+      z-index: 4;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .tap-ripple{
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 2px solid rgba(99,243,255,0.65);
+      transform: translate(-50%, -50%);
+      animation: rippleOut .7s ease forwards;
+    }
+
+    #debugOut{
+      display: none;
+    }
+
+    @keyframes scanMove{
+      0%{ top: 12%; opacity: 0.7; }
+      50%{ opacity: 1; }
+      100%{ top: 86%; opacity: 0.7; }
+    }
+
+    @keyframes pulseDot{
+      0%,100%{ transform: scale(1); opacity: 1; }
+      50%{ transform: scale(1.22); opacity: .7; }
+    }
+
+    @keyframes reticleBreath{
+      0%,100%{ transform: translate(-50%, -50%) scale(1); }
+      50%{ transform: translate(-50%, -50%) scale(1.015); }
+    }
+
+    @keyframes helperBlink{
+      0%,100%{ opacity: .82; }
+      50%{ opacity: 1; }
+    }
+
+    @keyframes floatSoft{
+      0%,100%{ transform: translateY(0); }
+      50%{ transform: translateY(-2px); }
+    }
+
+    @keyframes cardPop{
+      0%{ opacity: 0; transform: translate(-50%, -44%) scale(.96); }
+      100%{ opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    }
+
+    @keyframes fadeUp{
+      0%{ opacity: 0; transform: translateY(8px); }
+      100%{ opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes flashScan{
+      0%{ opacity: 0; }
+      35%{ opacity: 1; }
+      100%{ opacity: 0; }
+    }
+
+    @keyframes rippleOut{
+      0%{ opacity: .9; transform: translate(-50%, -50%) scale(.3); }
+      100%{ opacity: 0; transform: translate(-50%, -50%) scale(5.2); }
+    }
+
+    @media (max-width: 760px){
+      .quick-info{
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .status-pill{
+        max-width: 100%;
+      }
+
+      #arCard{
+        min-width: 200px;
+        max-width: 280px;
+      }
+    }
+
+    @media (max-width: 480px){
+      .quick-info{
+        grid-template-columns: 1fr;
+      }
+
+      .top-bar{
+        gap: 8px;
+      }
+
+      .top-left,
+      .top-right{
+        gap: 8px;
+      }
+
+      .status-pill,
+      .action-pill,
+      .back-pill{
+        padding: 9px 12px;
+      }
+
+      .status-text{
+        font-size: .86rem;
+      }
+
+      .scan-helper{
+        font-size: .78rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="ar-app" id="arApp">
+    <div id="reader"></div>
+    <div class="camera-fx"></div>
+    <div class="scan-flash" id="scanFlash"></div>
+    <div class="ripple-layer" id="rippleLayer"></div>
+
+    <div class="hud">
+      <div class="top-bar">
+        <div class="top-left">
+          <div class="back-pill">
+            <button id="backBtn" class="btn btn-ghost" type="button" data-href="{{ url_for('inventory.inventory_list') }}">⟵ Salir al inventario</button>
+          </div>
+
+          <div class="status-pill">
+            <span class="status-dot" id="statusDot"></span>
+            <span class="status-text" id="statusText">Inicializando cámara...</span>
+          </div>
+        </div>
+
+        <div class="top-right">
+          <div class="action-pill">
+            <button id="toggleConfigBtn" class="btn btn-ghost" type="button">Config</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="scan-frame">
+        <span class="scan-ring"></span>
+        <span class="scan-corner tl"></span>
+        <span class="scan-corner tr"></span>
+        <span class="scan-corner bl"></span>
+        <span class="scan-corner br"></span>
+        <span class="scan-line"></span>
+        <span class="scan-center-dot"></span>
+      </div>
+
+      <div class="scan-helper" id="scanHelper">Alinea el QR dentro del recuadro</div>
+
+      <div class="bottom-panel">
+        <div class="quick-info">
+          <div class="info-box">
+            <span>Estado cámara</span>
+            <strong id="cameraState">Pendiente</strong>
+          </div>
+          <div class="info-box">
+            <span>Último QR</span>
+            <strong id="lastQrText">Sin lectura</strong>
+          </div>
+          <div class="info-box">
+            <span>Material</span>
+            <strong id="materialState">Sin carga</strong>
+          </div>
+          <div class="info-box">
+            <span>Última lectura</span>
+            <strong id="lastScanAt">—</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="arCard">
+      <h3 id="matName">Material</h3>
+
+      <div class="ar-row">
+        <strong>Laboratorio</strong>
+        <span id="matLab">—</span>
+      </div>
+
+      <div class="ar-row">
+        <strong>Ubicación</strong>
+        <span id="matLocation">—</span>
+      </div>
+
+      <div class="ar-row">
+        <strong>Piezas</strong>
+        <span id="matPieces">—</span>
+      </div>
+
+      <div class="ar-row">
+        <strong>Estado</strong>
+        <span id="matStatus">—</span>
+      </div>
+
+      <div id="arMessage">Esperando detección...</div>
+    </div>
+
+    <aside class="config-panel" id="configPanel">
+      <h2>Configuración</h2>
+      <p>Ajusta la conexión. Esta vista está pensada para celular y pantalla completa.</p>
+
+      <div class="field">
+        <label for="baseUrl">Base URL</label>
+        <input id="baseUrl" type="text" value="http://127.0.0.1:5000" />
+      </div>
+
+      <div class="field">
+        <label for="apiKey">API Key</label>
+        <input id="apiKey" type="text" value="1seizIZsXnTXMMxvfvvUth0ZRnlb6KtRz-65g8V2TI4" />
+      </div>
+
+      <div class="field">
+        <label for="userEmail">User email</label>
+        <input id="userEmail" type="email" value="24310130@utpn.edu.mx" />
+      </div>
+
+      <div class="config-actions">
+        <button class="btn btn-gold" id="startBtn" type="button">Iniciar</button>
+        <button class="btn btn-ghost" id="stopBtn" type="button">Detener</button>
+      </div>
+    </aside>
+
+    <pre id="debugOut"></pre>
+  </div>
+
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+<script>
+  const $ = (id) => document.getElementById(id);
+
+  const statusText = $("statusText");
+  const statusDot = $("statusDot");
+  const cameraState = $("cameraState");
+  const lastQrText = $("lastQrText");
+  const materialState = $("materialState");
+  const lastScanAt = $("lastScanAt");
+  const scanHelper = $("scanHelper");
+
+  const arApp = $("arApp");
+  const arCard = $("arCard");
+  const arMessage = $("arMessage");
+  const scanFlash = $("scanFlash");
+  const rippleLayer = $("rippleLayer");
+
+  const matName = $("matName");
+  const matLab = $("matLab");
+  const matLocation = $("matLocation");
+  const matPieces = $("matPieces");
+  const matStatus = $("matStatus");
+
+  const configPanel = $("configPanel");
+  const toggleConfigBtn = $("toggleConfigBtn");
+  const startBtn = $("startBtn");
+  const stopBtn = $("stopBtn");
+  const backBtn = $("backBtn");
+
+  const baseUrlInput = $("baseUrl");
+  const apiKeyInput = $("apiKey");
+  const userEmailInput = $("userEmail");
+
+  const debugOut = $("debugOut");
+
+  const STATUS_STYLES = {
+    green: {
+      background: "var(--green)",
+      boxShadow: "0 0 14px rgba(113,245,170,0.8)"
+    },
+    red: {
+      background: "var(--red)",
+      boxShadow: "0 0 14px rgba(255,124,142,0.8)"
+    },
+    yellow: {
+      background: "var(--yellow)",
+      boxShadow: "0 0 14px rgba(241,202,91,0.8)"
+    }
+  };
+
+  const MESSAGE_STYLES = {
+    ok: {
+      color: "var(--green)",
+      borderColor: "rgba(113,245,170,0.18)",
+      background: "rgba(113,245,170,0.10)"
+    },
+    bad: {
+      color: "var(--red)",
+      borderColor: "rgba(255,124,142,0.18)",
+      background: "rgba(255,124,142,0.10)"
+    },
+    warn: {
+      color: "var(--yellow)",
+      borderColor: "rgba(241,202,91,0.18)",
+      background: "rgba(241,202,91,0.10)"
+    },
+    info: {
+      color: "var(--cyan)",
+      borderColor: "rgba(99,243,255,0.18)",
+      background: "rgba(99,243,255,0.10)"
+    }
+  };
+
+  const helperMessages = [
+    "Alinea el QR dentro del recuadro",
+    "Mantén buena luz para lectura estable",
+    "Acerca o aleja el código si no enfoca",
+    "El overlay aparecerá al detectar el material"
+  ];
+
+  let html5Qr = null;
+  let lastMaterialId = "";
+  let lastFetchAt = 0;
+  let helperIndex = 0;
+  let helperInterval = null;
+
+  function safeJsonParse(text, fallback = null) {
+    try {
+      return JSON.parse(text);
+    } catch {
+      return fallback;
+    }
+  }
+
+  async function safeResponseJson(response) {
+    try {
+      return await response.json();
+    } catch {
+      return {};
+    }
+  }
+
+  function log(message, data = null) {
+    const time = new Date().toLocaleTimeString();
+    let text = `[${time}] ${message}`;
+
+    if (data !== null) {
+      try {
+        text += `\n${JSON.stringify(data, null, 2)}`;
+      } catch {
+        text += `\n${String(data)}`;
+      }
+    }
+
+    debugOut.textContent = `${text}\n\n${debugOut.textContent}`;
+    console.log(message, data ?? "");
+  }
+
+  function setStatus(text, color = "yellow") {
+    statusText.textContent = text;
+    const style = STATUS_STYLES[color] || STATUS_STYLES.yellow;
+    statusDot.style.background = style.background;
+    statusDot.style.boxShadow = style.boxShadow;
+  }
+
+  function setCardMessage(text, type = "info") {
+    arMessage.textContent = text;
+    const style = MESSAGE_STYLES[type] || MESSAGE_STYLES.info;
+    arMessage.style.color = style.color;
+    arMessage.style.borderColor = style.borderColor;
+    arMessage.style.background = style.background;
+  }
+
+  function markScanTime() {
+    lastScanAt.textContent = new Date().toLocaleTimeString();
+  }
+
+  function getConfig() {
+    return {
+      baseUrl: baseUrlInput.value.trim().replace(/\/$/, ""),
+      apiKey: apiKeyInput.value.trim(),
+      userEmail: userEmailInput.value.trim().toLowerCase()
+    };
+  }
+
+  function validateConfig() {
+    const { baseUrl, apiKey, userEmail } = getConfig();
+
+    if (!baseUrl) {
+      setStatus("Falta Base URL.", "red");
+      return false;
+    }
+
+    if (!/^https?:\/\//i.test(baseUrl)) {
+      setStatus("Base URL inválida.", "red");
+      return false;
+    }
+
+    if (!apiKey) {
+      setStatus("Falta API Key.", "red");
+      return false;
+    }
+
+    if (!userEmail || !userEmail.includes("@")) {
+      setStatus("User email no válido.", "red");
+      return false;
+    }
+
+    return true;
+  }
+
+  function extractMaterialId(raw) {
+    const text = String(raw || "").trim();
+    log("Intentando extraer materialId de", text);
+
+    if (!text) return null;
+    if (/^\d+$/.test(text)) return Number(text);
+
+    const parsed = safeJsonParse(text);
+    if (parsed?.material_id) return Number(parsed.material_id);
+    if (parsed?.id) return Number(parsed.id);
+
+    const genericMatch = text.match(/material(?:_id)?\D*(\d+)/i);
+    if (genericMatch) return Number(genericMatch[1]);
+
+    const urlMatch = text.match(/[?&]id=(\d+)/i);
+    if (urlMatch) return Number(urlMatch[1]);
+
+    const tailNumber = text.match(/(\d+)(?!.*\d)/);
+    if (tailNumber) return Number(tailNumber[1]);
+
+    return null;
+  }
+
+  function normalizeMaterial(data) {
+    return {
+      name: data.name || data.material_name || "Sin nombre",
+      lab: data.lab || data.lab_name || data.laboratorio || "Sin laboratorio",
+      location: data.location || data.ubicacion || "Sin ubicación",
+      pieces: data.pieces_qty ?? data.pieces_text ?? data.cantidad ?? "N/D",
+      status: data.status || data.estado || "Sin estado"
+    };
+  }
+
+  function renderMaterialCard(data) {
+    const material = normalizeMaterial(data);
+
+    matName.textContent = material.name;
+    matLab.textContent = material.lab;
+    matLocation.textContent = material.location;
+    matPieces.textContent = material.pieces;
+    matStatus.textContent = material.status;
+
+    arCard.classList.remove("show");
+    arCard.style.display = "block";
+    void arCard.offsetWidth;
+    arCard.classList.add("show");
+  }
+
+  function hideMaterialCard() {
+    arCard.classList.remove("show");
+    arCard.style.display = "none";
+  }
+
+  function triggerScanSuccessEffects() {
+    scanFlash.classList.remove("active");
+    void scanFlash.offsetWidth;
+    scanFlash.classList.add("active");
+
+    setTimeout(() => {
+      scanFlash.classList.remove("active");
+    }, 500);
+  }
+
+  function createTapRipple(x, y) {
+    const ripple = document.createElement("span");
+    ripple.className = "tap-ripple";
+    ripple.style.left = `${x}px`;
+    ripple.style.top = `${y}px`;
+    rippleLayer.appendChild(ripple);
+
+    setTimeout(() => ripple.remove(), 750);
+  }
+
+  async function fetchJson(url, options = {}) {
+    const response = await fetch(url, options);
+    const data = await safeResponseJson(response);
+    return { response, data };
+  }
+
+  async function postEvent(materialId, qrText) {
+    const { baseUrl, apiKey, userEmail } = getConfig();
+
+    const payload = {
+      material_id: Number(materialId),
+      event_type: "scan",
+      user_email: userEmail,
+      metadata: {
+        qr_text: qrText,
+        source: "fullscreen_ar"
+      }
+    };
+
+    try {
+      const { response, data } = await fetchJson(`${baseUrl}/api/ra/events`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-API-Key": apiKey
+        },
+        body: JSON.stringify(payload)
+      });
+
+      log("POST /api/ra/events", { status: response.status, data });
+      return response.ok;
+    } catch (error) {
+      log("Error en postEvent", error.message);
+      return false;
+    }
+  }
+
+  async function fetchMaterial(materialId, qrText) {
+    if (!validateConfig()) return;
+
+    const { baseUrl, apiKey } = getConfig();
+
+    try {
+      materialState.textContent = "Consultando...";
+      setStatus(`Consultando material ${materialId}...`, "yellow");
+      setCardMessage("Consultando material...", "warn");
+
+      const { response, data } = await fetchJson(`${baseUrl}/api/ra/materials/${materialId}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "X-API-Key": apiKey
+        }
+      });
+
+      log("GET /api/ra/materials", { status: response.status, data });
+
+      if (!response.ok) {
+        materialState.textContent = "No encontrado";
+        setStatus("Material no encontrado.", "red");
+        setCardMessage("No se pudo obtener el material.", "bad");
+        return;
+      }
+
+      renderMaterialCard(data);
+      materialState.textContent = "Cargado";
+      setStatus("Material detectado correctamente.", "green");
+      setCardMessage("Material detectado y cargado.", "ok");
+      triggerScanSuccessEffects();
+
+      const eventOk = await postEvent(materialId, qrText);
+      if (!eventOk) {
+        setCardMessage("Material cargado, pero el evento no se registró.", "bad");
+      }
+    } catch (error) {
+      materialState.textContent = "Error";
+      setStatus("Error de red consultando material.", "red");
+      setCardMessage("Error de red consultando material.", "bad");
+      log("Error en fetchMaterial", error.message);
+    }
+  }
+
+  async function handleQr(decodedText) {
+    log("QR LEÍDO", decodedText);
+    lastQrText.textContent = decodedText || "Leído";
+    markScanTime();
+    setStatus("QR detectado correctamente.", "green");
+    setCardMessage(`QR leído: ${decodedText}`, "ok");
+    scanHelper.textContent = "Lectura detectada · procesando material";
+
+    const materialId = extractMaterialId(decodedText);
+
+    if (!materialId || Number.isNaN(materialId)) {
+      setStatus("QR leído, pero no contiene material_id usable.", "red");
+      setCardMessage("QR no válido para material.", "bad");
+      return;
+    }
+
+    const now = Date.now();
+    const shouldFetch = materialId !== lastMaterialId || now - lastFetchAt > 2500;
+
+    if (shouldFetch) {
+      lastMaterialId = materialId;
+      lastFetchAt = now;
+      await fetchMaterial(materialId, decodedText);
+    }
+  }
+
+  function getQrBoxSize(viewfinderWidth, viewfinderHeight) {
+    const size = Math.min(viewfinderWidth, viewfinderHeight) * 0.68;
+    return {
+      width: Math.floor(size),
+      height: Math.floor(size)
+    };
+  }
+
+  async function startCamera() {
+    if (!validateConfig()) return;
+
+    await stopCamera();
+
+    try {
+      setStatus("Iniciando cámara...", "yellow");
+      cameraState.textContent = "Iniciando";
+      scanHelper.textContent = "Preparando lector QR...";
+
+      html5Qr = new Html5Qrcode("reader");
+
+      await html5Qr.start(
+        { facingMode: "environment" },
+        {
+          fps: 10,
+          qrbox: getQrBoxSize,
+          disableFlip: false,
+          formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE]
+        },
+        async (decodedText, decodedResult) => {
+          log("Callback de escaneo disparado", { decodedText, decodedResult });
+          await handleQr(decodedText);
+        },
+        () => {}
+      );
+
+      cameraState.textContent = "Activa";
+      setStatus("Cámara activa. Apunta el QR dentro del cuadro.", "green");
+      scanHelper.textContent = "Alinea el QR dentro del recuadro";
+    } catch (error) {
+      cameraState.textContent = "Error";
+      setStatus(`No se pudo iniciar la cámara: ${error.message || error}`, "red");
+      scanHelper.textContent = "No se pudo iniciar el lector";
+      log("Error startCamera", error.message || error);
+      console.error(error);
+    }
+  }
+
+  async function stopCamera() {
+    if (html5Qr) {
+      try {
+        await html5Qr.stop();
+        await html5Qr.clear();
+      } catch (error) {
+        log("Error stopCamera", error.message);
+      } finally {
+        html5Qr = null;
+      }
+    }
+
+    cameraState.textContent = "Detenida";
+    scanHelper.textContent = "Lector detenido";
+    hideMaterialCard();
+  }
+
+  function rotateHelperText() {
+    clearInterval(helperInterval);
+
+    helperInterval = setInterval(() => {
+      if (cameraState.textContent !== "Activa") return;
+      helperIndex = (helperIndex + 1) % helperMessages.length;
+      scanHelper.textContent = helperMessages[helperIndex];
+    }, 2800);
+  }
+
+  function bindEvents() {
+    toggleConfigBtn.addEventListener("click", () => {
+      configPanel.classList.toggle("active");
+    });
+
+    startBtn.addEventListener("click", startCamera);
+    stopBtn.addEventListener("click", stopCamera);
+
+    backBtn.addEventListener("click", async () => {
+      try {
+        await stopCamera();
+      } catch {}
+
+      const href = backBtn.dataset.href || "/inventory/";
+      window.location.href = href;
+    });
+
+    arApp.addEventListener("pointerdown", (event) => {
+      createTapRipple(event.clientX, event.clientY);
+    });
+  }
+
+  function initView() {
+    cameraState.textContent = "Pendiente";
+    materialState.textContent = "Sin carga";
+    lastScanAt.textContent = "—";
+    setStatus("Listo para iniciar.", "yellow");
+    scanHelper.textContent = "Alinea el QR dentro del recuadro";
+    rotateHelperText();
+    log("Vista cargada");
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    bindEvents();
+    initView();
+  });
+</script>
+</body>
+</html>

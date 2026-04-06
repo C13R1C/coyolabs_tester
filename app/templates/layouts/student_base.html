@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Portal institucional{% endblock %}</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+  <style>
+    .brand-logo-shell--button {
+      position: relative;
+      border: none;
+      cursor: pointer;
+      transition: transform .16s ease, box-shadow .16s ease;
+    }
+    .brand-logo-shell--button:hover { transform: translateY(-1px); }
+    .brand-logo-shell--button:focus-visible {
+      outline: 2px solid rgba(224,177,44,.75);
+      outline-offset: 2px;
+    }
+    .notification-badge {
+      position: absolute;
+      right: -4px;
+      top: -4px;
+      min-width: 20px;
+      height: 20px;
+      border-radius: 999px;
+      background: #d93d3d;
+      color: #fff;
+      font-size: .68rem;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 6px;
+      box-shadow: 0 3px 10px rgba(0,0,0,.18);
+    }
+    .notification-badge.is-hidden { display: none; }
+    .notification-center {
+      position: absolute;
+      left: 18px;
+      right: 18px;
+      top: 74px;
+      z-index: 95;
+      display: none;
+    }
+    .notification-center.is-open { display: block; }
+    .notification-center__panel {
+      border: 1px solid var(--stroke);
+      border-radius: 14px;
+      background: var(--panel);
+      box-shadow: 0 14px 28px rgba(0,0,0,.13);
+      overflow: hidden;
+    }
+    .notification-center__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--stroke);
+      background: rgba(255,255,255,.45);
+    }
+    .notification-center__list {
+      max-height: 360px;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 10px;
+    }
+    .notification-center__empty {
+      padding: 16px 10px;
+      text-align: center;
+      color: var(--text-dim);
+    }
+    .notification-center-item {
+      border: 1px solid var(--stroke);
+      border-radius: 10px;
+      background: var(--panel-2);
+      padding: 10px;
+    }
+    .notification-center-item--unread { border-color: rgba(224,177,44,.5); }
+    .notification-center-item__title { font-weight: 700; margin-bottom: 4px; }
+    .notification-center-item__message { font-size: .9rem; margin-bottom: 8px; }
+    .notification-center-item__meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      font-size: .78rem;
+      color: var(--text-dim);
+    }
+    #notification-container {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      width: min(390px, calc(100vw - 22px));
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 130;
+      pointer-events: none;
+    }
+    .notification {
+      pointer-events: auto;
+      position: relative;
+      border-radius: 14px;
+      border: 1px solid var(--stroke);
+      background: var(--panel);
+      box-shadow: 0 14px 30px rgba(0,0,0,.16);
+      overflow: hidden;
+      transform: translateX(120%);
+      opacity: 0;
+      animation: toast-slide-in .24s ease forwards;
+    }
+    .notification.is-closing { animation: toast-slide-out .22s ease forwards; }
+    .notification__progress {
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 3px;
+      width: 100%;
+      transform-origin: left center;
+      animation: toast-progress linear forwards;
+    }
+    .notification:hover .notification__progress { animation-play-state: paused; }
+    .notification__body {
+      display: grid;
+      grid-template-columns: 34px 1fr 22px;
+      gap: 10px;
+      align-items: start;
+      padding: 12px 12px 11px;
+    }
+    .notification__icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 15px;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.25);
+    }
+    .notification__header {
+      font-size: .92rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .notification__text {
+      margin: 0;
+      font-size: .86rem;
+      line-height: 1.3;
+      color: var(--text-dim);
+    }
+    .notification__close {
+      border: none;
+      background: transparent;
+      color: var(--text-dim);
+      cursor: pointer;
+      font-size: 14px;
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+    }
+    .notification__close:hover { background: rgba(0,0,0,.06); color: var(--text); }
+    .notification--success .notification__icon,
+    .notification--success .notification__progress { background: #1f9d62; }
+    .notification--error .notification__icon,
+    .notification--error .notification__progress { background: #cf4d4d; }
+    .notification--warning .notification__icon,
+    .notification--warning .notification__progress { background: #d09a19; }
+    .notification--info .notification__icon,
+    .notification--info .notification__progress { background: #3e7edc; }
+    @keyframes toast-slide-in {
+      from { transform: translateX(120%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes toast-slide-out {
+      from { transform: translateX(0); opacity: 1; }
+      to { transform: translateX(115%); opacity: 0; }
+    }
+    @keyframes toast-progress {
+      from { transform: scaleX(1); }
+      to { transform: scaleX(0); }
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="{{ url_for('static', filename='js/ui-animations.js') }}"></script>
+  <div class="app-layout">
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-top">
+        <div class="brand">
+          <button id="btnCollapse" class="sidebar-collapse-btn" type="button" aria-label="Colapsar menú">
+            <i class="ph ph-caret-left"></i>
+          </button>
+
+          <button id="logoNotificationToggle" class="brand-logo-shell brand-logo-shell--button" type="button" aria-label="Centro de notificaciones">
+              <img src="{{ url_for('static', filename='img/coyolabs.png') }}" alt="CoyoLabs Logo" class="brand-logo">
+              <span id="notificationBadge" class="notification-badge is-hidden">0</span>
+          </button>
+
+          <a href="{{ url_for('root_home') }}" class="brand-link">
+            <div class="brand-text">
+              <h2>CoyoLabs</h2>
+              <p>Sistema institucional</p>
+            </div>
+          </a>
+        </div>
+        {% if current_user.is_authenticated %}
+        <div id="notificationCenter" class="notification-center">
+          <section class="notification-center__panel">
+            <header class="notification-center__header">
+              <strong>Notificaciones</strong>
+              <a href="{{ url_for('notifications.list_notifications') }}" class="btn btn-ghost">Ver todo</a>
+            </header>
+            <div id="notificationPanelList" class="notification-center__list"></div>
+          </section>
+        </div>
+        {% endif %}
+      </div>
+      <div class="sidebar-scroll">
+        <nav class="sidebar-nav">
+          <p class="nav-section-title">Principal</p>
+
+
+          {% set is_admin_nav = current_user.is_authenticated and is_admin_role(current_user.role) %}
+          <a href="{{ url_for('root_home') }}"
+             class="nav-item {% if active_page == 'home' %}active{% endif %}">
+            <i class="ph ph-house nav-icon"></i>
+            <span class="nav-label">Inicio</span>
+          </a>
+          {% if is_admin_nav %}
+          <a href="{{ url_for('dashboard.dashboard_home') }}" class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
+            <i class="ph ph-gauge nav-icon"></i>
+            <span class="nav-label">Panel</span>
+          </a>
+          {% endif %}
+          <a href="{{ url_for('inventory.inventory_list') }}" class="nav-item {% if active_page == 'inventory' %}active{% endif %}">
+            <i class="ph ph-package nav-icon"></i>
+            <span class="nav-label">Inventario</span>
+          </a>
+
+          <a href="{{ url_for('profile.my_profile') }}" class="nav-item {% if active_page == 'profile' %}active{% endif %}">
+            <i class="ph ph-user-circle nav-icon"></i>
+            <span class="nav-label">Mi perfil</span>
+          </a>
+
+          {% if current_user.is_authenticated and is_admin_role(current_user.role) %}
+    <a href="{{ url_for('reports.reports_home') }}" class="nav-item {% if active_page == 'reports' %}active{% endif %}">
+      <i class="ph ph-chart-bar nav-icon"></i>
+      <span class="nav-label">Reportes</span>
+    </a>
+    <a href="{{ url_for('users.admin_panel') }}" class="nav-item {% if active_page == 'users' %}active{% endif %}">
+      <i class="ph ph-users-three nav-icon"></i>
+      <span class="nav-label">Usuarios</span>
+    </a>
+  {% endif %}
+
+          <a href="{{ url_for('ra_client.ra_client_home') }}" class="nav-item {% if active_page == 'ra_client' %}active{% endif %}">
+            <i class="ph ph-qr-code nav-icon"></i>
+            <span class="nav-label">RA Cliente</span>
+          </a>
+
+          <p class="nav-section-title">Servicios</p>
+
+          <div class="nav-submenu nav-submenu-static">
+            <a href="{{ url_for('software.software_home') }}" class="nav-subitem {% if active_page == 'software' %}active{% endif %}">
+              <i class="ph ph-app-window nav-subicon"></i>
+              <span>Software</span>
+            </a>
+
+            <a href="{{ url_for('print3d.my_jobs') }}" class="nav-subitem {% if active_page == 'prints3d' %}active{% endif %}">
+              <i class="ph ph-cube nav-subicon"></i>
+              <span>Impresiones 3D</span>
+            </a>
+
+            <a href="{{ url_for('reservations.reservations_home') }}" class="nav-subitem {% if active_page == 'reservations' %}active{% endif %}">
+              <i class="ph ph-calendar-check nav-subicon"></i>
+              <span>Reservaciones</span>
+            </a>
+
+            <a href="{{ url_for('debts.debts_home') }}" class="nav-subitem {% if active_page == 'debts' %}active{% endif %}">
+              <i class="ph ph-warning-circle nav-subicon"></i>
+              <span>Adeudos</span>
+            </a>
+
+            <a href="{{ url_for('inventory_requests.my_daily_request') }}" class="nav-subitem {% if active_page == 'inventory_requests' %}active{% endif %}">
+              <i class="ph ph-clipboard-text nav-subicon"></i>
+              <span>Pedidos diarios</span>
+            </a>
+
+            {% if current_user.is_authenticated and is_admin_role(current_user.role) %}
+            <a href="{{ url_for('admin_extra_requests.admin_extra_requests_inbox') }}" class="nav-subitem {% if active_page == 'extra_requests' %}active{% endif %}">
+              <i class="ph ph-inbox nav-subicon"></i>
+              <span>Solicitudes extra</span>
+            </a>
+            {% endif %}
+
+            <a href="{{ url_for('forum.forum_home') }}" class="nav-subitem {% if active_page == 'forum' %}active{% endif %}">
+              <i class="ph ph-chats-circle nav-subicon"></i>
+              <span>Foro</span>
+            </a>
+
+            <a href="{{ url_for('lostfound.lostfound_home') }}" class="nav-subitem {% if active_page == 'lostfound' %}active{% endif %}">
+              <i class="ph ph-suitcase nav-subicon"></i>
+              <span>Objetos perdidos</span>
+            </a>
+            <form method="post" action="{{ url_for('auth.logout') }}" style="margin:0;">
+              <button type="submit" class="btn btn-ghost sidebar-logout">
+                <i class="ph ph-sign-out"></i>
+                <span>Cerrar sesión</span>
+              </button>
+            </form>
+          </div>
+        </nav>
+      </div>
+      <div class="sidebar-footer">
+        <div class="sidebar-footer-card">
+          <span class="footer-label">{{ current_user.email if current_user.is_authenticated else 'Usuario' }}</span>
+          <strong>{{ (current_user.role|role_label) if current_user.is_authenticated else 'Sin sesión' }}</strong>
+        </div>
+        <div style="margin-top:8px; font-size:.78rem; color:var(--text-dim); display:flex; gap:6px; flex-wrap:wrap;">
+          <a href="{{ url_for('legal.privacy_notice') }}" style="color:inherit; text-decoration:none;">Privacidad</a>
+          <span>•</span>
+          <a href="{{ url_for('legal.terms_and_conditions') }}" style="color:inherit; text-decoration:none;">Términos</a>
+        </div>
+      </div>
+    </aside>
+
+
+    <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
+    <main class="main-content">
+      <div class="mobile-topbar">
+        <button id="btnToggleSidebar" class="mobile-menu-btn" type="button" aria-label="Abrir menú">
+          <i class="ph ph-list"></i>
+        </button>
+      </div>
+
+      <section class="page-shell">
+        {% if crumbs %}
+          <section class="toolbar-card toolbar-card--compact">
+            <div class="crumbs">
+              {% for label, href in crumbs %}
+                <a href="{{ href }}" class="item-link" {% if loop.last %}aria-current="page"{% endif %}>{{ label }}</a>
+                {% if not loop.last %}
+                  <span class="crumb-separator">•</span>
+                {% endif %}
+              {% endfor %}
+            </div>
+          </section>
+        {% endif %}
+
+        {% set flash_messages = get_flashed_messages(with_categories=true) %}
+        <script id="flashMessagesData" type="application/json">{{ flash_messages|tojson }}</script>
+
+        {% if current_user.is_authenticated and active_page not in ['home', 'dashboard'] %}
+          {% include "components/back_button.html" %}
+        {% endif %}
+
+        {% block content %}{% endblock %}
+      </section>
+    </main>
+  </div>
+  <div id="notification-container"></div>
+
+  <script src="{{ url_for('static', filename='js/sidebar.js') }}"></script>
+  <script>
+    (function () {
+      const token = "{{ csrf_token }}";
+      if (!token) return;
+
+      const forms = document.querySelectorAll('form[method="post"], form[method="POST"]');
+      forms.forEach((form) => {
+        const action = form.getAttribute('action') || '';
+        if (action.startsWith('/api/')) return;
+        if (form.querySelector('input[name="csrf_token"]')) return;
+
+        const hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.name = 'csrf_token';
+        hidden.value = token;
+        form.appendChild(hidden);
+      });
+    })();
+  </script>
+  {% if current_user.is_authenticated %}
+  <script>
+    (function () {
+      const notificationContainer = document.getElementById("notification-container");
+      const badge = document.getElementById("notificationBadge");
+      const panelList = document.getElementById("notificationPanelList");
+      const center = document.getElementById("notificationCenter");
+      const logoToggle = document.getElementById("logoNotificationToggle");
+      const csrfToken = "{{ csrf_token }}";
+      if (!badge || !panelList || !center || !logoToggle || !notificationContainer) return;
+
+      const state = { items: [], unreadCount: 0 };
+
+      function normalizeToastType(type) {
+        const value = String(type || "").toLowerCase();
+        if (value === "success") return "success";
+        if (value === "error" || value === "danger") return "error";
+        if (value === "warning" || value === "warn") return "warning";
+        return "info";
+      }
+
+      function updateBadge(value) {
+        const normalized = Number.isFinite(value) ? value : 0;
+        state.unreadCount = normalized;
+        if (normalized <= 0) {
+          badge.textContent = "0";
+          badge.classList.add("is-hidden");
+          return;
+        }
+        badge.textContent = normalized > 99 ? "99+" : String(normalized);
+        badge.classList.remove("is-hidden");
+      }
+
+      function createNotification({ title, message, type = "info", duration = 4000 }) {
+        const toastType = normalizeToastType(type);
+        const iconByType = {
+          success: "ph-check-circle",
+          error: "ph-x-circle",
+          warning: "ph-warning-circle",
+          info: "ph-info",
+        };
+        const toast = document.createElement("article");
+        toast.className = `notification notification--${toastType}`;
+        toast.innerHTML = `
+          <div class="notification__progress" style="animation-duration:${duration}ms"></div>
+          <div class="notification__body">
+            <span class="notification__icon"><i class="ph ${iconByType[toastType]}"></i></span>
+            <div>
+              <div class="notification__header">${title || "Notificación"}</div>
+              <p class="notification__text">${message || ""}</p>
+            </div>
+            <button type="button" class="notification__close" aria-label="Cerrar"><i class="ph ph-x"></i></button>
+          </div>
+        `;
+        notificationContainer.appendChild(toast);
+
+        let timer = null;
+        let remaining = duration;
+        let startedAt = Date.now();
+
+        function closeToast() {
+          if (!toast.isConnected) return;
+          toast.classList.add("is-closing");
+          setTimeout(() => toast.remove(), 220);
+        }
+        function startTimer() {
+          startedAt = Date.now();
+          timer = setTimeout(closeToast, remaining);
+        }
+        function pauseTimer() {
+          clearTimeout(timer);
+          remaining -= (Date.now() - startedAt);
+          if (remaining < 120) remaining = 120;
+        }
+
+        startTimer();
+        toast.addEventListener("mouseenter", pauseTimer);
+        toast.addEventListener("mouseleave", startTimer);
+        toast.querySelector(".notification__close")?.addEventListener("click", closeToast);
+      }
+
+      function renderNotificationPanel() {
+        if (!state.items.length) {
+          panelList.innerHTML = '<div class="notification-center__empty">Sin notificaciones recientes.</div>';
+          return;
+        }
+
+        panelList.innerHTML = "";
+        state.items.slice(0, 5).forEach((n) => {
+          const wrapper = document.createElement("div");
+          wrapper.className = `notification-center-item ${n.is_read ? "" : "notification-center-item--unread"}`;
+          wrapper.innerHTML = `
+            <div class="notification-center-item__title">${n.title}</div>
+            <div class="notification-center-item__message">${n.message}</div>
+            <div class="notification-center-item__meta">
+              <span>${n.created_at_label || ""}</span>
+              <span style="display:flex; gap:6px;">
+                ${n.link ? `<a href="${n.link}" class="btn btn-ghost">Abrir</a>` : ""}
+                ${!n.is_read ? `<button type="button" class="btn btn-ghost notif-mark-read" data-id="${n.id}">Marcar leída</button>` : ""}
+              </span>
+            </div>
+          `;
+          panelList.appendChild(wrapper);
+        });
+
+        panelList.querySelectorAll(".notif-mark-read").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const notifId = btn.getAttribute("data-id");
+            try {
+              const body = new URLSearchParams();
+              body.set("csrf_token", csrfToken);
+              const resp = await fetch(`/notifications/${notifId}/read`, {
+                method: "POST",
+                headers: { "X-Requested-With": "XMLHttpRequest", "Content-Type": "application/x-www-form-urlencoded" },
+                body: body.toString(),
+                credentials: "same-origin"
+              });
+              if (!resp.ok) return;
+              const data = await resp.json();
+              const found = state.items.find((item) => String(item.id) === String(notifId));
+              if (found) found.is_read = true;
+              updateBadge(data.unread_count || 0);
+              renderNotificationPanel();
+            } catch (_) {}
+          });
+        });
+      }
+
+      function upsertNotification(payload) {
+        const idx = state.items.findIndex((n) => n.id === payload.id);
+        if (idx >= 0) state.items[idx] = payload;
+        else state.items.unshift(payload);
+        state.items = state.items.slice(0, 20);
+      }
+
+      async function loadInitialFeed() {
+        try {
+          const resp = await fetch("{{ url_for('notifications.feed_notifications') }}", { credentials: "same-origin" });
+          if (!resp.ok) return;
+          const data = await resp.json();
+          state.items = Array.isArray(data.notifications) ? data.notifications : [];
+          updateBadge(data.unread_count || 0);
+          renderNotificationPanel();
+        } catch (_) {}
+      }
+
+      function inferNotificationType(payload) {
+        const text = `${payload.title || ""} ${payload.message || ""}`.toLowerCase();
+        if (text.includes("rechazada") || text.includes("error") || text.includes("adeudo")) return "error";
+        if (text.includes("aprobada") || text.includes("listo") || text.includes("abierto")) return "success";
+        if (text.includes("pendiente") || text.includes("actualizado")) return "warning";
+        return "info";
+      }
+
+      const viewFragmentSelectorsByPath = {
+        "/reservations/admin": "#reservations-admin-queue-container",
+        "/reservations/admin/approved": "#reservations-admin-approved-container",
+        "/reservations/admin/tickets/closure-requests": "#reservations-admin-closure-requests-container",
+        "/reservations/admin/approved/history": "#reservations-admin-approved-history-container",
+        "/reservations/my": "#reservations-my-list-container",
+        "/debts/admin": "#debts-admin-list-container",
+        "/debts/my": "#debts-my-list-container",
+      };
+      const viewFragmentSelectorsByPrefix = [
+        ["/reservations/my/", "#ticket-my-container"],
+        ["/reservations/admin/tickets/", "#ticket-detail-container"],
+      ];
+      let isRefreshingView = false;
+      let refreshViewTimer = null;
+
+      function currentViewFragmentSelector() {
+        const pathname = (window.location && window.location.pathname) || "";
+        if (viewFragmentSelectorsByPath[pathname]) return viewFragmentSelectorsByPath[pathname];
+        const matchedPrefix = viewFragmentSelectorsByPrefix.find(([prefix]) => pathname.startsWith(prefix));
+        return matchedPrefix ? matchedPrefix[1] : null;
+      }
+
+      async function refreshCurrentViewFragment() {
+        const selector = currentViewFragmentSelector();
+        if (!selector || isRefreshingView) return;
+
+        const currentFragment = document.querySelector(selector);
+        if (!currentFragment) return;
+
+        isRefreshingView = true;
+        try {
+          const resp = await fetch(window.location.href, {
+            credentials: "same-origin",
+            headers: { "X-Requested-With": "XMLHttpRequest" },
+          });
+          if (!resp.ok) {
+            console.warn("Partial refresh failed: response not OK", resp.status);
+            return;
+          }
+
+          const html = await resp.text();
+          const parser = new DOMParser();
+          const nextDoc = parser.parseFromString(html, "text/html");
+          const nextFragment = nextDoc.querySelector(selector);
+          if (!nextFragment) return;
+
+          currentFragment.replaceWith(nextFragment);
+        } catch (err) {
+          console.warn("Partial refresh failed", err);
+        } finally {
+          isRefreshingView = false;
+        }
+      }
+
+      function scheduleCurrentViewFragmentRefresh() {
+        if (!currentViewFragmentSelector()) return;
+        if (refreshViewTimer) clearTimeout(refreshViewTimer);
+        refreshViewTimer = setTimeout(() => {
+          refreshCurrentViewFragment();
+        }, 180);
+      }
+
+      function connectSSE() {
+        const source = new EventSource("{{ url_for('notifications.stream_notifications') }}");
+        source.addEventListener("notification_created", (event) => {
+          const payload = JSON.parse(event.data || "{}");
+          upsertNotification(payload);
+          updateBadge(payload.unread_count || 0);
+          renderNotificationPanel();
+          window.dispatchEvent(new CustomEvent("coyolabs:notification_created", { detail: payload }));
+          createNotification({
+            title: payload.title || "Nueva notificación",
+            message: payload.message || "",
+            type: inferNotificationType(payload),
+          });
+          scheduleCurrentViewFragmentRefresh();
+        });
+        source.addEventListener("error", () => {
+          source.close();
+          setTimeout(connectSSE, 2000);
+        });
+      }
+
+      const flashRaw = document.getElementById("flashMessagesData")?.textContent || "[]";
+      let flashMessages = [];
+      try {
+        flashMessages = JSON.parse(flashRaw);
+      } catch (_) {}
+      flashMessages.forEach((item) => {
+        const category = Array.isArray(item) ? item[0] : "info";
+        const message = Array.isArray(item) ? item[1] : "";
+        createNotification({
+          title: "Sistema",
+          message: message || "",
+          type: normalizeToastType(category),
+        });
+      });
+
+      logoToggle.addEventListener("click", () => center.classList.toggle("is-open"));
+      document.addEventListener("click", (evt) => {
+        if (!evt.target.closest(".brand")) center.classList.remove("is-open");
+      });
+
+      loadInitialFeed();
+      connectSSE();
+    })();
+  </script>
+  {% endif %}
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

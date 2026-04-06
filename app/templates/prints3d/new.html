@@ -1,0 +1,42 @@
+{% extends "layouts/student_base.html" %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Impresiones 3D", url_for('print3d.my_jobs')), ("Nueva solicitud", url_for('print3d.new_job'))] %}
+{% block title %}Nueva solicitud 3D{% endblock %}
+
+{% block content %}
+<header class="topbar">
+  <div class="topbar-left">
+    <p class="page-kicker">Impresiones 3D</p>
+    <h1>Nueva solicitud</h1>
+    <p class="page-subtitle">Sube tu archivo y registra la solicitud para revisión administrativa.</p>
+  </div>
+</header>
+
+<section class="toolbar-card">
+  <form method="post" enctype="multipart/form-data" class="toolbar" style="grid-template-columns: 1fr;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="toolbar-group">
+      <label for="title">Título de la solicitud</label>
+      <div class="search-box">
+        <i class="ph ph-cube search-icon"></i>
+        <input id="title" type="text" name="title" maxlength="180" required placeholder="Ejemplo: Soporte para sensor">
+      </div>
+    </div>
+
+    <div class="toolbar-group">
+      <label for="description">Descripción (opcional)</label>
+      <textarea class="form-control" id="description" name="description" rows="4" placeholder="Detalles de impresión, dimensiones, uso esperado"></textarea>
+    </div>
+
+    <div class="toolbar-group">
+      <label for="model_file">Archivo 3D</label>
+      <input class="form-control" id="model_file" type="file" name="model_file" required accept=".stl,.obj,.3mf,.gcode">
+      <small style="display:block; margin-top:6px; color:var(--text-dim);">Formatos permitidos: STL, OBJ, 3MF, GCODE. Máximo 25 MB.</small>
+    </div>
+
+    <div class="toolbar-actions">
+      <button type="submit" class="btn btn-gold">Crear solicitud</button>
+      <a href="{{ url_for('print3d.my_jobs') }}" class="btn btn-ghost">Cancelar</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,77 @@
+{% extends "layouts/student_base.html" %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Impresiones 3D admin", url_for('print3d.admin_list'))] %}
+{% block title %}Impresiones 3D (Admin){% endblock %}
+
+{% block content %}
+<header class="topbar">
+  <div class="topbar-left">
+    <p class="page-kicker">Impresiones 3D</p>
+    <h1>Solicitudes (Administración)</h1>
+    <p class="page-subtitle">Listado general de solicitudes para gestión administrativa.</p>
+  </div>
+</header>
+
+<section class="toolbar-card">
+  <div class="toolbar-actions">
+    <a href="{{ url_for('print3d.my_jobs') }}" class="btn btn-ghost">Vista usuario</a>
+  </div>
+</section>
+
+{% if jobs|length == 0 %}
+<section class="empty-state">
+  <i class="ph ph-check-circle empty-icon"></i>
+  <h3>Sin solicitudes</h3>
+  <p>No hay trabajos de impresión 3D registrados.</p>
+</section>
+{% else %}
+<section class="table-card">
+  <div class="table-wrap">
+    <table class="inventory-table" style="min-width: 1200px;">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Solicitante</th>
+          <th>Título</th>
+          <th>Archivo</th>
+          <th>Tamaño</th>
+          <th>Estado</th>
+          <th>Total estimado</th>
+          <th>Notificado READY</th>
+          <th>Creado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for job in jobs %}
+        <tr>
+          <td>#{{ job.id }}</td>
+          <td>{{ job.requester_user.email if job.requester_user else '-' }}</td>
+          <td>{{ job.title }}</td>
+          <td>{{ job.original_filename }}</td>
+          <td>{{ (job.file_size_bytes / 1024)|round(1) }} KB</td>
+          <td><span class="status-badge {{ status_badge_class(job.status) }}">{{ job.status|status_label }}</span></td>
+          <td>{{ ('$' ~ ('%.2f'|format(job.total_estimated))) if job.total_estimated is not none else '-' }}</td>
+          <td>{{ job.ready_notified_at if job.ready_notified_at else '-' }}</td>
+          <td>{{ job.created_at }}</td>
+          <td>
+            <div class="toolbar" style="grid-template-columns: 1fr; gap:8px;">
+              <a href="{{ url_for('print3d.download_file', job_id=job.id) }}" class="btn btn-ghost">Descargar</a>
+              <form method="post" action="{{ url_for('print3d.admin_set_status', job_id=job.id) }}" class="toolbar" style="grid-template-columns: minmax(180px, 1fr) auto; gap:8px;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <select class="form-control" name="status" required>
+                  {% for status in print3d_statuses %}
+                    <option value="{{ status }}" {% if job.status == status %}selected{% endif %}>{{ status|status_label }}</option>
+                  {% endfor %}
+                </select>
+                <button type="submit" class="btn btn-gold">Estado</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

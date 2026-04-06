@@ -1,0 +1,62 @@
+{% extends "layouts/student_base.html" %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Objetos perdidos", url_for('lostfound.list_items')), ("Detalle", url_for('lostfound.detail', item_id=item.id))] %}
+{% block title %}Detalle objeto perdido{% endblock %}
+{% block content %}
+<style>
+.lostfound-evidence-img{
+  max-width: min(100%, 420px);
+  border-radius: 12px;
+  border: 1px solid var(--stroke);
+  display: block;
+}
+
+.lostfound-evidence-link{
+  word-break: break-all;
+}
+
+@media (max-width: 768px){
+  .lostfound-detail-back .btn{
+    width: 100%;
+  }
+
+  .lostfound-detail-admin-form{
+    grid-template-columns: 1fr !important;
+  }
+
+  .lostfound-detail-admin-form .toolbar-actions{
+    width: 100%;
+  }
+
+  .lostfound-detail-admin-form .toolbar-actions .btn{
+    width: 100%;
+  }
+}
+</style>
+<header class="topbar"><div class="topbar-left"><p class="page-kicker">Objetos perdidos</p><h1>Detalle del registro #{{ item.id }}</h1><p class="page-subtitle">Información del objeto y acciones administrativas.</p></div></header>
+
+<section class="toolbar-card">
+  <div class="toolbar-actions lostfound-detail-back">
+    <a class="btn btn-ghost" href="{{ url_for('lostfound.list_items') }}">Volver</a>
+  </div>
+</section>
+
+<section class="table-card" style="margin-bottom:16px;"><div class="table-wrap"><table class="inventory-table" style="min-width:800px;"><tbody>
+<tr><td><strong>Título</strong></td><td>{{ item.title }}</td></tr>
+<tr><td><strong>Estado</strong></td><td>{{ item.status|status_label }}</td></tr>
+<tr><td><strong>Descripción</strong></td><td>{{ item.description or '-' }}</td></tr>
+<tr><td><strong>Evidencia</strong></td><td>{% if item.evidence_ref and item.evidence_ref.startswith('uploads/lostfound/') %}<img class="lostfound-evidence-img" src="{{ url_for('static', filename=item.evidence_ref) }}" alt="Evidencia del objeto {{ item.title }}">{% elif item.evidence_ref and (item.evidence_ref.startswith('http://') or item.evidence_ref.startswith('https://')) %}<a class="item-link lostfound-evidence-link" href="{{ item.evidence_ref }}" target="_blank" rel="noopener noreferrer">{{ item.evidence_ref }}</a>{% else %}{{ item.evidence_ref or '-' }}{% endif %}</td></tr>
+<tr><td><strong>Nota admin</strong></td><td>{{ item.admin_note or '-' }}</td></tr>
+<tr><td><strong>Creado</strong></td><td>{{ item.created_at }}</td></tr>
+</tbody></table></div></section>
+
+{% if current_user.is_authenticated and is_admin_role(current_user.role) %}
+<section class="toolbar-card">
+  <h3 style="margin-bottom: 10px;">Acciones (Administración)</h3>
+  <form method="post" action="{{ url_for('lostfound.admin_set_status', item_id=item.id) }}" class="toolbar lostfound-detail-admin-form" style="grid-template-columns: 1fr 1fr auto;">
+    <div class="toolbar-group"><label for="status">Nuevo estado</label><div class="select-wrap"><select id="status" name="status" required><option value="REPORTED" {% if item.status == 'REPORTED' %}selected{% endif %}>Reportado</option><option value="IN_STORAGE" {% if item.status == 'IN_STORAGE' %}selected{% endif %}>En resguardo</option><option value="RETURNED" {% if item.status == 'RETURNED' %}selected{% endif %}>Devuelto</option></select><i class="ph ph-caret-down select-arrow"></i></div></div>
+    <div class="toolbar-group"><label for="admin_note">Nota (opcional)</label><div class="search-box"><i class="ph ph-note search-icon"></i><input id="admin_note" type="text" name="admin_note" placeholder="Ejemplo: Entregado en coordinación"></div></div>
+    <div class="toolbar-actions"><button type="submit" class="btn btn-gold">Actualizar</button></div>
+  </form>
+</section>
+{% endif %}
+{% endblock %}

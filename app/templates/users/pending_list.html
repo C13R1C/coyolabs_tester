@@ -1,0 +1,73 @@
+{% extends "layouts/student_base.html" %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Usuarios pendientes", url_for('users.pending_users'))] %}
+{% block title %}Usuarios pendientes{% endblock %}
+
+{% block content %}
+<header class="topbar">
+  <div class="topbar-left">
+    <p class="page-kicker">Administración de usuarios</p>
+    <h1>Usuarios pendientes</h1>
+    <p class="page-subtitle">Aprueba cuentas institucionales pendientes asignando un rol institucional.</p>
+  </div>
+</header>
+
+<section class="toolbar-card">
+  <div class="toolbar-actions" style="justify-content:space-between; width:100%;">
+    <div>
+      <span class="status-badge status-warn">Pendientes</span>
+      <strong style="margin-left:8px;">{{ users|length }}</strong>
+    </div>
+  </div>
+</section>
+
+{% if users %}
+  <section class="table-card">
+    <div class="table-wrap">
+      <table class="inventory-table" style="min-width: 980px;">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Correo</th>
+            <th>Verificada</th>
+            <th>Creada</th>
+            <th>Asignar rol</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for user in users %}
+            <tr>
+              <td>{{ user.id }}</td>
+              <td><strong>{{ user.email }}</strong></td>
+              <td>
+                <span class="status-badge {% if user.is_verified %}status-ok{% else %}status-bad{% endif %}">
+                  {{ "Sí" if user.is_verified else "No" }}
+                </span>
+              </td>
+              <td>{{ user.created_at }}</td>
+              <td>
+                <form method="post" action="{{ url_for('users.assign_role', user_id=user.id) }}" style="display:flex; gap:8px; align-items:center;">
+                  <div class="select-wrap" style="min-width:180px;">
+                    <select name="role" required>
+                    {% for role_name in assignable_roles %}
+                      <option value="{{ role_name }}">{{ role_name|role_label }}</option>
+                    {% endfor %}
+                    </select>
+                    <i class="ph ph-caret-down select-arrow"></i>
+                  </div>
+                  <button type="submit" class="btn btn-gold">Asignar</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% else %}
+  <section class="empty-state">
+    <i class="ph ph-check-circle empty-icon"></i>
+    <h3>Sin pendientes</h3>
+    <p>No hay usuarios pendientes por aprobar.</p>
+  </section>
+{% endif %}
+{% endblock %}

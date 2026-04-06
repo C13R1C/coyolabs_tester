@@ -1,0 +1,17 @@
+{% extends "layouts/student_base.html" %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Software", url_for('software.list_software')), ("Nuevo", url_for('software.admin_new'))] %}
+{% block title %}Nuevo software{% endblock %}
+{% block content %}
+<header class="topbar"><div class="topbar-left"><p class="page-kicker">Software</p><h1>Agregar software (Administración)</h1><p class="page-subtitle">Registra un nuevo software para catálogo institucional.</p></div></header>
+
+<section class="toolbar-card">
+  <form method="post" class="toolbar" style="grid-template-columns: repeat(2, minmax(280px, 1fr));">
+    <div class="toolbar-group"><label for="lab_id">Laboratorio (opcional)</label><div class="select-wrap"><select id="lab_id" name="lab_id"><option value="">-- Sin laboratorio --</option>{% for lab in labs %}<option value="{{ lab.id }}">{{ lab.name }}</option>{% endfor %}</select><i class="ph ph-caret-down select-arrow"></i></div></div>
+    <div class="toolbar-group"><label for="name">Nombre (obligatorio)</label><div class="search-box"><i class="ph ph-app-window search-icon"></i><input id="name" type="text" name="name" placeholder="Ejemplo: AutoCAD" required></div></div>
+    <div class="toolbar-group"><label for="version">Versión (opcional)</label><div class="search-box"><i class="ph ph-git-branch search-icon"></i><input id="version" type="text" name="version" placeholder="Ejemplo: 2026.1"></div></div>
+    <div class="toolbar-group"><label for="license_type">Tipo de licencia (opcional)</label><div class="search-box"><i class="ph ph-seal-check search-icon"></i><input id="license_type" type="text" name="license_type" placeholder="Ejemplo: Institucional"></div></div>
+    <div class="toolbar-group" style="grid-column: 1 / -1;"><label for="notes">Notas (opcional)</label><textarea class="form-control" id="notes" name="notes" rows="4" placeholder="Detalles adicionales, requisitos o comentarios"></textarea></div>
+    <div class="toolbar-actions" style="grid-column: 1 / -1;"><button type="submit" class="btn btn-gold">Guardar</button><a href="{{ url_for('software.list_software') }}" class="btn btn-ghost">Volver</a></div>
+  </form>
+</section>
+{% endblock %}

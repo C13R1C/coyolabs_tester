@@ -1,0 +1,280 @@
+{% extends "layouts/student_base.html" %}
+{% set crumbs = [("Inicio", url_for('root_home'))] %}
+{% block title %}Mi inicio{% endblock %}
+
+{% block extra_css %}
+<style>
+  .home-grid{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-top:16px}
+  .card{background:linear-gradient(180deg,var(--panel-2),var(--panel));border:1px solid var(--stroke);border-radius:18px;padding:18px;box-shadow:var(--shadow-md)}
+  .card-title{font-size:1.05rem;font-weight:800;margin-bottom:4px}
+  .card-subtitle{color:var(--text-dim);font-size:.92rem}
+  .hero{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;background:linear-gradient(135deg,rgba(91,140,114,.16),rgba(199,159,51,.15));border:1px solid var(--stroke-strong);border-radius:22px;padding:22px}
+  .hero h1{font-size:clamp(1.4rem,2.3vw,2rem);margin-top:6px}
+  .hero p{margin-top:8px;color:var(--text-soft)}
+  .badge{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.62);border:1px solid var(--stroke);font-size:.82rem;font-weight:700;color:var(--text-soft)}
+  .quick-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:16px}
+  .quick-link{display:flex;align-items:center;gap:8px;padding:11px 12px;background:rgba(255,255,255,.52);border:1px solid var(--stroke);border-radius:12px;font-weight:700;color:var(--text-soft);transition:.2s}
+  .quick-link:hover{transform:translateY(-1px);border-color:var(--stroke-strong);color:var(--text)}
+  .profile-list{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+  .profile-item{padding:10px 12px;border:1px solid var(--stroke);border-radius:12px;background:rgba(255,255,255,.5)}
+  .profile-item span{display:block;color:var(--text-dim);font-size:.78rem;text-transform:uppercase;letter-spacing:.04em}
+  .profile-item strong{font-size:.95rem;word-break:break-word}
+  .progress-shell{margin-top:14px}
+  .progress-track{height:10px;border-radius:999px;background:rgba(0,0,0,.07);overflow:hidden}
+  .progress-bar{height:100%;background:linear-gradient(90deg,var(--green),var(--gold));border-radius:999px}
+  .status-ok{color:#2d6942;background:rgba(91,165,111,.14);border:1px solid rgba(91,165,111,.3)}
+  .status-warn{color:#8c6914;background:rgba(212,166,61,.15);border:1px solid rgba(212,166,61,.3)}
+  .list{margin-top:12px;display:grid;gap:10px}
+  .list-item{border:1px solid var(--stroke);border-radius:12px;padding:12px;background:rgba(255,255,255,.48)}
+  .list-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+  .meta{margin-top:6px;color:var(--text-soft);font-size:.9rem;display:flex;gap:12px;flex-wrap:wrap}
+  .chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;font-size:.8rem;font-weight:700;border:1px solid}
+  .chip-APPROVED,.chip-CLOSED,.chip-PAID{background:rgba(91,165,111,.15);border-color:rgba(91,165,111,.35);color:#2f6b44}
+  .chip-PENDING,.chip-OPEN{background:rgba(212,166,61,.16);border-color:rgba(212,166,61,.35);color:#7d5f13}
+  .chip-REJECTED,.chip-CANCELED{background:rgba(200,91,91,.14);border-color:rgba(200,91,91,.35);color:#893b3b}
+  .empty{margin-top:12px;border:1px dashed var(--stroke-strong);border-radius:12px;padding:16px;text-align:center;background:rgba(255,255,255,.42)}
+  .empty p{color:var(--text-soft);margin-bottom:10px}
+  .btn-ghost{display:inline-flex;align-items:center;gap:6px;padding:9px 12px;border-radius:10px;border:1px solid var(--stroke);background:rgba(255,255,255,.65);font-weight:700;color:var(--text-soft)}
+  .labs-toolbar{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin-top:14px}
+  .labs-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:12px}
+  .lab-card{border-radius:12px;padding:14px;border:1px solid var(--stroke);background:rgba(255,255,255,.55)}
+  .lab-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .lab-free{border-color:rgba(91,165,111,.35);background:rgba(91,165,111,.09)}
+  .lab-busy{border-color:rgba(200,91,91,.35);background:rgba(200,91,91,.09)}
+  .lab-pending{border-color:rgba(212,166,61,.35);background:rgba(212,166,61,.09)}
+  .lab-meta{margin-top:8px;font-size:.85rem;color:var(--text-soft);line-height:1.35}
+  .section{margin-top:16px}
+
+  @media (max-width: 1140px){
+    .home-grid{grid-template-columns:1fr}
+  }
+  @media (max-width: 760px){
+    .quick-actions{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .profile-list{grid-template-columns:1fr}
+    .labs-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  }
+  @media (max-width: 480px){
+    .quick-actions,.labs-grid{grid-template-columns:1fr}
+    .hero{padding:16px}
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div>
+    <span class="badge"><i class="ph ph-user"></i> HOME PERSONAL</span>
+    <h1>Hola, {{ current_user.full_name or current_user.email }}.</h1>
+    <p>Este es tu resumen personal: perfil, pendientes, reservas y disponibilidad de laboratorios.</p>
+    <div class="quick-actions">
+      <a class="quick-link" href="{{ url_for('profile.my_profile') }}"><i class="ph ph-user-circle"></i>Mi perfil</a>
+      <a class="quick-link" href="{{ url_for('reservations.request_reservation') }}"><i class="ph ph-calendar-plus"></i>Nueva reservación</a>
+      <a class="quick-link" href="{{ url_for('reservations.my_reservations') }}"><i class="ph ph-calendar-check"></i>Mis reservas</a>
+    </div>
+  </div>
+  <div class="card" style="min-width:260px;max-width:320px;">
+    <div class="card-title">Estado rápido</div>
+    <div class="list" style="margin-top:10px;">
+      <div class="list-item"><strong>{{ upcoming_reservations|length }}</strong> próximas reservas</div>
+      <div class="list-item"><strong>{{ my_open_debts|length }}</strong> adeudos activos</div>
+      <div class="list-item"><strong>{{ recent_tickets|length }}</strong> solicitudes recientes</div>
+    </div>
+  </div>
+</section>
+
+<section class="home-grid">
+  <div>
+    <article class="card section">
+      <div class="card-title">Próximas reservas</div>
+      <div class="card-subtitle">Tus siguientes reservas programadas.</div>
+      {% if upcoming_reservations %}
+      <div class="list">
+        {% for r in upcoming_reservations %}
+        <div class="list-item">
+          <div class="list-head">
+            <strong>{{ r.room }}</strong>
+            <span class="chip chip-{{ r.status }}">{{ r.status|status_label }}</span>
+          </div>
+          <div class="meta">
+            <span><i class="ph ph-calendar"></i> {{ r.date.strftime('%d/%m/%Y') }}</span>
+            <span><i class="ph ph-clock"></i> {{ r.start_time.strftime('%H:%M') }} - {{ r.end_time.strftime('%H:%M') }}</span>
+            <span><i class="ph ph-book"></i> {{ r.subject_rel.name if r.subject_rel else r.subject }}</span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty">
+        <p>No tienes reservas próximas.</p>
+        <a class="btn btn-ghost" href="{{ url_for('reservations.request_reservation') }}"><i class="ph ph-calendar-plus"></i>Crear reservación</a>
+      </div>
+      {% endif %}
+    </article>
+
+    <article class="card section">
+      <div class="card-title">Historial reciente</div>
+      <div class="card-subtitle">Últimas reservaciones registradas en tu cuenta.</div>
+      {% if recent_reservations %}
+      <div class="list">
+        {% for r in recent_reservations %}
+        <div class="list-item">
+          <div class="list-head">
+            <strong>{{ r.room }}</strong>
+            <span class="chip chip-{{ r.status }}">{{ r.status|status_label }}</span>
+          </div>
+          <div class="meta">
+            <span>{{ r.date.strftime('%d/%m/%Y') }}</span>
+            <span>{{ r.start_time.strftime('%H:%M') }} - {{ r.end_time.strftime('%H:%M') }}</span>
+            <span>{{ r.subject_rel.name if r.subject_rel else r.subject }}</span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty"><p>Aún no tienes historial de reservas.</p></div>
+      {% endif %}
+    </article>
+
+    <article class="card section">
+      <div class="card-title">Disponibilidad de laboratorios</div>
+      <div class="card-subtitle">Integrado desde la vista anterior de <code>/home/labs</code>.</div>
+
+      <form method="GET" action="{{ url_for('home.home_dashboard') }}#labs" class="labs-toolbar" id="labs">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <input type="date" name="date" value="{{ selected_date }}">
+          <input type="time" name="time" value="{{ selected_time }}">
+          <button class="btn btn-gold" type="submit">Filtrar</button>
+        </div>
+        <span class="badge"><i class="ph ph-clock"></i>Hora evaluada: {{ selected_time }}</span>
+      </form>
+
+      {% for floor_name, cards in labs_by_floor.items() %}
+      <div class="section">
+        <h3>{{ floor_name }}</h3>
+        <div class="labs-grid">
+          {% for item in cards %}
+          {% set res = item.reservation %}
+          <div class="lab-card lab-{{ item.status }}">
+            <div class="lab-head">
+              <strong>{{ item.lab }}</strong>
+              <span class="chip chip-{% if item.status == 'free' %}APPROVED{% elif item.status == 'busy' %}REJECTED{% else %}PENDING{% endif %}">
+                {% if item.status == 'free' %}Disponible{% elif item.status == 'busy' %}Ocupado{% else %}Pendiente{% endif %}
+              </span>
+            </div>
+            {% if res %}
+            <div class="lab-meta">
+              <div><strong>Materia:</strong> {{ res.subject_rel.name if res.subject_rel else res.subject }}</div>
+              <div><strong>Grupo:</strong> {{ res.group_name }}</div>
+              <div><strong>Responsable:</strong> {{ res.user.full_name if res.user and res.user.full_name else (res.user.email if res.user else res.teacher_name) }}</div>
+            </div>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </article>
+  </div>
+
+  <div>
+    <article class="card section">
+      <div class="card-title">Resumen de perfil</div>
+      <div class="card-subtitle">Tu información académica y de contacto.</div>
+
+      <div class="profile-list">
+        <div class="profile-item"><span>Nombre completo</span><strong>{{ current_user.full_name or 'Sin capturar' }}</strong></div>
+        <div class="profile-item"><span>Correo</span><strong>{{ current_user.email }}</strong></div>
+        <div class="profile-item"><span>Matrícula</span><strong>{{ current_user.matricula or 'Sin capturar' }}</strong></div>
+        <div class="profile-item"><span>Carrera</span><strong>{{ current_user.career_rel.name if current_user.career_rel else (current_user.career or 'Sin capturar') }}</strong></div>
+        <div class="profile-item"><span>Nivel académico</span><strong>{{ current_user.academic_level_rel.name if current_user.academic_level_rel else (current_user.academic_level or 'Sin capturar') }}</strong></div>
+        <div class="profile-item"><span>Teléfono</span><strong>{{ current_user.phone or 'Sin capturar' }}</strong></div>
+        <div class="profile-item"><span>Rol</span><strong>{{ current_user.role|role_label }}</strong></div>
+        <div class="profile-item"><span>Estado</span>
+          <strong>
+            {% if is_profile_complete %}
+              <span class="chip status-ok">Perfil completo</span>
+            {% else %}
+              <span class="chip status-warn">Perfil incompleto</span>
+            {% endif %}
+          </strong>
+        </div>
+      </div>
+
+      <div class="progress-shell">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+          <small>Completitud del perfil</small>
+          <strong>{{ profile_completion_percent }}%</strong>
+        </div>
+        <div class="progress-track"><div class="progress-bar" style="width: {{ profile_completion_percent }}%;"></div></div>
+      </div>
+
+      {% if not is_profile_complete %}
+      <div class="empty" style="text-align:left;">
+        <p>Completa tu perfil para evitar bloqueos en procesos académicos.</p>
+        <a class="btn btn-ghost" href="{{ url_for('profile.complete_profile') }}"><i class="ph ph-pencil-simple-line"></i>Completar perfil</a>
+      </div>
+      {% endif %}
+    </article>
+
+    <article class="card section">
+      <div class="card-title">Solicitudes / tickets</div>
+      <div class="card-subtitle">Pedidos diarios recientes del usuario.</div>
+      {% if recent_tickets %}
+      <div class="list">
+        {% for ticket in recent_tickets %}
+        <div class="list-item">
+          <div class="list-head">
+            <strong>Ticket #{{ ticket.id }}</strong>
+            <span class="chip chip-{{ ticket.status }}">{{ ticket.status|status_label }}</span>
+          </div>
+          <div class="meta">
+            <span><i class="ph ph-calendar"></i> {{ ticket.request_date.strftime('%d/%m/%Y') }}</span>
+            <span><i class="ph ph-clock"></i> {{ ticket.created_at.strftime('%d/%m/%Y %H:%M') }}</span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty">
+        <p>No hay solicitudes recientes.</p>
+        <a class="btn btn-ghost" href="{{ url_for('inventory_requests.my_daily_request') }}"><i class="ph ph-clipboard-text"></i>Crear solicitud</a>
+      </div>
+      {% endif %}
+    </article>
+
+    <article class="card section">
+      <div class="card-title">Adeudos activos</div>
+      {% if my_open_debts %}
+      <div class="list">
+        {% for debt in my_open_debts %}
+        <div class="list-item">
+          <div class="list-head">
+            <strong>Adeudo #{{ debt.id }}</strong>
+            <span class="chip chip-{{ debt.status }}">{{ debt.status|status_label }}</span>
+          </div>
+          <div class="meta">
+            <span>{{ debt.reason or 'Sin descripción' }}</span>
+            <span><i class="ph ph-currency-circle-dollar"></i> {{ debt.amount if debt.amount is not none else 'Sin monto' }}</span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty"><p>No tienes adeudos activos.</p></div>
+      {% endif %}
+    </article>
+
+    <article class="card section">
+      <div class="card-title">Accesos rápidos personales</div>
+      <div class="quick-actions" style="grid-template-columns:1fr 1fr;">
+        <a class="quick-link" href="{{ url_for('profile.my_profile') }}"><i class="ph ph-user-circle"></i>Mi perfil</a>
+        <a class="quick-link" href="{{ url_for('reservations.my_reservations') }}"><i class="ph ph-calendar-check"></i>Mis reservas</a>
+        <a class="quick-link" href="{{ url_for('reservations.request_reservation') }}"><i class="ph ph-calendar-plus"></i>Nueva reservación</a>
+        <a class="quick-link" href="{{ url_for('inventory_requests.my_daily_request') }}"><i class="ph ph-clipboard-text"></i>Mis solicitudes</a>
+        <a class="quick-link" href="{{ url_for('debts.my_debts') }}"><i class="ph ph-warning-circle"></i>Mis adeudos</a>
+        <a class="quick-link" href="{{ url_for('forum.forum_home') }}"><i class="ph ph-chats-circle"></i>Foro</a>
+      </div>
+    </article>
+  </div>
+</section>
+{% endblock %}

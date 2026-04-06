@@ -1,0 +1,418 @@
+{% extends "layouts/student_base.html" %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Mi perfil", url_for('profile.my_profile'))] %}
+{% block title %}Mi perfil{% endblock %}
+
+
+{% block content %}
+<style>
+@media (max-width: 980px){
+  .profile-phone-form,
+  .profile-admin-basic-form,
+  .profile-filter-form,
+  .profile-add-load-form{
+    grid-template-columns: 1fr !important;
+  }
+
+  .profile-phone-form .toolbar-actions,
+  .profile-admin-basic-form .toolbar-actions,
+  .profile-filter-form .toolbar-actions,
+  .profile-add-load-form .toolbar-actions{
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .profile-phone-form .toolbar-actions .btn,
+  .profile-admin-basic-form .toolbar-actions .btn,
+  .profile-filter-form .toolbar-actions .btn,
+  .profile-add-load-form .toolbar-actions .btn{
+    width: 100%;
+  }
+}
+</style>
+<header class="topbar">
+  <div class="topbar-left">
+    <p class="page-kicker">Cuenta</p>
+    <h1>Mi perfil</h1>
+    <p class="page-subtitle">Consulta tus datos personales, carga académica y actividad del sistema.</p>
+  </div>
+</header>
+
+<section class="table-card">
+  <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:16px;">
+    <div class="toolbar-card" style="margin:0;">
+      <h3 style="margin-top:0;">Resumen de cuenta</h3>
+      <div style="display:grid; gap:8px;">
+        <div><strong>Nombre completo:</strong> {{ current_user.full_name or '-' }}</div>
+        <div><strong>Correo electrónico:</strong> {{ current_user.email }}</div>
+        <div><strong>Rol:</strong> {{ current_user.role|role_label }}</div>
+        <div><strong>Matrícula:</strong> {{ current_user.matricula or '-' }}</div>
+        <div><strong>Teléfono:</strong> {{ current_user.phone or '-' }}</div>
+        <div><strong>Correo verificado:</strong> {{ 'Sí' if current_user.is_verified else 'No' }}</div>
+        <div><strong>Perfil completo:</strong> {{ 'Sí' if current_user.profile_completed else 'No' }}</div>
+      </div>
+    </div>
+
+    <div class="toolbar-card" style="margin:0;">
+      <h3 style="margin-top:0;">Actualización de datos</h3>
+      {% if is_admin_role(current_user.role) %}
+        <p style="margin-top:0; color:var(--text-dim);">
+          Tu cuenta tiene privilegios administrativos ({{ current_user.role|role_label }}). Puedes actualizar directamente tu nombre y teléfono.
+        </p>
+        <form method="post" action="{{ url_for('profile.update_basic_profile') }}" class="toolbar profile-admin-basic-form" style="grid-template-columns:1fr 1fr auto;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <div class="toolbar-group">
+            <label>Nombre completo</label>
+            <div class="search-box">
+              <i class="ph ph-user search-icon"></i>
+              <input type="text" name="full_name" value="{{ current_user.full_name or '' }}" placeholder="Ej.: Nombre Apellido" required>
+            </div>
+          </div>
+          <div class="toolbar-group">
+            <label>Teléfono de contacto</label>
+            <div class="search-box">
+              <i class="ph ph-phone search-icon"></i>
+              <input type="text" name="phone" value="{{ current_user.phone or '' }}" placeholder="Ej.: 656-123-4567" required>
+            </div>
+          </div>
+          <div class="toolbar-actions" style="align-self:end;">
+            <button type="submit" class="btn btn-gold">Guardar datos</button>
+          </div>
+        </form>
+      {% elif is_professor %}
+        <p style="margin-top:0; color:var(--text-dim);">
+          Como profesor, puedes actualizar directamente tu teléfono.
+        </p>
+        <form method="post" action="{{ url_for('profile.update_phone') }}" class="toolbar profile-phone-form" style="grid-template-columns:1fr auto;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <div class="toolbar-group">
+            <label>Teléfono de contacto</label>
+            <div class="search-box">
+              <i class="ph ph-phone search-icon"></i>
+              <input type="text" name="phone" value="{{ current_user.phone or '' }}" placeholder="Ej.: 656-123-4567" required>
+            </div>
+          </div>
+          <div class="toolbar-actions" style="align-self:end;">
+            <button type="submit" class="btn btn-gold">Actualizar teléfono</button>
+          </div>
+        </form>
+      {% else %}
+        <p style="margin-top:0; color:var(--text-dim);">
+          Para mantener la integridad institucional, debes solicitar al administrador cualquier cambio de teléfono.
+        </p>
+        <form method="post" action="{{ url_for('profile.request_phone_change') }}" class="toolbar" style="grid-template-columns:1fr;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <div class="toolbar-group">
+            <label>Teléfono solicitado</label>
+            <div class="search-box">
+              <i class="ph ph-phone search-icon"></i>
+              <input type="text" name="requested_phone" placeholder="Ej.: 555-123-4567" required>
+            </div>
+          </div>
+          <div class="toolbar-group">
+            <label>Motivo (opcional)</label>
+            <div class="search-box">
+              <i class="ph ph-note-pencil search-icon"></i>
+              <input type="text" name="reason" placeholder="Describe brevemente el motivo">
+            </div>
+          </div>
+          <button type="submit" class="btn btn-gold">
+            Solicitar cambio de teléfono
+          </button>
+        </form>
+      {% endif %}
+
+      <hr style="margin:16px 0; border:none; border-top:1px solid var(--stroke);">
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <button type="button" id="togglePasswordPanel" class="btn btn-ghost">
+          Cambiar contraseña
+        </button>
+
+        <form id="passwordChangeForm" method="post" action="{{ url_for('profile.change_password') }}" class="toolbar" style="grid-template-columns:1fr;" hidden>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+          <div class="toolbar-group">
+            <label>Contraseña actual</label>
+            <div class="search-box">
+              <i class="ph ph-lock search-icon"></i>
+              <input type="password" name="current_password" required>
+            </div>
+          </div>
+
+          <div class="toolbar-group">
+            <label>Nueva contraseña</label>
+            <div class="search-box">
+              <i class="ph ph-key search-icon"></i>
+              <input type="password" name="new_password" minlength="6" required>
+            </div>
+          </div>
+
+          <div class="toolbar-group">
+            <label>Confirmar nueva contraseña</label>
+            <div class="search-box">
+              <i class="ph ph-key search-icon"></i>
+              <input type="password" name="confirm_new_password" minlength="6" required>
+            </div>
+          </div>
+
+          <div class="toolbar-actions">
+            <button type="submit" class="btn btn-gold">Guardar contraseña</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% if is_professor %}
+<section class="table-card" style="margin-top:16px;">
+  <h3 style="margin:0 0 12px 0;">Mi carga académica (materia + grupo)</h3>
+  <p style="margin:0 0 12px 0; color:var(--text-dim);">
+    Gestiona únicamente tus asignaciones docentes. No se permiten duplicados de la misma materia y grupo.
+  </p>
+  <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
+    <span class="status-badge status-ok">Asignaciones activas: {{ teacher_loads|length }}</span>
+    <span class="status-badge status-neutral">Carrera docente: {{ teacher_scope.career or 'No definida' }}</span>
+    <span class="status-badge status-neutral">Nivel docente: {{ teacher_scope.level or 'No definido' }}</span>
+  </div>
+
+  <form method="get" action="{{ url_for('profile.my_profile') }}" class="toolbar profile-filter-form" style="grid-template-columns: 1fr 1fr 1fr auto;">
+    <div class="toolbar-group">
+      <label>Buscar materia</label>
+      <div class="search-box">
+        <i class="ph ph-magnifying-glass search-icon"></i>
+        <input type="text" name="q" value="{{ catalog_filters.q }}" placeholder="Nombre de la materia">
+      </div>
+    </div>
+
+    <div class="toolbar-group">
+      <label>Carrera</label>
+      <div class="select-wrap">
+        <select name="career_id">
+          <option value="">Todas</option>
+          {% for c in catalog_careers %}
+          <option value="{{ c.id }}" {% if catalog_filters.career_id == c.id|string %}selected{% endif %}>{{ c.name }}</option>
+          {% endfor %}
+        </select>
+        <i class="ph ph-caret-down select-arrow"></i>
+      </div>
+    </div>
+
+    <div class="toolbar-group">
+      <label>Nivel</label>
+      <div class="select-wrap">
+        <select name="level">
+          <option value="">Todos</option>
+          {% for level in catalog_levels %}
+          <option value="{{ level }}" {% if catalog_filters.level == level %}selected{% endif %}>{{ level }}</option>
+          {% endfor %}
+        </select>
+        <i class="ph ph-caret-down select-arrow"></i>
+      </div>
+    </div>
+
+    <div class="toolbar-actions" style="align-self:end;">
+      <button type="submit" class="btn btn-ghost">Filtrar catálogo</button>
+    </div>
+  </form>
+
+  <form method="post" action="{{ url_for('profile.add_teaching_load') }}" class="toolbar profile-add-load-form" style="grid-template-columns: 1.2fr .8fr auto; margin-top:12px;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="toolbar-group">
+      <label>Materia</label>
+      <div class="select-wrap">
+        <select name="subject_id" required>
+          <option value="">Selecciona una materia del catálogo filtrado</option>
+          {% for s in available_subjects %}
+          <option value="{{ s.id }}">{{ s.name }} · {{ s.career.name if s.career else '-' }} · {{ s.level }} C{{ s.quarter }}</option>
+          {% endfor %}
+        </select>
+        <i class="ph ph-caret-down select-arrow"></i>
+      </div>
+    </div>
+
+    <div class="toolbar-group">
+      <label>Grupo (en mayúsculas)</label>
+      <div class="search-box">
+        <i class="ph ph-users search-icon"></i>
+        <input type="text" name="group_code" placeholder="Ej.: 3A" required>
+      </div>
+    </div>
+
+    <div class="toolbar-actions" style="align-self:end;">
+      <button type="submit" class="btn btn-gold">Agregar asignación</button>
+    </div>
+  </form>
+  {% if available_subjects|length == 0 %}
+    <p style="margin-top:10px; color:var(--text-dim);">No hay materias disponibles con los filtros actuales.</p>
+  {% endif %}
+
+  {% if teacher_loads %}
+  <div class="table-wrap" style="margin-top:12px;">
+    <table class="inventory-table" style="min-width: 860px;">
+      <thead>
+        <tr>
+          <th>Materia</th>
+          <th>Carrera</th>
+          <th>Nivel</th>
+          <th>Cuatrimestre</th>
+          <th>Grupo</th>
+          <th>Registro</th>
+          <th>Acción</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for load in teacher_loads %}
+        <tr>
+          <td>{{ load.subject.name if load.subject else '-' }}</td>
+          <td>{{ load.subject.career.name if load.subject and load.subject.career else '-' }}</td>
+          <td>{{ load.subject.level if load.subject else '-' }}</td>
+          <td>{{ load.subject.quarter if load.subject else '-' }}</td>
+          <td>{{ load.group_code }}</td>
+          <td>{{ load.created_at }}</td>
+          <td>
+            <form method="post" action="{{ url_for('profile.remove_teaching_load', load_id=load.id) }}">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <button type="submit" class="btn btn-ghost">Quitar</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <p style="margin-top:10px;">Aún no registras materias ni grupos.</p>
+  {% endif %}
+</section>
+{% endif %}
+
+<section class="table-card" style="margin-top:16px;">
+  <h3 style="margin:0 0 12px 0;">Mis reservaciones</h3>
+  {% if reservations|length == 0 %}
+    <p>No tienes reservaciones registradas.</p>
+  {% else %}
+  <div class="table-wrap">
+    <table class="inventory-table" style="min-width: 900px;">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Salón/Laboratorio</th>
+          <th>Fecha</th>
+          <th>Inicio</th>
+          <th>Fin</th>
+          <th>Estado</th>
+          <th>Motivo</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in reservations %}
+        <tr>
+          <td>{{ r.id }}</td>
+          <td>{{ r.room }}</td>
+          <td>{{ r.date }}</td>
+          <td>{{ r.start_time }}</td>
+          <td>{{ r.end_time }}</td>
+          <td>
+            <span class="status-badge {% if r.status == 'APPROVED' %}status-ok{% elif r.status == 'PENDING' %}status-warn{% else %}status-bad{% endif %}">
+              {{ r.status|status_label }}
+            </span>
+          </td>
+          <td>{{ r.purpose or '-' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</section>
+
+<section class="table-card" style="margin-top:16px;">
+  <h3 style="margin:0 0 12px 0;">Mis tickets / solicitudes</h3>
+  {% if tickets|length == 0 %}
+    <p>No tienes tickets registrados.</p>
+  {% else %}
+  <div class="table-wrap">
+    <table class="inventory-table" style="min-width: 1000px;">
+      <thead>
+        <tr>
+          <th>ID de ticket</th>
+          <th>Reserva asociada</th>
+          <th>Salón/Laboratorio</th>
+          <th>Fecha</th>
+          <th>Estado</th>
+          <th>Apertura</th>
+          <th>Cierre</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in tickets %}
+        <tr>
+          <td>{{ t.id }}</td>
+          <td>{{ t.reservation_id or '-' }}</td>
+          <td>{{ t.room or (t.reservation.room if t.reservation else '-') }}</td>
+          <td>{{ t.date or (t.reservation.date if t.reservation else '-') }}</td>
+          <td>
+            <span class="status-badge {% if t.status == 'OPEN' %}status-warn{% elif t.status == 'CLOSED' %}status-ok{% else %}status-bad{% endif %}">
+              {{ t.status|status_label }}
+            </span>
+          </td>
+          <td>{{ t.opened_at }}</td>
+          <td>{{ t.closed_at or '-' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</section>
+
+<section class="table-card" style="margin-top:16px;">
+  <h3 style="margin:0 0 12px 0;">Mis adeudos</h3>
+  {% if debts|length == 0 %}
+    <p>No tienes adeudos registrados.</p>
+  {% else %}
+  <div class="table-wrap">
+    <table class="inventory-table" style="min-width: 1000px;">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Material</th>
+          <th>Razón</th>
+          <th>Estado</th>
+          <th>Creado</th>
+          <th>Situación</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in debts %}
+        <tr>
+          <td>{{ d.id }}</td>
+          <td>{{ d.material.name if d.material else '-' }}</td>
+          <td>{{ d.reason or '-' }}</td>
+          <td>
+            <span class="status-badge {% if d.status == 'OPEN' %}status-bad{% else %}status-ok{% endif %}">
+              {{ d.status|status_label }}
+            </span>
+          </td>
+          <td>{{ d.created_at }}</td>
+          <td>{{ 'Abierto' if d.status == 'OPEN' else 'Pagado/Cerrado' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</section>
+
+<script>
+(() => {
+  const toggleBtn = document.getElementById("togglePasswordPanel");
+  const panel = document.getElementById("passwordChangeForm");
+  if (!toggleBtn || !panel) return;
+
+  toggleBtn.addEventListener("click", () => {
+    panel.hidden = !panel.hidden;
+  });
+})();
+</script>
+{% endblock %}

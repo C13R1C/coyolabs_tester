@@ -1,0 +1,70 @@
+{% extends "layouts/student_base.html" %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Administración usuarios", url_for('users.admin_panel')), ("Solicitudes perfil", url_for('users.profile_change_requests'))] %}
+{% block title %}Solicitudes de perfil{% endblock %}
+
+{% block content %}
+<header class="topbar">
+  <div class="topbar-left">
+    <p class="page-kicker">Administración</p>
+    <h1>Solicitudes de cambio de perfil</h1>
+    <p class="page-subtitle">Revisa y autoriza solicitudes de actualización de datos.</p>
+  </div>
+  <div class="topbar-actions">
+    <a href="{{ url_for('users.admin_panel') }}" class="btn btn-ghost">Volver a usuarios</a>
+  </div>
+</header>
+
+<section class="table-card">
+  {% if requests|length == 0 %}
+    <p>No hay solicitudes registradas.</p>
+  {% else %}
+  <div class="table-wrap">
+    <table class="inventory-table" style="min-width: 980px;">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Usuario</th>
+          <th>Tipo</th>
+          <th>Teléfono solicitado</th>
+          <th>Razón</th>
+          <th>Estado</th>
+          <th>Creado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for req in requests %}
+        <tr>
+          <td>{{ req.id }}</td>
+          <td>{{ req.user.email if req.user else req.user_id }}</td>
+          <td>{{ req.request_type }}</td>
+          <td>{{ req.requested_phone or '-' }}</td>
+          <td>{{ req.reason or '-' }}</td>
+          <td>
+            <span class="status-badge {% if req.status == 'PENDING' %}status-warn{% elif req.status == 'APPROVED' %}status-ok{% else %}status-bad{% endif %}">
+              {{ req.status|status_label }}
+            </span>
+          </td>
+          <td>{{ req.created_at }}</td>
+          <td>
+            {% if req.status == 'PENDING' %}
+            <div style="display:flex; gap:6px;">
+              <form method="post" action="{{ url_for('users.approve_profile_change_request', request_id=req.id) }}">
+                <button class="btn btn-gold" type="submit">Aprobar</button>
+              </form>
+              <form method="post" action="{{ url_for('users.reject_profile_change_request', request_id=req.id) }}">
+                <button class="btn btn-ghost" type="submit">Rechazar</button>
+              </form>
+            </div>
+            {% else %}
+              <span style="opacity:.7;">Procesada</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,461 @@
+{% extends "layouts/student_base.html" %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Pedidos diarios", url_for('inventory_requests.my_daily_request'))] %}
+{% block title %}Pedidos diarios{% endblock %}
+
+{% block content %}
+<header class="topbar">
+  <div class="topbar-left">
+    <p class="page-kicker">Inventario</p>
+    <h1>Mi pedido diario</h1>
+    <p class="page-subtitle">Un solo ticket por día. Puedes agregar o quitar materiales antes de enviar.</p>
+  </div>
+  {% if is_admin_role(current_user.role) %}
+  <div class="topbar-actions">
+    <a href="{{ url_for('inventory_requests.admin_daily_requests') }}" class="btn btn-ghost">Ver pedidos admin</a>
+  </div>
+  {% endif %}
+</header>
+
+<style>
+.material-search {
+  position: relative;
+  margin-bottom: 12px;
+}
+
+#materialSearch { min-height: 54px; }
+
+.autocomplete-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 100%;
+  background: white;
+  border-radius: 10px;
+  max-height: 220px;
+  overflow: auto;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+  z-index: 20;
+  border: 1px solid rgba(0,0,0,0.06);
+}
+
+.autocomplete-item {
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background .15s ease;
+}
+
+.autocomplete-item:hover {
+  background: #f1ede4;
+}
+
+.autocomplete-item.out-of-stock {
+  cursor: not-allowed;
+  background: rgba(207, 77, 77, 0.06);
+}
+
+.autocomplete-item.out-of-stock:hover {
+  background: rgba(207, 77, 77, 0.1);
+}
+
+.cart-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cart-empty {
+  padding: 14px;
+  border: 1px dashed rgba(0,0,0,0.12);
+  border-radius: 10px;
+  color: var(--text-dim, #728078);
+  background: rgba(255,255,255,0.5);
+}
+
+.cart-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 10px;
+  background: #f7f4ec;
+  margin-bottom: 2px;
+  animation: fadeIn .2s ease;
+  border: 1px solid rgba(0,0,0,0.05);
+}
+
+.cart-item-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.cart-item-name {
+  font-weight: 600;
+  color: var(--text);
+  word-break: break-word;
+}
+
+.cart-item-meta {
+  font-size: 12px;
+  color: var(--text-dim, #728078);
+}
+
+.cart-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.qty-btn {
+  width: 32px;
+  min-height: 32px;
+  height: 32px;
+  border-radius: 10px;
+  padding: 0;
+  cursor: pointer;
+  font-weight: 800;
+  transition: transform .12s ease;
+}
+
+.qty-btn:hover {
+  transform: translateY(-1px);
+}
+
+.qty-btn:active {
+  transform: scale(0.96);
+}
+
+.qty-value {
+  min-width: 24px;
+  text-align: center;
+  font-weight: 700;
+}
+
+.cart-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.65);
+  border: 1px solid rgba(0,0,0,0.05);
+}
+
+.cart-summary strong {
+  color: var(--text);
+}
+
+.toast {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  background: #1f7a4f;
+  color: white;
+  padding: 10px 16px;
+  border-radius: 8px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(8px);
+  transition: .25s ease;
+  z-index: 50;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+</style>
+
+<section class="table-card">
+  <h3 style="margin:0 0 12px 0;">Agregar materiales al pedido de hoy</h3>
+  <form method="post" action="{{ url_for('inventory_requests.add_to_daily_request') }}">
+    <div class="material-search">
+      <div class="search-box">
+        <i class="ph ph-magnifying-glass search-icon"></i>
+        <input type="text" id="materialSearch" placeholder="Buscar material por nombre, código o ubicación">
+      </div>
+      <div id="autocompleteList" class="autocomplete-list"></div>
+    </div>
+
+    <div id="cartContainer" class="cart-container">
+      <div class="cart-empty">Aún no agregas materiales.</div>
+    </div>
+
+    <div class="cart-summary">
+      <span><strong id="cartKinds">0</strong> materiales distintos</span>
+      <strong id="cartTotal">0 piezas</strong>
+    </div>
+
+    <div style="display:flex; justify-content:flex-end; margin-top:10px; gap:8px;">
+      <button type="button" id="clearCartBtn" class="btn btn-ghost">Vaciar carrito</button>
+      <button type="submit" class="btn btn-gold">Agregar al ticket de hoy</button>
+    </div>
+
+    <div id="cartHiddenInputs"></div>
+  </form>
+</section>
+
+<section class="table-card" style="margin-top:16px;">
+  <h3 style="margin:0 0 12px 0;">Ticket de hoy</h3>
+  {% if not today_ticket %}
+    <p>Aún no tienes ticket de pedido para hoy.</p>
+  {% else %}
+    <p><strong>Ticket #{{ today_ticket.id }}</strong> · Estado: <span class="status-badge {% if today_ticket.status == 'OPEN' %}status-warn{% elif today_ticket.status == 'READY_FOR_PICKUP' %}status-ok{% else %}status-bad{% endif %}">{{ today_ticket.status|status_label }}</span></p>
+    <div class="table-wrap">
+      <table class="inventory-table" style="min-width:700px;">
+        <thead>
+          <tr>
+            <th>Material</th>
+            <th>Cantidad solicitada</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in today_ticket.items %}
+          <tr>
+            <td>{{ item.material.name if item.material else ('ID ' ~ item.material_id) }}</td>
+            <td>{{ item.quantity_requested }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+</section>
+
+<section class="table-card" style="margin-top:16px;">
+  <h3 style="margin:0 0 12px 0;">Historial reciente</h3>
+  {% if history|length == 0 %}
+    <p>Sin historial de pedidos.</p>
+  {% else %}
+    <div class="table-wrap">
+      <table class="inventory-table" style="min-width:850px;">
+        <thead>
+          <tr>
+            <th>Ticket</th>
+            <th>Fecha</th>
+            <th>Estado</th>
+            <th>Items</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in history %}
+          <tr>
+            <td>#{{ t.id }}</td>
+            <td>{{ t.request_date }}</td>
+            <td>{{ t.status|status_label }}</td>
+            <td>{{ t.items|length }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+</section>
+
+<div id="toast" class="toast">Material agregado</div>
+
+<script>
+const materials = {{ materials_json | safe }};
+let cart = JSON.parse(localStorage.getItem("daily_request_cart") || "{}");
+
+const search = document.getElementById("materialSearch");
+const list = document.getElementById("autocompleteList");
+const cartContainer = document.getElementById("cartContainer");
+const cartHiddenInputs = document.getElementById("cartHiddenInputs");
+const cartTotal = document.getElementById("cartTotal");
+const cartKinds = document.getElementById("cartKinds");
+const clearCartBtn = document.getElementById("clearCartBtn");
+
+function persistCart() {
+  localStorage.setItem("daily_request_cart", JSON.stringify(cart));
+}
+
+search.addEventListener("input", () => {
+  const value = search.value.trim().toLowerCase();
+  list.innerHTML = "";
+
+  if (!value) return;
+
+  materials
+    .filter(m => m.name.toLowerCase().includes(value))
+    .slice(0, 8)
+    .forEach(m => {
+      const item = document.createElement("div");
+      const available = parseInt(m.pieces_qty || 0, 10);
+      const inCart = cart[m.id]?.qty || 0;
+      const isOut = available <= 0;
+
+      item.className = "autocomplete-item";
+      if (isOut) item.classList.add("out-of-stock");
+
+      item.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+          <div style="${isOut ? 'opacity:.5;' : ''}">
+            <div>${m.name}</div>
+            <div style="font-size:12px; opacity:.7;">
+              ${available} disponibles${inCart > 0 ? ` · en carrito: ${inCart}` : ""}
+            </div>
+          </div>
+          <div style="font-size:12px; font-weight:600; ${isOut ? 'color:#cf4d4d;' : 'opacity:.7;'}">
+            ${isOut ? 'Sin stock' : 'Agregar'}
+          </div>
+        </div>
+      `;
+
+      if (!isOut) {
+        item.onclick = () => addToCart(m);
+      } else {
+        item.onclick = () => showToast("Material sin stock");
+      }
+
+      list.appendChild(item);
+    });
+});
+
+document.addEventListener("click", (e) => {
+  if (!e.target.closest(".material-search")) {
+    list.innerHTML = "";
+  }
+});
+
+function addToCart(material) {
+  const available = parseInt(material.pieces_qty || 0, 10);
+
+  if (available <= 0) {
+    showToast("No hay stock disponible");
+    return;
+  }
+
+  if (!cart[material.id]) {
+    cart[material.id] = { ...material, qty: 1 };
+    showToast("Material agregado");
+  } else {
+    if (cart[material.id].qty >= available) {
+      showToast(`Solo hay ${available} disponibles`);
+      return;
+    }
+    cart[material.id].qty++;
+    showToast("Cantidad actualizada");
+  }
+
+  persistCart();
+  renderCart();
+
+  search.value = "";
+  list.innerHTML = "";
+}
+
+function updateQty(id, delta) {
+  const item = cart[id];
+  if (!item) return;
+
+  const available = parseInt(item.pieces_qty || 0, 10);
+  const nextQty = item.qty + delta;
+
+  if (nextQty <= 0) {
+    delete cart[id];
+    persistCart();
+    renderCart();
+    showToast("Material eliminado");
+    return;
+  }
+
+  if (nextQty > available) {
+    showToast(`Solo hay ${available} disponibles`);
+    return;
+  }
+
+  item.qty = nextQty;
+  persistCart();
+  renderCart();
+}
+
+function clearCart() {
+  cart = {};
+  persistCart();
+  renderCart();
+  showToast("Carrito vaciado");
+}
+
+function renderCart() {
+  cartContainer.innerHTML = "";
+  cartHiddenInputs.innerHTML = "";
+
+  const ids = Object.keys(cart);
+
+  if (!ids.length) {
+    cartContainer.innerHTML = '<div class="cart-empty">Aún no agregas materiales.</div>';
+    cartKinds.textContent = "0";
+    cartTotal.textContent = "0 piezas";
+    return;
+  }
+
+  let totalPieces = 0;
+
+  ids.forEach(id => {
+    const item = cart[id];
+    totalPieces += item.qty;
+
+    const row = document.createElement("div");
+    row.className = "cart-item";
+    row.innerHTML = `
+      <div class="cart-item-left">
+        <div class="cart-item-name">${item.name}</div>
+        <div class="cart-item-meta">Disponibles: ${item.pieces_qty}</div>
+      </div>
+      <div class="cart-controls">
+        <button type="button" class="btn btn-ghost qty-btn" data-action="dec" data-id="${id}">-</button>
+        <span class="qty-value">${item.qty}</span>
+        <button type="button" class="btn btn-ghost qty-btn" data-action="inc" data-id="${id}">+</button>
+      </div>
+    `;
+
+    cartContainer.appendChild(row);
+
+    const i1 = document.createElement("input");
+    i1.type = "hidden";
+    i1.name = "material_id[]";
+    i1.value = id;
+
+    const i2 = document.createElement("input");
+    i2.type = "hidden";
+    i2.name = "quantity[]";
+    i2.value = item.qty;
+
+    cartHiddenInputs.appendChild(i1);
+    cartHiddenInputs.appendChild(i2);
+  });
+
+  cartKinds.textContent = ids.length;
+  cartTotal.textContent = `${totalPieces} piezas`;
+
+  cartContainer.querySelectorAll(".qty-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id = btn.dataset.id;
+      const action = btn.dataset.action;
+      updateQty(id, action === "inc" ? 1 : -1);
+    });
+  });
+}
+
+clearCartBtn.addEventListener("click", clearCart);
+
+function showToast(msg) {
+  const toast = document.getElementById("toast");
+  toast.textContent = msg;
+  toast.classList.add("show");
+  setTimeout(() => toast.classList.remove("show"), 1500);
+}
+
+renderCart();
+</script>
+{% endblock %}

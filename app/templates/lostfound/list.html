@@ -1,0 +1,37 @@
+{% extends "layouts/student_base.html" %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Objetos perdidos", url_for('lostfound.list_items'))] %}
+{% block title %}Objetos perdidos{% endblock %}
+{% block content %}
+<style>
+.lostfound-thumb{
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--stroke);
+  background: rgba(255,255,255,0.45);
+}
+
+@media (max-width: 768px){
+  .lostfound-list-filters .btn{
+    width: 100%;
+  }
+}
+</style>
+<header class="topbar"><div class="topbar-left"><p class="page-kicker">Objetos perdidos</p><h1>Objetos perdidos</h1><p class="page-subtitle">Consulta reportes y estado de resguardo o devolución.</p></div></header>
+
+<section class="toolbar-card">
+  <div class="toolbar-actions lostfound-list-filters">
+    <a class="btn {% if not status %}btn-gold{% else %}btn-ghost{% endif %}" href="{{ url_for('lostfound.list_items') }}">Todos</a>
+    <a class="btn {% if status == 'REPORTED' %}btn-gold{% else %}btn-ghost{% endif %}" href="{{ url_for('lostfound.list_items', status='REPORTED') }}">Reportado</a>
+    <a class="btn {% if status == 'IN_STORAGE' %}btn-gold{% else %}btn-ghost{% endif %}" href="{{ url_for('lostfound.list_items', status='IN_STORAGE') }}">En resguardo</a>
+    <a class="btn {% if status == 'RETURNED' %}btn-gold{% else %}btn-ghost{% endif %}" href="{{ url_for('lostfound.list_items', status='RETURNED') }}">Devuelto</a>
+  </div>
+</section>
+
+{% if items|length == 0 %}
+  <section class="empty-state"><i class="ph ph-suitcase empty-icon"></i><h3>Sin registros</h3><p>No hay objetos perdidos para mostrar.</p></section>
+{% else %}
+  <section class="table-card"><div class="table-wrap"><table class="inventory-table" style="min-width:1020px;"><thead><tr><th>ID</th><th>Título</th><th>Evidencia</th><th>Estado</th><th>Creado</th><th>Ver</th></tr></thead><tbody>{% for it in items %}<tr><td>{{ it.id }}</td><td>{{ it.title }}</td><td>{% if it.evidence_ref and it.evidence_ref.startswith('uploads/lostfound/') %}<img class="lostfound-thumb" src="{{ url_for('static', filename=it.evidence_ref) }}" alt="Evidencia {{ it.title }}">{% elif it.evidence_ref %}<span class="status-badge status-neutral">Texto/URL</span>{% else %}-{% endif %}</td><td><span class="status-badge {% if it.status == 'RETURNED' %}status-ok{% elif it.status == 'IN_STORAGE' %}status-warn{% else %}status-neutral{% endif %}">{{ it.status|status_label }}</span></td><td>{{ it.created_at }}</td><td><a class="action-btn" href="{{ url_for('lostfound.detail', item_id=it.id) }}"><i class="ph ph-eye"></i></a></td></tr>{% endfor %}</tbody></table></div></section>
+{% endif %}
+{% endblock %}

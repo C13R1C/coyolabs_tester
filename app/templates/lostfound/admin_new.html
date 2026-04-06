@@ -1,0 +1,35 @@
+{% extends "layouts/student_base.html" %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Objetos perdidos", url_for('lostfound.list_items')), ("Nuevo", url_for('lostfound.admin_new'))] %}
+{% block title %}Nuevo objeto perdido{% endblock %}
+
+{% block content %}
+<header class="topbar">
+  <div class="topbar-left">
+    <p class="page-kicker">Objetos perdidos</p>
+    <h1>Nuevo registro (Administración)</h1>
+    <p class="page-subtitle">Registra un objeto reportado y su información de soporte.</p>
+  </div>
+</header>
+
+<section class="toolbar-card">
+  <form method="post" enctype="multipart/form-data" class="toolbar" style="grid-template-columns: repeat(2, minmax(280px, 1fr));">
+    <div class="toolbar-group"><label for="title">Título (obligatorio)</label><div class="search-box"><i class="ph ph-tag search-icon"></i><input id="title" type="text" name="title" placeholder="Ejemplo: Mochila negra con llavero" required></div></div>
+    <div class="toolbar-group"><label for="evidence_ref">Evidencia (URL/texto)</label><div class="search-box"><i class="ph ph-link search-icon"></i><input id="evidence_ref" type="text" name="evidence_ref" placeholder="URL de foto o referencia breve"></div></div>
+    <div class="toolbar-group" style="grid-column: 1 / -1;">
+      <label for="evidence_file">Foto de evidencia (opcional)</label>
+      <input class="form-control" id="evidence_file" type="file" name="evidence_file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+      <small style="display:block; margin-top:6px; color:var(--text-dim);">Formatos permitidos: JPG, PNG, WEBP. Máximo 5 MB. Si cargas foto, tendrá prioridad sobre la URL/texto.</small>
+    </div>
+
+    <div class="toolbar-group" style="grid-column: 1 / -1;">
+      <label for="description">Descripción (opcional)</label>
+      <textarea class="form-control" id="description" name="description" rows="4" placeholder="Describe características clave para facilitar la identificación"></textarea>
+    </div>
+
+    <div class="toolbar-actions" style="grid-column: 1 / -1;">
+      <button type="submit" class="btn btn-gold"><i class="ph ph-plus-circle"></i><span>Crear</span></button>
+      <a class="btn btn-ghost" href="{{ url_for('lostfound.list_items') }}"><i class="ph ph-arrow-left"></i><span>Volver</span></a>
+    </div>
+  </form>
+</section>
+{% endblock %}

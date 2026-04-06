@@ -1,0 +1,79 @@
+{% extends "layouts/student_base.html" %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Reservas admin", url_for('reservations.admin_queue')), ("Cierres solicitados", url_for('reservations.admin_ticket_closure_requests'))] %}
+{% block title %}Solicitudes de cierre de ticket{% endblock %}
+
+{% block content %}
+<header class="topbar">
+  <div class="topbar-left">
+    <p class="page-kicker">Reservaciones</p>
+    <h1>Solicitudes de cierre de ticket</h1>
+    <p class="page-subtitle">Revisa tickets con cierre solicitado y confirma el cierre definitivo.</p>
+  </div>
+</header>
+
+<section class="toolbar-card">
+  <div class="toolbar-actions">
+    <a class="btn btn-ghost" href="{{ url_for('reservations.admin_approved') }}">Volver a reservas en curso</a>
+  </div>
+</section>
+
+<div id="reservations-admin-closure-requests-container">
+{% if tickets|length == 0 %}
+  <section class="empty-state">
+    <i class="ph ph-check-circle empty-icon"></i>
+    <h3>Sin solicitudes pendientes</h3>
+    <p>No hay tickets con cierre solicitado en este momento.</p>
+  </section>
+{% else %}
+  <section class="table-card">
+    <div class="table-wrap">
+      <table class="inventory-table" style="min-width:1300px;">
+      <thead>
+        <tr>
+          <th>Ticket</th>
+          <th>Reserva</th>
+          <th>Usuario</th>
+          <th>Salón</th>
+          <th>Fecha</th>
+          <th>Estado</th>
+          <th>Materiales</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ticket in tickets %}
+        <tr>
+          <td>#{{ ticket.id }}</td>
+          <td>#{{ ticket.reservation_id or '-' }}</td>
+          <td>{{ ticket.owner_user.email if ticket.owner_user else '-' }}</td>
+          <td>{{ ticket.room or '-' }}</td>
+          <td>{{ ticket.date or '-' }}</td>
+          <td><span class="status-badge status-warn">{{ ticket.status|status_label }}</span></td>
+          <td>
+            {% if ticket.items %}
+              <ul style="padding-left:16px; margin:0;">
+                {% for item in ticket.items[:3] %}
+                  <li>{{ item.material.name if item.material else ('ID ' ~ item.material_id) }} ({{ item.quantity_requested }})</li>
+                {% endfor %}
+                {% if ticket.items|length > 3 %}
+                  <li>+{{ ticket.items|length - 3 }} más...</li>
+                {% endif %}
+              </ul>
+            {% else %}
+              -
+            {% endif %}
+          </td>
+          <td>
+            <a class="btn btn-gold" href="{{ url_for('reservations.admin_ticket_detail', ticket_id=ticket.id) }}">
+              Revisar y cerrar
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      </table>
+    </div>
+  </section>
+{% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,234 @@
+{% extends "layouts/student_base.html" %}
+{% block title %}Disponibilidad de Laboratorios{% endblock %}
+
+{% block content %}
+
+<style>
+.lab-grid{
+  display:grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap:18px;
+  margin-top:20px;
+}
+
+.lab-card{
+  border-radius:18px;
+  padding:22px;
+  text-align:center;
+  font-weight:700;
+  font-size:1.1rem;
+  border:1px solid var(--stroke);
+  box-shadow: var(--shadow-md);
+  transition: transform .18s ease, border-color .18s ease;
+}
+
+.lab-card:hover{
+  transform: translateY(-2px);
+}
+
+.lab-free{
+  background: rgba(91,165,111,0.15);
+  color:#2f6b44;
+}
+
+.lab-busy{
+  background: rgba(200,91,91,0.15);
+  color:#8f3a3a;
+}
+
+.lab-pending{
+  background: rgba(212,166,61,0.15);
+  color:#8c6914;
+}
+
+.filters{
+  display:flex;
+  gap:12px;
+  align-items:center;
+  flex-wrap: wrap;
+}
+
+.legend{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-top:14px;
+}
+
+.legend-item{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 12px;
+  border-radius:999px;
+  background: rgba(255,255,255,0.45);
+  border:1px solid var(--stroke);
+  font-size:.92rem;
+}
+
+.legend-dot{
+  width:12px;
+  height:12px;
+  border-radius:50%;
+  display:inline-block;
+}
+
+.dot-free{ background:#5ba56f; }
+.dot-busy{ background:#c85b5b; }
+.dot-pending{ background:#d4a63d; }
+
+.floor-title{
+  margin-bottom:14px;
+}
+
+.time-chip{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 12px;
+  border-radius:999px;
+  background: rgba(255,255,255,0.45);
+  border:1px solid var(--stroke);
+  font-weight:700;
+  color: var(--text-soft);
+}
+
+.lab-meta{
+  margin-top:10px;
+  font-size:.82rem;
+  line-height:1.35;
+  text-align:left;
+  background: rgba(255,255,255,0.45);
+  border:1px solid rgba(0,0,0,0.06);
+  border-radius:10px;
+  padding:8px 10px;
+}
+</style>
+
+<header class="topbar">
+  <div class="topbar-left">
+    <p class="page-kicker">Home</p>
+    <h1>Disponibilidad de laboratorios</h1>
+    <p class="page-subtitle">Edificio B</p>
+  </div>
+
+  <form method="GET" class="filters">
+    <input type="date" name="date" value="{{ selected_date }}">
+    <input type="time" name="time" value="{{ selected_time }}">
+    <button class="btn btn-gold" type="submit">Filtrar</button>
+  </form>
+</header>
+
+<div class="legend">
+  <div class="legend-item">
+    <span class="legend-dot dot-free"></span>
+    <span>Disponible</span>
+  </div>
+  <div class="legend-item">
+    <span class="legend-dot dot-busy"></span>
+    <span>Ocupado</span>
+  </div>
+  <div class="legend-item">
+    <span class="legend-dot dot-pending"></span>
+    <span>Pendiente</span>
+  </div>
+  <div class="time-chip">
+    <i class="ph ph-clock"></i>
+    <span>Hora evaluada: {{ selected_time }}</span>
+  </div>
+</div>
+
+{% set first_floor = ["B001", "B002", "B003", "B004", "B005", "B006"] %}
+{% set second_floor = ["B101", "B102", "B103", "B104"] %}
+
+<section style="margin-top:20px;">
+  <h2 class="floor-title">Primer piso</h2>
+  <div class="lab-grid">
+    {% for lab in first_floor %}
+      {% set status = namespace(value="free", reservation=None) %}
+
+      {% for r in reservations %}
+        {% if r.room == lab %}
+          {% set start_str = r.start_time.strftime("%H:%M") %}
+          {% set end_str = r.end_time.strftime("%H:%M") %}
+
+          {% if selected_time >= start_str and selected_time < end_str %}
+            {% if r.status == "APPROVED" %}
+              {% set status.value = "busy" %}
+              {% set status.reservation = r %}
+            {% elif r.status == "PENDING" and status.value != "busy" %}
+              {% set status.value = "pending" %}
+              {% set status.reservation = r %}
+            {% endif %}
+          {% endif %}
+        {% endif %}
+      {% endfor %}
+
+      <div class="lab-card {% if status.value == 'free' %}lab-free{% elif status.value == 'busy' %}lab-busy{% elif status.value == 'pending' %}lab-pending{% endif %}">
+        {{ lab }}
+        <div style="margin-top:8px; font-size:.9rem;">
+          {% if status.value == "free" %}Disponible{% endif %}
+          {% if status.value == "busy" %}Ocupado{% endif %}
+          {% if status.value == "pending" %}Pendiente{% endif %}
+        </div>
+        {% if status.value != "free" and status.reservation %}
+        {% set occupied_by = status.reservation.user.full_name if status.reservation.user and status.reservation.user.full_name else (status.reservation.user.email if status.reservation.user else (status.reservation.teacher_name or 'N/D')) %}
+        {% set subject_name = status.reservation.subject_rel.name if status.reservation.subject_rel else (status.reservation.subject or 'Sin materia') %}
+        {% set group_name = status.reservation.group_name or 'Sin grupo' %}
+        <div class="lab-meta">
+          <div><strong>Ocupado por:</strong> {{ occupied_by }}</div>
+          <div><strong>Materia:</strong> {{ subject_name }}</div>
+          <div><strong>Grupo:</strong> {{ group_name }}</div>
+        </div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section style="margin-top:28px;">
+  <h2 class="floor-title">Segundo piso</h2>
+  <div class="lab-grid">
+    {% for lab in second_floor %}
+      {% set status = namespace(value="free", reservation=None) %}
+
+      {% for r in reservations %}
+        {% if r.room == lab %}
+          {% set start_str = r.start_time.strftime("%H:%M") %}
+          {% set end_str = r.end_time.strftime("%H:%M") %}
+
+          {% if selected_time >= start_str and selected_time < end_str %}
+            {% if r.status == "APPROVED" %}
+              {% set status.value = "busy" %}
+              {% set status.reservation = r %}
+            {% elif r.status == "PENDING" and status.value != "busy" %}
+              {% set status.value = "pending" %}
+              {% set status.reservation = r %}
+            {% endif %}
+          {% endif %}
+        {% endif %}
+      {% endfor %}
+
+      <div class="lab-card {% if status.value == 'free' %}lab-free{% elif status.value == 'busy' %}lab-busy{% elif status.value == 'pending' %}lab-pending{% endif %}">
+        {{ lab }}
+        <div style="margin-top:8px; font-size:.9rem;">
+          {% if status.value == "free" %}Disponible{% endif %}
+          {% if status.value == "busy" %}Ocupado{% endif %}
+          {% if status.value == "pending" %}Pendiente{% endif %}
+        </div>
+        {% if status.value != "free" and status.reservation %}
+        {% set occupied_by = status.reservation.user.full_name if status.reservation.user and status.reservation.user.full_name else (status.reservation.user.email if status.reservation.user else (status.reservation.teacher_name or 'N/D')) %}
+        {% set subject_name = status.reservation.subject_rel.name if status.reservation.subject_rel else (status.reservation.subject or 'Sin materia') %}
+        {% set group_name = status.reservation.group_name or 'Sin grupo' %}
+        <div class="lab-meta">
+          <div><strong>Ocupado por:</strong> {{ occupied_by }}</div>
+          <div><strong>Materia:</strong> {{ subject_name }}</div>
+          <div><strong>Grupo:</strong> {{ group_name }}</div>
+        </div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+</section>
+
+{% endblock %}

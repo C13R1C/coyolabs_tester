@@ -1,0 +1,80 @@
+{% extends "layouts/student_base.html" %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Foro", url_for('forum.forum_home')), (post.title, url_for('forum.post_detail', post_id=post.id))] %}
+{% block title %}{{ post.title }}{% endblock %}
+
+{% block content %}
+<style>
+.forum-comment-form{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.forum-comment-actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+@media (max-width: 768px){
+  .forum-comment-actions .btn{
+    width: 100%;
+  }
+}
+</style>
+<header class="topbar">
+  <div class="topbar-left">
+    <p class="page-kicker">Foro</p>
+    <h1>{{ post.title }}</h1>
+    <p class="page-subtitle">
+      Autor: {{ author_label_fn(post.author, post.is_anonymous) }} · {{ post.created_at }}
+      {% if post.is_anonymous %}<span class="status-badge status-warn">ANÓNIMO</span>{% endif %}
+    </p>
+  </div>
+  <div class="topbar-actions">
+    {% if can_edit_post %}
+      <a class="btn btn-ghost" href="{{ url_for('forum.edit_post', post_id=post.id) }}">Editar publicación</a>
+    {% endif %}
+    {% if is_admin %}
+    <form method="post" action="{{ url_for('forum.toggle_post_hidden', post_id=post.id) }}">
+      <button type="submit" class="btn {% if post.is_hidden %}btn-gold{% else %}btn-ghost{% endif %}">
+        {% if post.is_hidden %}Mostrar publicación{% else %}Ocultar publicación{% endif %}
+      </button>
+    </form>
+    {% endif %}
+  </div>
+</header>
+
+<section class="table-card" style="white-space:pre-wrap;">{{ post.content }}</section>
+
+<section class="table-card">
+  <h3 style="margin-top:0;">Responder</h3>
+  <form method="post" class="forum-comment-form">
+    <textarea class="form-control" name="content" rows="4" required placeholder="Escribe tu comentario..."></textarea>
+    <div class="forum-comment-actions">
+      <button type="submit" class="btn btn-gold">Comentar</button>
+    </div>
+  </form>
+</section>
+
+<section class="table-card" style="display:flex; flex-direction:column; gap:10px;">
+  <h3 style="margin-top:0;">Comentarios ({{ comments|length }})</h3>
+  {% for c in comments %}
+    <article class="toolbar-card" style="margin-bottom:0; {% if c.is_hidden %}opacity:.6;{% endif %}">
+      <div style="display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap; align-items:center;">
+        <strong>{{ author_label_fn(c.author, c.is_anonymous) }}</strong>
+        <span class="text-dim">{{ c.created_at }}</span>
+      </div>
+      {% if c.is_anonymous %}<span class="status-badge status-warn">ANÓNIMO</span>{% endif %}
+      <p style="margin:8px 0 0 0; white-space:pre-wrap;">{{ c.content }}</p>
+      {% if is_admin %}
+        <form method="post" action="{{ url_for('forum.toggle_comment_hidden', comment_id=c.id) }}" style="margin-top:8px;">
+          <button type="submit" class="btn btn-ghost">{% if c.is_hidden %}Mostrar{% else %}Ocultar{% endif %} comentario</button>
+        </form>
+      {% endif %}
+    </article>
+  {% else %}
+    <p class="text-dim">Aún no hay comentarios.</p>
+  {% endfor %}
+</section>
+{% endblock %}

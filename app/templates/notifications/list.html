@@ -1,0 +1,55 @@
+{% extends "layouts/student_base.html" %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Notificaciones", url_for('notifications.list_notifications'))] %}
+{% block title %}Notificaciones{% endblock %}
+
+{% block content %}
+<style>
+  .notifications-row-btn {
+    width: 100%;
+    text-align: left;
+  }
+</style>
+<header class="topbar">
+  <div class="topbar-left">
+    <p class="page-kicker">Sistema</p>
+    <h1>Notificaciones</h1>
+    <p class="page-subtitle">Eventos recientes y avisos del sistema.</p>
+  </div>
+</header>
+
+{% if notifications %}
+<section class="table-card">
+  <div style="display:flex; flex-direction:column; gap:12px;">
+    {% for n in notifications %}
+    <form method="post"
+      action="{{ url_for('notifications.mark_read', notif_id=n.id) }}"
+      class="toolbar-card"
+      style = "margin-bottom:0; {% if not n.is_read %}border:1px solid rgba(199,159,51,0.35);{% endif %}">
+      <button type="submit" class="btn btn-ghost notifications-row-btn">
+      <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap;">
+        <div>
+          <div style="display:flex; gap:10px; align-items:center; margin-bottom:6px;">
+            <strong>{{ n.title }}</strong>
+            {% if not n.is_read %}
+              <span class="status-badge status-warn">NUEVA</span>
+            {% else %}
+              <span class="status-badge status-neutral">LEÍDA</span>
+            {% endif %}
+          </div>
+          <div class="text-dim">{{ n.message }}</div>
+        </div>
+        <div class="text-dim">{{ n.created_at }}</div>
+      </div>
+      </button>
+    </form>
+    {% endfor %}
+  </div>
+</section>
+{% else %}
+<section class="empty-state">
+  <i class="ph ph-bell empty-icon"></i>
+  <h3>Sin notificaciones</h3>
+  <p>No tienes avisos pendientes.</p>
+</section>
+{% endif %}
+{% endblock %}

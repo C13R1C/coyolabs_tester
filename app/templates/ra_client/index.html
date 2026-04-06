@@ -1,0 +1,551 @@
+{% extends "layouts/student_base.html" %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("RA", url_for('ra_client.ra_client_home'))] %}
+{% block title %}RA cliente{% endblock %}
+
+{% block extra_css %}
+<style>
+  .ra-page{
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+  }
+
+  .ra-hero{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:18px;
+    flex-wrap:wrap;
+  }
+
+  .ra-hero-copy h1{
+    margin:0 0 8px;
+    font-size:clamp(2rem, 3vw, 3rem);
+    color:var(--text);
+  }
+
+  .ra-hero-copy p{
+    margin:0;
+    color:var(--text-soft);
+    max-width:760px;
+  }
+
+  .ra-status-chip{
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    padding:12px 16px;
+    border-radius:999px;
+    background:rgba(255,255,255,0.42);
+    border:1px solid var(--stroke);
+    box-shadow:var(--shadow-md);
+    font-weight:800;
+    color:var(--text);
+  }
+
+  .ra-status-dot{
+    width:10px;
+    height:10px;
+    border-radius:50%;
+    background:var(--warning);
+    box-shadow:0 0 0 6px rgba(212,166,61,0.16);
+  }
+
+  .ra-layout{
+    display:grid;
+    grid-template-columns:minmax(380px, 1.4fr) minmax(320px, 0.85fr);
+    gap:18px;
+    align-items:start;
+  }
+
+  .ra-card{
+    background:linear-gradient(180deg, var(--panel-2), var(--panel));
+    backdrop-filter:blur(var(--glass-blur));
+    -webkit-backdrop-filter:blur(var(--glass-blur));
+    border:1px solid var(--stroke);
+    border-radius:var(--radius-xl);
+    box-shadow:var(--shadow-lg);
+    overflow:hidden;
+  }
+
+  .ra-card-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding:18px 20px;
+    border-bottom:1px solid var(--stroke);
+    background:linear-gradient(180deg, rgba(226,193,90,0.16), rgba(199,159,51,0.08));
+  }
+
+  .ra-card-header h2,
+  .ra-card-header h3{
+    margin:0;
+    color:var(--text);
+  }
+
+  .ra-card-body{
+    padding:18px;
+  }
+
+  .ra-scanner-shell{
+    position:relative;
+    border:1px solid var(--stroke);
+    border-radius:22px;
+    overflow:hidden;
+    background:rgba(255,255,255,0.18);
+    min-height:520px;
+  }
+
+  .ra-scanner-frame{
+    position:absolute;
+    inset:16px;
+    pointer-events:none;
+    border-radius:20px;
+    border:1px dashed rgba(199,159,51,0.34);
+  }
+
+  .ra-corner{
+    position:absolute;
+    width:30px;
+    height:30px;
+    border-color:var(--gold);
+    border-style:solid;
+    pointer-events:none;
+  }
+
+  .ra-corner.tl{ top:24px; left:24px; border-width:3px 0 0 3px; border-top-left-radius:14px; }
+  .ra-corner.tr{ top:24px; right:24px; border-width:3px 3px 0 0; border-top-right-radius:14px; }
+  .ra-corner.bl{ bottom:24px; left:24px; border-width:0 0 3px 3px; border-bottom-left-radius:14px; }
+  .ra-corner.br{ bottom:24px; right:24px; border-width:0 3px 3px 0; border-bottom-right-radius:14px; }
+
+  .scan-line{
+    position:absolute;
+    left:8%;
+    right:8%;
+    top:22%;
+    height:2px;
+    background:linear-gradient(90deg, transparent, var(--gold), transparent);
+    box-shadow:0 0 18px rgba(199,159,51,0.35);
+    animation:scanMove 2.2s linear infinite;
+    pointer-events:none;
+    opacity:.8;
+  }
+
+  @keyframes scanMove{
+    0%{ top:20%; }
+    50%{ top:75%; }
+    100%{ top:20%; }
+  }
+
+  #reader{
+    min-height:520px;
+  }
+
+  #reader video{
+    border-radius:20px;
+  }
+
+  .ra-scanner-toolbar{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-top:16px;
+  }
+
+  .ra-side{
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+  }
+
+  .ra-panel{
+    padding:18px;
+    border:1px solid var(--stroke);
+    border-radius:20px;
+    background:rgba(255,255,255,0.24);
+  }
+
+  .ra-panel h3{
+    margin:0 0 12px;
+    color:var(--text);
+    font-size:1.05rem;
+  }
+
+  .ra-kv{
+    display:grid;
+    gap:10px;
+  }
+
+  .ra-kv-row{
+    display:grid;
+    grid-template-columns:120px 1fr;
+    gap:10px;
+    align-items:start;
+  }
+
+  .ra-kv-row span:first-child{
+    color:var(--text-dim);
+    font-weight:700;
+  }
+
+  .ra-kv-row span:last-child{
+    color:var(--text);
+    font-weight:600;
+  }
+
+  .ra-empty{
+    color:var(--text-dim);
+  }
+
+  .ra-overlay-card{
+    display:none;
+    margin-top:14px;
+    padding:16px;
+    border-radius:18px;
+    border:1px solid var(--stroke);
+    background:rgba(255,255,255,0.34);
+  }
+
+  .ra-overlay-card.active{
+    display:block;
+  }
+
+  .ra-overlay-card h3{
+    margin:0 0 10px;
+    color:var(--text);
+    font-size:1.2rem;
+  }
+
+  .ra-badges{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:10px;
+  }
+
+  .ra-badge{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:8px 12px;
+    border-radius:999px;
+    font-size:.84rem;
+    font-weight:800;
+    border:1px solid transparent;
+  }
+
+  .ra-badge.ok{
+    background:rgba(91,165,111,0.14);
+    border-color:rgba(91,165,111,0.18);
+    color:#417d52;
+  }
+
+  .ra-badge.warn{
+    background:rgba(212,166,61,0.14);
+    border-color:rgba(212,166,61,0.18);
+    color:#8c6914;
+  }
+
+  .ra-console{
+    min-height:140px;
+    max-height:220px;
+    overflow:auto;
+    padding:14px;
+    border-radius:16px;
+    background:#111;
+    color:#d6e2dc;
+    border:1px solid rgba(255,255,255,0.08);
+    font-family:ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size:.9rem;
+    white-space:pre-wrap;
+  }
+
+  .ra-dev-toggle{
+    width:100%;
+    text-align:left;
+  }
+
+  .ra-dev-grid{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:12px;
+    margin-top:14px;
+  }
+
+  .ra-field{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+
+  .ra-field label{
+    color:var(--text-soft);
+    font-size:.9rem;
+    font-weight:700;
+  }
+
+  .ra-field input{
+    height:50px;
+    border:1px solid var(--stroke);
+    border-radius:14px;
+    background:rgba(255,255,255,0.42);
+    padding:0 14px;
+    color:var(--text);
+    outline:none;
+  }
+
+  .ra-field input:focus{
+    border-color:rgba(199,159,51,0.35);
+    box-shadow:0 0 0 4px rgba(199,159,51,0.08);
+    background:rgba(255,255,255,0.72);
+  }
+
+  .ra-hidden{
+    display:none;
+  }
+
+  @media (max-width: 1180px){
+    .ra-layout{
+      grid-template-columns:1fr;
+    }
+  }
+
+  @media (max-width: 768px){
+    .ra-scanner-shell,
+    #reader{
+      min-height:360px;
+    }
+
+    .ra-kv-row{
+      grid-template-columns:1fr;
+      gap:4px;
+    }
+
+    .ra-scanner-toolbar .btn{
+      width:100%;
+      justify-content:center;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+<script>
+  function setRaStatus(text, mode = "idle") {
+    const label = document.getElementById("raStatusLabel");
+    const dot = document.getElementById("raStatusDot");
+    if (!label || !dot) return;
+
+    label.textContent = text;
+
+    if (mode === "ok") {
+      dot.style.background = "var(--success)";
+      dot.style.boxShadow = "0 0 0 6px rgba(91,165,111,0.16)";
+    } else if (mode === "error") {
+      dot.style.background = "var(--danger)";
+      dot.style.boxShadow = "0 0 0 6px rgba(200,91,91,0.16)";
+    } else if (mode === "scan") {
+      dot.style.background = "var(--info)";
+      dot.style.boxShadow = "0 0 0 6px rgba(77,136,217,0.16)";
+    } else {
+      dot.style.background = "var(--warning)";
+      dot.style.boxShadow = "0 0 0 6px rgba(212,166,61,0.16)";
+    }
+  }
+
+  function fillOverlayCard(data = {}) {
+    const card = document.getElementById("overlayCard");
+    card.classList.add("active");
+
+    document.getElementById("matName").textContent = data.name || "Material sin nombre";
+    document.getElementById("matLab").textContent = data.lab || data.lab_id || "-";
+    document.getElementById("matLocation").textContent = data.location || "-";
+    document.getElementById("matPieces").textContent = data.pieces_text || data.pieces_qty || "-";
+    document.getElementById("matStatus").textContent = data.status || "-";
+
+    const scanStatus = document.getElementById("scanStatus");
+    scanStatus.textContent = data.scan_message || "Material detectado correctamente.";
+  }
+
+  function toggleDevPanel() {
+    const panel = document.getElementById("devPanel");
+    panel.classList.toggle("ra-hidden");
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    setRaStatus("Listo para escanear", "idle");
+  });
+</script>
+{% endblock %}
+
+{% block content %}
+<section class="ra-page">
+  <header class="ra-hero">
+    <div class="ra-hero-copy">
+      <p class="page-kicker">RA cliente</p>
+      <h1>Escaneo RA</h1>
+      <p>Escanea un código QR para consultar información del material y registrar el evento de forma rápida.</p>
+    </div>
+
+    <div class="ra-status-chip">
+      <span id="raStatusDot" class="ra-status-dot"></span>
+      <span id="raStatusLabel">Listo para escanear</span>
+    </div>
+  </header>
+
+  <section class="ra-layout">
+    <div class="ra-card">
+      <div class="ra-card-header">
+        <h2>Visor de escaneo</h2>
+      </div>
+
+      <div class="ra-card-body">
+        <div class="ra-scanner-shell">
+          <div id="reader"></div>
+
+          <div class="ra-scanner-frame"></div>
+          <div class="ra-corner tl"></div>
+          <div class="ra-corner tr"></div>
+          <div class="ra-corner bl"></div>
+          <div class="ra-corner br"></div>
+          <div class="scan-line"></div>
+        </div>
+
+        <div class="ra-scanner-toolbar">
+          <button class="btn btn-gold" type="button" onclick="setRaStatus('Cámara activa', 'scan'); startCamera();">
+            Iniciar escaneo
+          </button>
+          <button class="btn btn-ghost" type="button" onclick="setRaStatus('Escaneo detenido', 'idle'); stopCamera();">
+            Detener
+          </button>
+          <button class="btn btn-ghost ra-dev-toggle" type="button" onclick="toggleDevPanel()">
+            Herramientas técnicas
+          </button>
+        </div>
+
+        <div id="devPanel" class="ra-hidden">
+          <div class="ra-dev-grid">
+            <div class="ra-field">
+              <label>Base URL</label>
+              <input id="baseUrl" type="text" value="http://127.0.0.1:5000">
+            </div>
+            <div class="ra-field">
+              <label>API Key</label>
+              <input id="apiKey" type="text" value="1seizIZsXnTXMMxvfvvUth0ZRnlb6KtRz-65g8V2TI4">
+            </div>
+            <div class="ra-field">
+              <label>User email</label>
+              <input id="userEmail" type="email" value="24310130@utpn.edu.mx">
+            </div>
+            <div class="ra-field">
+              <label>Material ID manual</label>
+              <input id="materialId" type="number" value="2">
+            </div>
+
+            <div class="ra-scanner-toolbar">
+              <button class="btn btn-ghost" type="button" onclick="setRaStatus('Consultando material', 'scan'); getMaterial();">
+                GET Material
+              </button>
+              <button class="btn btn-ghost" type="button" onclick="setRaStatus('Enviando evento', 'scan'); postEvent();">
+                POST Evento
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div id="overlayCard" class="ra-overlay-card">
+          <h3 id="matName">Sin material detectado</h3>
+
+          <div class="ra-kv">
+            <div class="ra-kv-row">
+              <span>Laboratorio</span>
+              <span id="matLab">-</span>
+            </div>
+            <div class="ra-kv-row">
+              <span>Ubicación</span>
+              <span id="matLocation">-</span>
+            </div>
+            <div class="ra-kv-row">
+              <span>Piezas</span>
+              <span id="matPieces">-</span>
+            </div>
+            <div class="ra-kv-row">
+              <span>Estado</span>
+              <span id="matStatus">-</span>
+            </div>
+          </div>
+
+          <div class="ra-badges">
+            <span class="ra-badge ok">Material detectado</span>
+          </div>
+
+          <div id="scanStatus" style="margin-top:10px;font-weight:800;color:var(--text);"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ra-side">
+      <div class="ra-card">
+        <div class="ra-card-header">
+          <h3>Último resultado</h3>
+        </div>
+        <div class="ra-card-body">
+          <div class="ra-panel">
+            <div class="ra-kv">
+              <div class="ra-kv-row">
+                <span>Nombre</span>
+                <span id="matNameMirror" class="ra-empty">Esperando escaneo</span>
+              </div>
+              <div class="ra-kv-row">
+                <span>Laboratorio</span>
+                <span id="matLabMirror" class="ra-empty">-</span>
+              </div>
+              <div class="ra-kv-row">
+                <span>Ubicación</span>
+                <span id="matLocationMirror" class="ra-empty">-</span>
+              </div>
+              <div class="ra-kv-row">
+                <span>Estado</span>
+                <span id="matStatusMirror" class="ra-empty">-</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ra-card">
+        <div class="ra-card-header">
+          <h3>Consola</h3>
+        </div>
+        <div class="ra-card-body">
+          <pre id="out" class="ra-console"></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+</section>
+
+<script>
+  const oldFillOverlayCard = window.fillOverlayCard;
+  window.fillOverlayCard = function(data = {}) {
+    if (typeof oldFillOverlayCard === "function") {
+      oldFillOverlayCard(data);
+    }
+
+    const name = data.name || "Material detectado";
+    const lab = data.lab || data.lab_id || "-";
+    const location = data.location || "-";
+    const status = data.status || "-";
+
+    document.getElementById("matNameMirror").textContent = name;
+    document.getElementById("matLabMirror").textContent = lab;
+    document.getElementById("matLocationMirror").textContent = location;
+    document.getElementById("matStatusMirror").textContent = status;
+
+    setRaStatus("Material detectado", "ok");
+  };
+</script>
+{% endblock %}

@@ -1,0 +1,123 @@
+{% extends "layouts/student_base.html" %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Reservas admin", url_for('reservations.admin_queue')), ("Reservas en curso", url_for('reservations.admin_approved'))] %}
+{% block title %}Reservas en curso (Administración){% endblock %}
+{% block content %}
+<header class="topbar">
+  <div class="topbar-left">
+    <p class="page-kicker">Reservaciones</p>
+    <h1>Reservas en curso de hoy</h1>
+<p class="page-subtitle">Desde aquí puedes abrir tickets de laboratorio para reservas en curso del día actual.</p>
+  </div>
+</header>
+
+<section class="toolbar-card">
+  <div class="toolbar-actions">
+    <a class="btn btn-ghost" href="{{ url_for('reservations.admin_queue') }}">
+      Ver reservas pendientes
+    </a>
+  </div>
+</section>
+
+<section class="toolbar-card">
+  <div class="toolbar-actions">
+    <a class="btn btn-ghost" href="{{ url_for('reservations.admin_queue') }}">
+      Ver reservas pendientes
+    </a>
+    <a class="btn btn-ghost" href="{{ url_for('reservations.admin_approved_history') }}">
+      Ver historial
+    </a>
+    <a class="btn btn-ghost" href="{{ url_for('reservations.admin_ticket_closure_requests') }}">
+      Cierres solicitados
+    </a>
+  </div>
+</section>
+
+<div id="reservations-admin-approved-container">
+  {% if reservations|length == 0 %}
+    <section class="empty-state">
+      <i class="ph ph-calendar-check empty-icon"></i>
+      <h3>Sin reservas en curso</h3>
+      <p>No hay reservas en curso.</p>
+    </section>
+  {% else %}
+  <section class="table-card">
+    <div class="table-wrap">
+      <table class="inventory-table" style="min-width: 1500px;">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Usuario</th>
+            <th>Salón/Lab</th>
+            <th>Fecha</th>
+            <th>Inicio</th>
+            <th>Fin</th>
+            <th>Materia</th>
+            <th>Grupo</th>
+            <th>Solicitante</th>
+            <th>Motivo</th>
+            <th>Materiales solicitados</th>
+            <th class="th-actions">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in reservations %}
+          <tr>
+            <td>{{ r.id }}</td>
+            <td>{{ r.user.email }}</td>
+            <td>{{ r.room }}</td>
+            <td>{{ r.date }}</td>
+            <td>{{ r.start_time }}</td>
+            <td>{{ r.end_time }}</td>
+            <td>{{ r.subject }}</td>
+            <td>{{ r.group_name }}</td>
+            <td>{{ ((r.user.first_name or '') ~ ' ' ~ (r.user.last_name or ''))|trim or r.user.email }}</td>
+            <td>{{ r.purpose or '-' }}</td>
+
+            <td>
+              {% if r.items %}
+                <ul style="padding-left:16px; margin:0;">
+                  {% for item in r.items %}
+                    <li>
+                      {{ item.material.name if item.material else ('ID ' ~ item.material_id) }}
+                      ({{ item.quantity_requested }})
+                    </li>
+                  {% endfor %}
+                </ul>
+              {% else %}
+                -
+              {% endif %}
+            </td>
+
+            <td>
+    {% if r.open_ticket %}
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <span class="status-badge {% if r.open_ticket.status == 'READY_FOR_PICKUP' %}status-ok{% elif r.open_ticket.status == 'CLOSURE_REQUESTED' %}status-warn{% else %}status-warn{% endif %}">
+          {{ r.open_ticket.status|status_label }}
+        </span>
+        <a href="{{ url_for('reservations.admin_ticket_detail', ticket_id=r.open_ticket.id) }}" class="btn btn-ghost">
+          Ver ticket
+        </a>
+      </div>
+    {% elif r.can_open_ticket %}
+      <form method="post" action="{{ url_for('reservations.admin_open_ticket', res_id=r.id) }}">
+        <button type="submit" class="btn btn-gold">
+          Abrir ticket
+        </button>
+      </form>
+    {% elif r.open_ticket_reason == "too_early" %}
+      <span class="status-badge status-warn">Aún no disponible</span>
+    {% elif r.open_ticket_reason == "expired" %}
+      <span class="status-badge status-bad">Fuera de horario</span>
+    {% else %}
+      <span class="status-badge status-bad">No disponible</span>
+    {% endif %}
+  </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}

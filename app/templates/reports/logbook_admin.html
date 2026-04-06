@@ -1,0 +1,101 @@
+{% extends "layouts/student_base.html" %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Reportes", url_for('reports.reports_home')), ("Bitácora", url_for('reports.logbook_admin_view'))] %}
+{% block title %}Bitácora (Administración){% endblock %}
+
+{% block content %}
+<header class="topbar">
+  <div class="topbar-left">
+    <p class="page-kicker">Reportes</p>
+    <h1>Bitácora (Administración)</h1>
+    <p class="page-subtitle">Filtra eventos de actividad por acción, usuario y material.</p>
+  </div>
+</header>
+
+<section class="toolbar-card">
+  <div class="toolbar-actions">
+    <a href="{{ url_for('reports.reports_home') }}" class="btn btn-ghost">
+      <i class="ph ph-arrow-left"></i><span>Volver</span>
+    </a>
+  </div>
+</section>
+
+<section class="toolbar-card">
+  <form method="get" action="{{ url_for('reports.logbook_admin_view') }}" class="toolbar" style="grid-template-columns: repeat(4, minmax(190px, 1fr)) auto;">
+    <div class="toolbar-group">
+      <label for="action">Acción contiene</label>
+      <div class="search-box"><i class="ph ph-lightning search-icon"></i><input type="text" id="action" name="action" value="{{ action or '' }}" placeholder="Ejemplo: RA_SCAN o LOGIN"></div>
+    </div>
+    <div class="toolbar-group">
+      <label for="module">Módulo</label>
+      <div class="search-box"><i class="ph ph-squares-four search-icon"></i><input type="text" id="module" name="module" value="{{ module or '' }}" placeholder="Ejemplo: RESERVATIONS o USERS"></div>
+    </div>
+    <div class="toolbar-group">
+      <label for="user_id">ID de usuario</label>
+      <div class="search-box"><i class="ph ph-user search-icon"></i><input type="number" id="user_id" name="user_id" value="{{ user_id or '' }}" placeholder="Ejemplo: 42"></div>
+    </div>
+    <div class="toolbar-group">
+      <label for="material_id">ID de material</label>
+      <div class="search-box"><i class="ph ph-hash search-icon"></i><input type="number" id="material_id" name="material_id" value="{{ material_id or '' }}" placeholder="Ejemplo: 128"></div>
+    </div>
+    <div class="toolbar-group">
+      <label for="description">Descripción contiene</label>
+      <div class="search-box"><i class="ph ph-text-align-left search-icon"></i><input type="text" id="description" name="description" value="{{ description or '' }}" placeholder="Texto libre"></div>
+    </div>
+    <div class="toolbar-group">
+      <label for="date_from">Desde</label>
+      <input class="form-control" type="date" id="date_from" name="date_from" value="{{ date_from or '' }}">
+    </div>
+    <div class="toolbar-group">
+      <label for="date_to">Hasta</label>
+      <input class="form-control" type="date" id="date_to" name="date_to" value="{{ date_to or '' }}">
+    </div>
+    <div class="toolbar-group" style="grid-column: 1 / -1;">
+      <details>
+        <summary><strong>Columnas visibles y exportables</strong></summary>
+        <div class="toolbar" style="grid-template-columns: repeat(4, minmax(160px, 1fr)); margin-top: 10px;">
+          {% for col in all_columns %}
+            <label class="form-control" style="display:flex; align-items:center; gap:8px; min-height:unset;">
+              <input type="checkbox" name="cols" value="{{ col }}" {% if col in selected_columns %}checked{% endif %}>
+              <span>{{ col }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </details>
+    </div>
+    <div class="toolbar-actions">
+      <button type="submit" class="btn btn-gold"><i class="ph ph-funnel"></i><span>Filtrar</span></button>
+      <a href="{{ url_for('reports.logbook_admin_view') }}" class="btn btn-ghost"><i class="ph ph-x-circle"></i><span>Limpiar</span></a>
+      <a href="{{ export_url }}" class="btn btn-ghost"><i class="ph ph-download-simple"></i><span>Descargar CSV</span></a>
+      <a href="{{ export_excel_url }}" class="btn btn-gold"><i class="ph ph-file-xls"></i><span>Descargar Excel</span></a>
+      <a href="{{ export_pdf_url }}" class="btn btn-ghost"><i class="ph ph-file-pdf"></i><span>Descargar PDF</span></a>
+    </div>
+  </form>
+</section>
+
+{% if rows|length == 0 %}
+  <section class="empty-state"><i class="ph ph-list empty-icon"></i><h3>Sin resultados</h3><p>No hay eventos con esos filtros.</p></section>
+{% else %}
+<section class="table-card">
+  <div class="table-wrap">
+    <table class="inventory-table" style="min-width: 1100px;">
+      <thead>
+        <tr>
+          {% for col in columns %}
+            <th>{{ col }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+          <tr>
+            {% for value in row %}
+              <td>{{ value if value is not none and value != '' else '-' }}</td>
+            {% endfor %}
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

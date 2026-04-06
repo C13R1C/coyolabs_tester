@@ -1,0 +1,101 @@
+{% extends "layouts/student_base.html" %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Reservas admin", url_for('reservations.admin_queue')), ("Historial reservas en curso", url_for('reservations.admin_approved_history'))] %}
+{% block title %}Historial de reservas en curso{% endblock %}
+
+{% block content %}
+<header class="topbar">
+  <div class="topbar-left">
+    <p class="page-kicker">Reservaciones</p>
+    <h1>Historial de reservas en curso</h1>
+    <p class="page-subtitle">Consulta reservas en curso anteriores. Esta vista es solo informativa.</p>
+  </div>
+</header>
+
+<section class="toolbar-card">
+  <div class="toolbar-actions">
+    <a class="btn btn-ghost" href="{{ url_for('reservations.admin_approved') }}">
+      Volver a reservas en curso de hoy
+    </a>
+    <a class="btn btn-ghost" href="{{ url_for('reservations.admin_queue') }}">
+      Ver pendientes
+    </a>
+  </div>
+</section>
+
+<div id="reservations-admin-approved-history-container">
+{% if reservations|length == 0 %}
+  <section class="empty-state">
+    <i class="ph ph-calendar-check empty-icon"></i>
+    <h3>Sin historial</h3>
+    <p>No hay reservas en curso anteriores.</p>
+  </section>
+{% else %}
+  <section class="table-card">
+    <div class="table-wrap">
+      <table class="inventory-table" style="min-width: 1550px;">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Usuario</th>
+          <th>Salón/Lab</th>
+          <th>Fecha</th>
+          <th>Inicio</th>
+          <th>Fin</th>
+          <th>Motivo</th>
+          <th>Materiales</th>
+          <th>Ticket</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in reservations %}
+        {% set latest_ticket = (r.lab_tickets|sort(attribute='opened_at', reverse=True)|first) if r.lab_tickets else None %}
+        <tr>
+          <td>{{ r.id }}</td>
+          <td>{{ r.user.email if r.user else '-' }}</td>
+          <td>{{ r.room }}</td>
+          <td>{{ r.date }}</td>
+          <td>{{ r.start_time }}</td>
+          <td>{{ r.end_time }}</td>
+          <td>{{ r.purpose or '-' }}</td>
+
+          <td>
+            {% if r.items %}
+              <ul style="padding-left:16px; margin:0;">
+                {% for item in r.items[:3] %}
+                  <li>
+                    {{ item.material.name if item.material else ('ID ' ~ item.material_id) }}
+                    ({{ item.quantity_requested }})
+                  </li>
+                {% endfor %}
+                {% if r.items|length > 3 %}
+                  <li>+{{ r.items|length - 3 }} más...</li>
+                {% endif %}
+              </ul>
+            {% else %}
+              -
+            {% endif %}
+          </td>
+
+          <td>
+            {% if latest_ticket %}
+              <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                <span class="status-badge {% if latest_ticket.status in ['OPEN', 'READY_FOR_PICKUP', 'CLOSURE_REQUESTED'] %}status-warn{% elif latest_ticket.status == 'CLOSED' %}status-ok{% else %}status-bad{% endif %}">
+                  {{ latest_ticket.status|status_label }}
+                </span>
+                <a href="{{ url_for('reservations.admin_ticket_detail', ticket_id=latest_ticket.id) }}" class="btn btn-ghost">
+                  Ver ticket
+                </a>
+              </div>
+            {% else %}
+              -
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      </table>
+    </div>
+  </section>
+{% endif %}
+</div>
+{% endblock %}

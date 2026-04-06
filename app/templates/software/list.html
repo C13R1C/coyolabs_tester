@@ -1,0 +1,44 @@
+{% extends "layouts/student_base.html" %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Software", url_for('software.list_software'))] %}
+{% block title %}Software{% endblock %}
+{% block content %}
+<header class="topbar"><div class="topbar-left"><p class="page-kicker">Software</p><h1>Catálogo de software</h1><p class="page-subtitle">Consulta software institucional y solicitudes de actualización.</p></div></header>
+
+<style>
+.software-update-form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.software-update-form .form-control {
+  min-height: 54px;
+  border-radius: 16px;
+}
+
+.software-update-form .btn {
+  min-height: 54px;
+  border-radius: 16px;
+}
+</style>
+
+<section class="toolbar-card">
+  <form method="get" action="{{ url_for('software.list_software') }}" class="toolbar">
+    <div class="toolbar-group"><label for="lab_id">Filtrar por laboratorio</label><div class="select-wrap"><select id="lab_id" name="lab_id"><option value="">-- Todos --</option>{% for lab in labs %}<option value="{{ lab.id }}" {% if selected_lab == lab.id %}selected{% endif %}>{{ lab.name }}</option>{% endfor %}</select><i class="ph ph-caret-down select-arrow"></i></div></div>
+    <div class="toolbar-actions"><button type="submit" class="btn btn-gold">Filtrar</button>{% if is_admin_role(current_user.role) %}<a class="btn btn-ghost" href="{{ url_for('software.admin_new') }}">Agregar software</a>{% endif %}</div>
+  </form>
+</section>
+
+{% if items|length == 0 %}
+  <section class="empty-state"><i class="ph ph-app-window empty-icon"></i><h3>Sin registros</h3><p>No hay software registrado.</p></section>
+{% else %}
+<section class="table-card"><div class="table-wrap"><table class="inventory-table" style="min-width: 1200px;"><thead><tr><th>ID</th><th>Laboratorio</th><th>Nombre</th><th>Versión</th><th>Licencia</th><th>Notas</th><th>Actualización</th><th class="th-actions">Acciones</th></tr></thead><tbody>
+{% for s in items %}
+<tr><td>{{ s.id }}</td><td>{% if s.lab %}{{ s.lab.name }}{% else %}-{% endif %}</td><td>{{ s.name }}</td><td>{{ s.version or '-' }}</td><td>{{ s.license_type or '-' }}</td><td>{{ s.notes or '-' }}</td><td>{% if s.update_requested %}<span class="status-badge status-warn">SOLICITADO</span><br>{{ s.update_note }}{% else %}<span class="status-badge status-neutral">-</span>{% endif %}</td><td>
+  <form method="post" action="{{ url_for('software.request_update', software_id=s.id) }}" class="software-update-form"><input class="form-control" type="text" name="update_note" placeholder="Motivo de actualización"><button type="submit" class="btn btn-ghost">Solicitar</button></form>
+  {% if is_admin_role(current_user.role) %}<form method="post" action="{{ url_for('software.admin_clear_update', software_id=s.id) }}"><button type="submit" class="btn btn-ghost">Resolver</button></form>{% endif %}
+</td></tr>
+{% endfor %}
+</tbody></table></div></section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,119 @@
+{% extends "layouts/student_base.html" %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Mis reservas", url_for('reservations.my_reservations')), ("Ticket activo #" ~ ticket.id, url_for('reservations.my_active_ticket', reservation_id=reservation.id))] %}
+{% block title %}Ticket activo #{{ ticket.id }}{% endblock %}
+
+{% block content %}
+<header class="topbar">
+  <div class="topbar-left">
+    <p class="page-kicker">Reservaciones</p>
+    <h1>Ticket activo #{{ ticket.id }}</h1>
+    <p class="page-subtitle">Aquí puedes revisar tu ticket vivo y agregar más materiales mientras siga activo.</p>
+  </div>
+</header>
+
+<div id="ticket-my-container">
+  <section class="table-card">
+    <div class="table-wrap" style="padding: 18px 22px;">
+      <div style="display:grid; grid-template-columns: repeat(3, minmax(220px, 1fr)); gap:12px;">
+        <div><strong>Reserva:</strong> #{{ reservation.id }}</div>
+        <div><strong>Salón/Lab:</strong> {{ reservation.room }}</div>
+        <div><strong>Fecha:</strong> {{ reservation.date }}</div>
+        <div><strong>Horario:</strong> {{ reservation.start_time }} - {{ reservation.end_time }}</div>
+        <div>
+          <strong>Estado ticket:</strong>
+          <span class="status-badge {% if ticket.status in ['OPEN', 'READY_FOR_PICKUP', 'CLOSURE_REQUESTED'] %}status-warn{% elif ticket.status == 'CLOSED' %}status-ok{% else %}status-bad{% endif %}">
+            {{ ticket.status|status_label }}
+          </span>
+        </div>
+        <div><strong>Abierto:</strong> {{ ticket.opened_at or '-' }}</div>
+      </div>
+    </div>
+  </section>
+
+  {% if ticket.status in ['OPEN', 'READY_FOR_PICKUP'] %}
+  <section class="toolbar-card" style="margin-top:18px;">
+    <form method="post" class="toolbar" style="grid-template-columns: minmax(260px, 2fr) minmax(160px, 1fr) auto;">
+      <div class="toolbar-group" style="margin:0;">
+        <label>Agregar material al ticket</label>
+        <div class="select-wrap">
+          <select name="material_id" required>
+            <option value="">Selecciona material</option>
+            {% for material in materials %}
+              <option value="{{ material.id }}">{{ material.name }} ({{ material.pieces_qty if material.pieces_qty is not none else 0 }} disp.)</option>
+            {% endfor %}
+          </select>
+          <i class="ph ph-caret-down select-arrow"></i>
+        </div>
+      </div>
+
+      <div class="toolbar-group" style="margin:0;">
+        <label>Cantidad</label>
+        <div class="search-box">
+          <i class="ph ph-hash search-icon"></i>
+          <input type="number" name="quantity" min="1" value="1" required>
+        </div>
+      </div>
+
+      <div class="toolbar-actions" style="align-items:flex-end;">
+        <button type="submit" class="btn btn-gold">Agregar al ticket</button>
+      </div>
+    </form>
+  </section>
+  {% endif %}
+
+  {% if ticket.status in ['OPEN', 'READY_FOR_PICKUP'] %}
+  <section class="toolbar-card" style="margin-top:18px;">
+    <div class="toolbar-actions">
+      <form method="post" action="{{ url_for('reservations.my_ticket_request_close', ticket_id=ticket.id) }}">
+        <button type="submit" class="btn btn-ghost">Solicitar cierre</button>
+      </form>
+    </div>
+  </section>
+  {% elif ticket.status == 'CLOSURE_REQUESTED' %}
+  <section class="toolbar-card" style="margin-top:18px;">
+    <p style="margin:0; font-weight:600;">
+      Tu solicitud de cierre ya fue enviada. El administrador debe confirmar el cierre final.
+    </p>
+  </section>
+  {% endif %}
+
+  <section class="table-card" style="margin-top:18px;">
+    <div class="table-wrap">
+      <table class="inventory-table">
+        <thead>
+          <tr>
+            <th>Material</th>
+            <th>Solicitado</th>
+            <th>Entregado</th>
+            <th>Devuelto</th>
+            <th>Estado</th>
+            <th>Notas</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in ticket.items %}
+          <tr>
+            <td>{{ item.material.name if item.material else ('ID ' ~ item.material_id) }}</td>
+            <td>{{ item.quantity_requested }}</td>
+            <td>{{ item.quantity_delivered }}</td>
+            <td>{{ item.quantity_returned }}</td>
+            <td>
+              <span class="status-badge {% if item.status == 'READY_FOR_PICKUP' %}status-ok{% elif item.status in ['REQUESTED', 'DELIVERED'] %}status-warn{% else %}status-bad{% endif %}">
+                {{ item.status|status_label }}
+              </span>
+            </td>
+            <td>{{ item.notes or '-' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="toolbar-card" style="margin-top:18px;">
+    <div class="toolbar-actions">
+      <a class="btn btn-ghost" href="{{ url_for('reservations.my_reservations') }}">Volver a mis reservas</a>
+    </div>
+  </section>
+</div>
+{% endblock %}

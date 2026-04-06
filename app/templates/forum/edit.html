@@ -1,0 +1,65 @@
+{% extends "layouts/student_base.html" %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Foro", url_for('forum.forum_home')), (post.title, url_for('forum.post_detail', post_id=post.id)), ("Editar", url_for('forum.edit_post', post_id=post.id))] %}
+{% block title %}Editar publicación{% endblock %}
+
+{% block content %}
+<style>
+.forum-edit-form{
+  display: grid;
+  gap: 12px;
+}
+
+.forum-edit-actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+@media (max-width: 768px){
+  .forum-edit-actions .btn{
+    width: 100%;
+  }
+}
+</style>
+<header class="topbar">
+  <div class="topbar-left">
+    <p class="page-kicker">Foro</p>
+    <h1>Editar publicación</h1>
+    <p class="page-subtitle">Actualiza título, categoría o contenido de tu publicación.</p>
+  </div>
+</header>
+
+<section class="table-card">
+  <form method="post" class="forum-edit-form">
+    <div class="toolbar-group">
+      <label for="post_title">Título</label>
+      <div class="search-box">
+        <i class="ph ph-note-pencil search-icon"></i>
+        <input id="post_title" type="text" name="title" maxlength="180" required value="{{ post.title }}">
+      </div>
+    </div>
+
+    <div class="toolbar-group">
+      <label for="post_category">Categoría</label>
+      <div class="select-wrap">
+      <select id="post_category" name="category">
+        {% for c in categories %}
+          <option value="{{ c }}" {% if post.category == c %}selected{% endif %}>{{ c }}</option>
+        {% endfor %}
+      </select>
+      <i class="ph ph-caret-down select-arrow"></i>
+      </div>
+    </div>
+
+    <div class="toolbar-group">
+      <label for="post_content">Contenido</label>
+      <textarea id="post_content" class="form-control" name="content" rows="7" required>{{ post.content }}</textarea>
+    </div>
+
+    <div class="forum-edit-actions">
+      <button class="btn btn-gold" type="submit">Guardar cambios</button>
+      <a class="btn btn-ghost" href="{{ url_for('forum.post_detail', post_id=post.id) }}">Cancelar</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

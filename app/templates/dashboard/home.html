@@ -1,0 +1,819 @@
+{% extends "layouts/student_base.html" %}
+{% set crumbs = [("Inicio", url_for('root_home'))] %}
+{% block title %}{{ "Panel" if active_page == "dashboard" else "Inicio" }}{% endblock %}
+
+{% block content %}
+<style>
+.kpi-grid{
+  display:grid;
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  gap:14px;
+  margin-bottom:18px;
+}
+
+.kpi-card{
+  background: linear-gradient(180deg, var(--panel-2), var(--panel));
+  border: 1px solid var(--stroke);
+  border-radius: 20px;
+  padding: 18px;
+  box-shadow: var(--shadow-md);
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.kpi-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.kpi-icon{
+  width:42px;
+  height:42px;
+  border-radius:14px;
+  display:grid;
+  place-items:center;
+  font-size:1.15rem;
+}
+
+.kpi-icon.gold{ background: rgba(199,159,51,0.14); color: var(--gold-dark); }
+.kpi-icon.red{ background: rgba(200,91,91,0.14); color: #9f3f3f; }
+.kpi-icon.blue{ background: rgba(77,136,217,0.14); color: #2f65b1; }
+
+.kpi-label{
+  color: var(--text-dim);
+  font-size: .88rem;
+}
+
+.kpi-value{
+  font-size: 1.55rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.kpi-sub{
+  color: var(--text-soft);
+  font-size: .88rem;
+}
+
+.dashboard-grid{
+  display:grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap:18px;
+}
+
+.stack{
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+}
+
+.mini-list{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.mini-item{
+  border:1px solid var(--stroke);
+  background: rgba(255,255,255,0.38);
+  border-radius:16px;
+  padding:14px;
+}
+
+.mini-top{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+
+.mini-meta{
+  color: var(--text-dim);
+  font-size:.86rem;
+  margin-top:6px;
+}
+
+.quick-grid{
+  display:grid;
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  gap:14px;
+}
+
+.quick-link{
+  display:block;
+  text-decoration:none;
+}
+
+.quick-card{
+  background: linear-gradient(180deg, var(--panel-2), var(--panel));
+  border: 1px solid var(--stroke);
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: var(--shadow-md);
+  transition: transform .18s ease, border-color .18s ease;
+}
+
+.quick-card:hover{
+  transform: translateY(-2px);
+  border-color: rgba(199,159,51,0.25);
+}
+
+.quick-card strong{
+  display:block;
+  margin-top:8px;
+  color: var(--text);
+}
+
+.quick-card span{
+  color: var(--text-dim);
+  font-size:.9rem;
+}
+
+.dashboard-notice-grid{
+  display:grid;
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
+  gap:12px;
+  margin-bottom:18px;
+}
+
+.dashboard-notice{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:14px 16px;
+  border-radius:18px;
+  text-decoration:none;
+  border:1px solid var(--stroke);
+  background: linear-gradient(180deg, var(--panel-2), var(--panel));
+  box-shadow: var(--shadow-md);
+  transition: transform .18s ease, border-color .18s ease;
+}
+
+.dashboard-notice:hover{
+  transform: translateY(-2px);
+}
+
+.notice-icon{
+  width:42px;
+  height:42px;
+  border-radius:14px;
+  display:grid;
+  place-items:center;
+  font-size:1.1rem;
+  flex-shrink:0;
+}
+
+.dashboard-notice strong{
+  display:block;
+  color: var(--text);
+  margin-bottom:3px;
+}
+
+.dashboard-notice span{
+  font-size:.88rem;
+  color: var(--text-dim);
+}
+
+.notice-warn .notice-icon{
+  background: rgba(212,166,61,0.14);
+  color: #8c6914;
+}
+
+.notice-danger-soft .notice-icon{
+  background: rgba(173,94,118,0.14);
+  color: #8f4e63;
+}
+
+.notice-stock .notice-icon{
+  background: rgba(199,159,51,0.12);
+  color: var(--gold-dark);
+}
+
+@media (max-width: 1200px){
+  .kpi-grid,
+  .quick-grid{
+    grid-template-columns: repeat(2, minmax(180px, 1fr));
+  }
+
+  .dashboard-grid,
+  .dashboard-notice-grid{
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px){
+  .kpi-grid,
+  .quick-grid{
+    grid-template-columns: 1fr;
+  }
+}
+
+.ops-grid{
+  display:grid;
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
+  gap:14px;
+  margin-bottom:18px;
+}
+
+.ops-card{
+  border:1px solid var(--stroke);
+  border-radius:18px;
+  background: linear-gradient(180deg, var(--panel-2), var(--panel));
+  box-shadow: var(--shadow-md);
+  padding:14px;
+}
+
+.ops-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  margin-bottom:10px;
+}
+
+.ops-count{
+  font-size:1.35rem;
+  font-weight:800;
+}
+
+.ops-list{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.ops-item{
+  border:1px solid var(--stroke);
+  border-radius:12px;
+  background: rgba(255,255,255,0.45);
+  padding:10px;
+}
+
+.ops-item a{ color: inherit; text-decoration:none; }
+
+@media (max-width: 1200px){
+  .ops-grid{ grid-template-columns: 1fr; }
+}
+</style>
+
+<header class="topbar">
+  <div class="topbar-left">
+    <p class="page-kicker">{{ "Panel general" if active_page == "dashboard" else "Inicio" }}</p>
+    <h1>{{ "Panel institucional" if active_page == "dashboard" else "Inicio institucional" }}</h1>
+    <p class="page-subtitle">
+      {{ "Resumen ejecutivo del sistema y accesos rápidos." if active_page == "dashboard" else "Resumen del sistema y accesos rápidos." }}
+    </p>
+  </div>
+</header>
+
+<section class="table-card" style="margin-bottom:18px;">
+  <div class="topbar" style="margin-bottom:12px;">
+    <div class="topbar-left">
+      <p class="page-kicker">Tiempo real</p>
+      <h2 style="font-size:1.4rem; margin-bottom:0;">Tablero operativo del laboratorio</h2>
+      <p class="page-subtitle" style="margin-top:6px;">Se actualiza automáticamente con eventos críticos.</p>
+    </div>
+  </div>
+
+  <div class="ops-grid">
+    <article class="ops-card">
+      <div class="ops-head">
+        <strong>Reservaciones pendientes</strong>
+        <span class="ops-count" id="opsPendingCount">{{ ops_snapshot.counts.pending_reservations }}</span>
+      </div>
+      <div class="ops-list" id="opsPendingList"></div>
+    </article>
+
+    <article class="ops-card">
+      <div class="ops-head">
+        <strong>Tickets activos</strong>
+        <span class="ops-count" id="opsActiveTicketsCount">{{ ops_snapshot.counts.active_tickets }}</span>
+      </div>
+      <div class="ops-list" id="opsActiveTicketsList"></div>
+    </article>
+
+    <article class="ops-card">
+      <div class="ops-head">
+        <strong>Material listo para recoger</strong>
+        <span class="ops-count" id="opsReadyItemsCount">{{ ops_snapshot.counts.ready_items }}</span>
+      </div>
+      <div class="ops-list" id="opsReadyItemsList"></div>
+    </article>
+
+    <article class="ops-card">
+      <div class="ops-head">
+        <strong>Cierre solicitado</strong>
+        <span class="ops-count" id="opsClosureCount">{{ ops_snapshot.counts.closure_requested_tickets }}</span>
+      </div>
+      <div class="ops-list" id="opsClosureList"></div>
+    </article>
+
+    <article class="ops-card">
+      <div class="ops-head">
+        <strong>Adeudos abiertos recientes</strong>
+        <span class="ops-count" id="opsDebtsCount">{{ ops_snapshot.counts.open_debts }}</span>
+      </div>
+      <div class="ops-list" id="opsDebtsList"></div>
+    </article>
+
+    <article class="ops-card">
+      <div class="ops-head">
+        <strong>Actividad reciente</strong>
+        <span class="status-badge status-warn">LIVE</span>
+      </div>
+      <div class="ops-list" id="opsActivityList"></div>
+    </article>
+  </div>
+</section>
+
+<section class="dashboard-notice-grid">
+  <a
+    id="noticePendingUsers"
+    href="{{ url_for('users.pending_users') }}"
+    class="dashboard-notice notice-warn"
+    style="{% if not (is_admin_role(current_user.role) and pending_users_count > 0) %}display:none;{% endif %}"
+  >
+    <div class="notice-icon">
+      <i class="ph ph-user-list"></i>
+    </div>
+    <div>
+      <strong id="noticePendingUsersText">{{ pending_users_count }} usuarios por dar de alta</strong>
+      <span>Asigna rol: maestro, staff o admin</span>
+    </div>
+  </a>
+
+  <a
+    id="noticePendingToday"
+    href="{{ url_for('reservations.admin_queue') }}"
+    class="dashboard-notice notice-warn"
+    style="{% if not (is_admin_role(current_user.role) and pending_today > 0) %}display:none;{% endif %}"
+  >
+    <div class="notice-icon">
+      <i class="ph ph-clock-countdown"></i>
+    </div>
+    <div>
+      <strong id="noticePendingTodayText">{{ pending_today }} pendientes</strong>
+      <span>Reservas esperando revisión</span>
+    </div>
+  </a>
+
+  <a
+    id="noticeOpenDebts"
+    href="{{ url_for('debts.admin_list') }}"
+    class="dashboard-notice notice-danger-soft"
+    style="{% if not (is_admin_role(current_user.role) and open_debts > 0) %}display:none;{% endif %}"
+  >
+    <div class="notice-icon">
+      <i class="ph ph-warning-circle"></i>
+    </div>
+    <div>
+      <strong id="noticeOpenDebtsText">{{ open_debts }} adeudos activos</strong>
+      <span>Usuarios con deuda pendiente</span>
+    </div>
+  </a>
+
+  <a
+    id="noticeLowStock"
+    href="{{ url_for('inventory.inventory_list') }}"
+    class="dashboard-notice notice-stock"
+    style="{% if low_stock_count <= 0 %}display:none;{% endif %}"
+  >
+    <div class="notice-icon">
+      <i class="ph ph-package"></i>
+    </div>
+    <div>
+      <strong id="noticeLowStockText">{{ low_stock_count }} con stock bajo</strong>
+      <span>Materiales que requieren revisión</span>
+    </div>
+  </a>
+</section>
+
+<section class="kpi-grid">
+  <article class="kpi-card">
+    <div class="kpi-head">
+      <span class="kpi-label">Inventario total</span>
+      <div class="kpi-icon gold"><i class="ph ph-package"></i></div>
+    </div>
+    <div class="kpi-value" id="kpiTotalInventory">{{ total_inventory }}</div>
+    <div class="kpi-sub">Materiales registrados en el sistema</div>
+  </article>
+
+  <article class="kpi-card">
+    <div class="kpi-head">
+      <span class="kpi-label">Reservas hoy</span>
+      <div class="kpi-icon blue"><i class="ph ph-calendar-check"></i></div>
+    </div>
+    <div class="kpi-value" id="kpiReservationsToday">{{ reservations_today }}</div>
+    <div class="kpi-sub" id="kpiReservationsSub">{{ approved_today }} aprobadas · {{ pending_today }} pendientes</div>
+  </article>
+
+  <article class="kpi-card">
+    <div class="kpi-head">
+      <span class="kpi-label">Tickets abiertos</span>
+      <div class="kpi-icon gold"><i class="ph ph-ticket"></i></div>
+    </div>
+    <div class="kpi-value" id="kpiOpenTickets">{{ open_tickets }}</div>
+    <div class="kpi-sub" id="kpiTicketsSub">{{ closed_with_debt }} cerrados con adeudo</div>
+  </article>
+
+  <article class="kpi-card">
+    <div class="kpi-head">
+      <span class="kpi-label">Adeudos activos</span>
+      <div class="kpi-icon red"><i class="ph ph-warning-circle"></i></div>
+    </div>
+    <div class="kpi-value" id="kpiOpenDebts">{{ open_debts }}</div>
+    <div class="kpi-sub" id="kpiDebtsSub">{{ low_stock_count }} materiales con stock bajo</div>
+  </article>
+</section>
+
+<section class="toolbar-card">
+  <div class="topbar" style="margin-bottom:0;">
+    <div class="topbar-left">
+      <p class="page-kicker">Navegación rápida</p>
+      <h2 style="font-size:1.4rem; margin-bottom:0;">Accesos directos</h2>
+    </div>
+  </div>
+
+  <div class="quick-grid" style="margin-top:16px;">
+    <a class="quick-link" href="{{ url_for('inventory.inventory_list') }}">
+      <div class="quick-card">
+        <i class="ph ph-package nav-icon"></i>
+        <strong>Inventario</strong>
+        <span>Gestión de materiales</span>
+      </div>
+    </a>
+
+    <a class="quick-link" href="{{ url_for('reservations.reservations_home') }}">
+      <div class="quick-card">
+        <i class="ph ph-calendar-check nav-icon"></i>
+        <strong>Reservaciones</strong>
+        <span>Solicitudes y tickets</span>
+      </div>
+    </a>
+
+    <a class="quick-link" href="{{ url_for('debts.debts_home') }}">
+      <div class="quick-card">
+        <i class="ph ph-warning-circle nav-icon"></i>
+        <strong>Adeudos</strong>
+        <span>Seguimiento de deudores</span>
+      </div>
+    </a>
+
+    <a class="quick-link" href="{{ url_for('lostfound.lostfound_home') }}">
+      <div class="quick-card">
+        <i class="ph ph-suitcase nav-icon"></i>
+        <strong>Objetos perdidos</strong>
+        <span>Consulta y control</span>
+      </div>
+    </a>
+  </div>
+</section>
+
+<section class="dashboard-grid">
+  <section class="stack">
+    <section class="table-card">
+      <div class="topbar" style="margin-bottom:14px;">
+        <div class="topbar-left">
+          <p class="page-kicker">Actividad</p>
+          <h2 style="font-size:1.4rem; margin-bottom:0;">Reservas de hoy y ayer</h2>
+        </div>
+      </div>
+
+      {% if recent_reservations %}
+      <div class="mini-list">
+        {% for r in recent_reservations %}
+          {% set badge_class = "status-bad" %}
+          {% if r.status == "APPROVED" %}
+            {% set badge_class = "status-ok" %}
+          {% elif r.status == "PENDING" %}
+            {% set badge_class = "status-warn" %}
+          {% endif %}
+        <div class="mini-item">
+          <div class="mini-top">
+            <strong>Reserva #{{ r.id }} · {{ r.room }}</strong>
+            <span class="status-badge {{ badge_class }}">{{ r.status|status_label }}</span>
+          </div>
+          <div class="mini-meta">
+            {{ r.user.email if r.user else '-' }} · {{ r.date }} · {{ r.start_time }} - {{ r.end_time }}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <section class="empty-state">
+        <i class="ph ph-calendar empty-icon"></i>
+        <h3>Sin reservas recientes</h3>
+        <p>No hay actividad reciente.</p>
+      </section>
+      {% endif %}
+    </section>
+
+    <section class="table-card">
+      <div class="topbar" style="margin-bottom:14px;">
+        <div class="topbar-left">
+          <p class="page-kicker">Ranking</p>
+          <h2 style="font-size:1.4rem; margin-bottom:0;">Materiales más usados</h2>
+        </div>
+      </div>
+
+      {% if top_materials %}
+      <div class="table-wrap">
+        <table class="inventory-table" style="min-width:620px;">
+          <thead>
+            <tr>
+              <th>Material</th>
+              <th>Total solicitado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for m in top_materials %}
+            <tr>
+              <td>{{ m[0] }}</td>
+              <td>{{ m[1] }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <section class="empty-state">
+        <i class="ph ph-package empty-icon"></i>
+        <h3>Sin datos</h3>
+        <p>Aún no hay uso de materiales registrado.</p>
+      </section>
+      {% endif %}
+    </section>
+  </section>
+
+  <section class="stack">
+    <section class="table-card">
+      <div class="topbar" style="margin-bottom:14px;">
+        <div class="topbar-left">
+          <p class="page-kicker">Tickets</p>
+          <h2 style="font-size:1.4rem; margin-bottom:0;">Hoy y ayer</h2>
+        </div>
+      </div>
+
+      {% if recent_tickets %}
+      <div class="mini-list">
+        {% for t in recent_tickets %}
+          {% set ticket_badge = "status-bad" %}
+          {% if t.status == "OPEN" %}
+            {% set ticket_badge = "status-warn" %}
+          {% elif t.status == "CLOSED" %}
+            {% set ticket_badge = "status-ok" %}
+          {% endif %}
+        <div class="mini-item">
+          <div class="mini-top">
+            <strong>Ticket #{{ t.id }}</strong>
+            <span class="status-badge {{ ticket_badge }}">{{ t.status|status_label }}</span>
+          </div>
+          <div class="mini-meta">
+            {{ t.owner_user.email if t.owner_user else '-' }} · {{ t.room or '-' }} · {{ t.opened_at }}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <section class="empty-state">
+        <i class="ph ph-ticket empty-icon"></i>
+        <h3>Sin tickets</h3>
+        <p>No hay tickets recientes.</p>
+      </section>
+      {% endif %}
+    </section>
+
+    <section class="table-card">
+      <div class="topbar" style="margin-bottom:14px;">
+        <div class="topbar-left">
+          <p class="page-kicker">Riesgo</p>
+          <h2 style="font-size:1.4rem; margin-bottom:0;">Usuarios con más adeudos</h2>
+        </div>
+      </div>
+
+      {% if top_debtors %}
+      <div class="table-wrap">
+        <table class="inventory-table" style="min-width:620px;">
+          <thead>
+            <tr>
+              <th>Usuario</th>
+              <th>Adeudos abiertos</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for d in top_debtors %}
+            <tr>
+              <td>{{ d[0] }}</td>
+              <td>{{ d[1] }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <section class="empty-state">
+        <i class="ph ph-warning-circle empty-icon"></i>
+        <h3>Sin deudores</h3>
+        <p>No hay adeudos abiertos actualmente.</p>
+      </section>
+      {% endif %}
+    </section>
+
+    <section class="table-card">
+      <div class="topbar" style="margin-bottom:14px;">
+        <div class="topbar-left">
+          <p class="page-kicker">Uso</p>
+          <h2 style="font-size:1.4rem; margin-bottom:0;">Laboratorios más usados</h2>
+        </div>
+      </div>
+
+      {% if top_rooms %}
+      <div class="table-wrap">
+        <table class="inventory-table" style="min-width:620px;">
+          <thead>
+            <tr>
+              <th>Salón/Lab</th>
+              <th>Reservas</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for room in top_rooms %}
+            <tr>
+              <td>{{ room[0] }}</td>
+              <td>{{ room[1] }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <section class="empty-state">
+        <i class="ph ph-buildings empty-icon"></i>
+        <h3>Sin datos</h3>
+        <p>No hay uso de laboratorios registrado.</p>
+      </section>
+      {% endif %}
+    </section>
+  </section>
+</section>
+
+<section class="table-card" style="margin-top:18px;">
+  <div class="topbar" style="margin-bottom:14px;">
+    <div class="topbar-left">
+      <p class="page-kicker">Adeudos</p>
+      <h2 style="font-size:1.4rem; margin-bottom:0;">Hoy y ayer</h2>
+    </div>
+  </div>
+
+  {% if recent_debts %}
+  <div class="table-wrap">
+    <table class="inventory-table" style="min-width:980px;">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Usuario</th>
+          <th>Material</th>
+          <th>Estado</th>
+          <th>Fecha</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in recent_debts %}
+          {% set debt_badge = "status-ok" %}
+          {% if d.status == "OPEN" %}
+            {% set debt_badge = "status-bad" %}
+          {% endif %}
+        <tr>
+          <td>#{{ d.id }}</td>
+          <td>{{ d.user.email if d.user else '-' }}</td>
+          <td>{{ d.material.name if d.material else '-' }}</td>
+          <td>
+            <span class="status-badge {{ debt_badge }}">{{ d.status|status_label }}</span>
+          </td>
+          <td>{{ d.created_at }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <section class="empty-state">
+    <i class="ph ph-warning empty-icon"></i>
+    <h3>Sin adeudos recientes</h3>
+    <p>No hay actividad reciente en adeudos.</p>
+  </section>
+{% endif %}
+</section>
+
+<script>
+const initialOpsSnapshot = {{ ops_snapshot | tojson }};
+
+function renderOpsList(containerId, items, renderer) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  if (!items || !items.length) {
+    container.innerHTML = '<div class="ops-item" style="opacity:.7;">Sin elementos</div>';
+    return;
+  }
+  container.innerHTML = items.slice(0, 5).map(renderer).join("");
+}
+
+function renderOpsSnapshot(snapshot) {
+  const summary = snapshot.summary || {};
+
+  const kpiTotalInventory = document.getElementById("kpiTotalInventory");
+  const kpiReservationsToday = document.getElementById("kpiReservationsToday");
+  const kpiReservationsSub = document.getElementById("kpiReservationsSub");
+  const kpiOpenTickets = document.getElementById("kpiOpenTickets");
+  const kpiTicketsSub = document.getElementById("kpiTicketsSub");
+  const kpiOpenDebts = document.getElementById("kpiOpenDebts");
+  const kpiDebtsSub = document.getElementById("kpiDebtsSub");
+  const noticePendingUsers = document.getElementById("noticePendingUsers");
+  const noticePendingUsersText = document.getElementById("noticePendingUsersText");
+  const noticePendingToday = document.getElementById("noticePendingToday");
+  const noticePendingTodayText = document.getElementById("noticePendingTodayText");
+  const noticeOpenDebts = document.getElementById("noticeOpenDebts");
+  const noticeOpenDebtsText = document.getElementById("noticeOpenDebtsText");
+  const noticeLowStock = document.getElementById("noticeLowStock");
+  const noticeLowStockText = document.getElementById("noticeLowStockText");
+
+  if (kpiTotalInventory) kpiTotalInventory.textContent = summary.total_inventory ?? 0;
+  if (kpiReservationsToday) kpiReservationsToday.textContent = summary.reservations_today ?? 0;
+  if (kpiReservationsSub) {
+    kpiReservationsSub.textContent = `${summary.approved_today ?? 0} aprobadas · ${summary.pending_today ?? 0} pendientes`;
+  }
+  if (kpiOpenTickets) kpiOpenTickets.textContent = summary.open_tickets ?? 0;
+  if (kpiTicketsSub) kpiTicketsSub.textContent = `${summary.closed_with_debt ?? 0} cerrados con adeudo`;
+  if (kpiOpenDebts) kpiOpenDebts.textContent = summary.open_debts ?? 0;
+  if (kpiDebtsSub) kpiDebtsSub.textContent = `${summary.low_stock_count ?? 0} materiales con stock bajo`;
+
+  if (noticePendingUsers && noticePendingUsersText) {
+    const count = summary.pending_users_count ?? 0;
+    noticePendingUsers.style.display = count > 0 ? "" : "none";
+    noticePendingUsersText.textContent = `${count} usuarios por dar de alta`;
+  }
+  if (noticePendingToday && noticePendingTodayText) {
+    const count = summary.pending_today ?? 0;
+    noticePendingToday.style.display = count > 0 ? "" : "none";
+    noticePendingTodayText.textContent = `${count} pendientes`;
+  }
+  if (noticeOpenDebts && noticeOpenDebtsText) {
+    const count = summary.open_debts ?? 0;
+    noticeOpenDebts.style.display = count > 0 ? "" : "none";
+    noticeOpenDebtsText.textContent = `${count} adeudos activos`;
+  }
+  if (noticeLowStock && noticeLowStockText) {
+    const count = summary.low_stock_count ?? 0;
+    noticeLowStock.style.display = count > 0 ? "" : "none";
+    noticeLowStockText.textContent = `${count} con stock bajo`;
+  }
+
+  document.getElementById("opsPendingCount").textContent = snapshot.counts.pending_reservations;
+  document.getElementById("opsActiveTicketsCount").textContent = snapshot.counts.active_tickets;
+  document.getElementById("opsReadyItemsCount").textContent = snapshot.counts.ready_items;
+  document.getElementById("opsClosureCount").textContent = snapshot.counts.closure_requested_tickets;
+  document.getElementById("opsDebtsCount").textContent = snapshot.counts.open_debts;
+
+  renderOpsList("opsPendingList", snapshot.pending_reservations, (item) => `
+    <div class="ops-item"><a href="${item.link}"><strong>#${item.id}</strong> · ${item.user}<br><span>${item.room} · ${item.date} ${item.time}</span></a></div>
+  `);
+  renderOpsList("opsActiveTicketsList", snapshot.active_tickets, (item) => `
+    <div class="ops-item"><a href="${item.link}"><strong>Ticket #${item.id}</strong> · ${item.user}<br><span>${item.status} · ${item.room}</span></a></div>
+  `);
+  renderOpsList("opsReadyItemsList", snapshot.ready_items, (item) => `
+    <div class="ops-item"><a href="${item.link}"><strong>Ticket #${item.ticket_id}</strong> · ${item.material}<br><span>${item.user}</span></a></div>
+  `);
+  renderOpsList("opsClosureList", snapshot.closure_requested_tickets, (item) => `
+    <div class="ops-item"><a href="${item.link}"><strong>Ticket #${item.id}</strong> · ${item.user}<br><span>${item.room}</span></a></div>
+  `);
+  renderOpsList("opsDebtsList", snapshot.open_debts_recent, (item) => `
+    <div class="ops-item"><a href="${item.link}"><strong>Adeudo #${item.id}</strong> · ${item.user}<br><span>${item.material}</span></a></div>
+  `);
+  renderOpsList("opsActivityList", snapshot.recent_activity, (item) => `
+    <div class="ops-item"><a href="${item.link}"><strong>${item.title}</strong><br><span>${item.message}</span></a></div>
+  `);
+}
+
+async function refreshOpsSnapshot() {
+  try {
+    const resp = await fetch("{{ url_for('dashboard.dashboard_ops_feed') }}", { credentials: "same-origin" });
+    if (!resp.ok) return;
+    const snapshot = await resp.json();
+    renderOpsSnapshot(snapshot);
+  } catch (_) {}
+}
+
+renderOpsSnapshot(initialOpsSnapshot);
+
+window.addEventListener("coyolabs:notification_created", () => {
+  refreshOpsSnapshot();
+});
+
+setInterval(refreshOpsSnapshot, 15000);
+</script>
+
+{% endblock %}

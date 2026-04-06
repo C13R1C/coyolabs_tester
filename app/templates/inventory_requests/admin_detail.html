@@ -1,0 +1,75 @@
+{% extends "layouts/student_base.html" %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Pedidos diarios admin", url_for('inventory_requests.admin_daily_requests')), ("Ticket #" ~ ticket.id, url_for('inventory_requests.admin_ticket_detail', ticket_id=ticket.id))] %}
+{% block title %}Pedido #{{ ticket.id }}{% endblock %}
+
+{% block content %}
+<style>
+@media (max-width: 768px){
+  .inventory-admin-detail-back .btn{
+    width: 100%;
+  }
+
+  .inventory-admin-detail-actions{
+    flex-direction: column;
+    align-items: stretch !important;
+  }
+
+  .inventory-admin-detail-actions form,
+  .inventory-admin-detail-actions .btn{
+    width: 100%;
+  }
+}
+</style>
+<header class="topbar">
+  <div class="topbar-left">
+    <p class="page-kicker">Inventario</p>
+    <h1>Ticket diario #{{ ticket.id }}</h1>
+    <p class="page-subtitle">Usuario: {{ ticket.user.email if ticket.user else '-' }} · Fecha: {{ ticket.request_date }}</p>
+  </div>
+</header>
+
+<section class="toolbar-card">
+  <div class="toolbar-actions inventory-admin-detail-back">
+    <a href="{{ url_for('inventory_requests.admin_daily_requests') }}" class="btn btn-ghost">Volver</a>
+  </div>
+</section>
+
+<section class="toolbar-card">
+  <div class="inventory-admin-detail-actions" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+    <span class="status-badge {% if ticket.status == 'OPEN' %}status-warn{% elif ticket.status == 'READY_FOR_PICKUP' %}status-ok{% else %}status-bad{% endif %}">{{ ticket.status|status_label }}</span>
+
+    {% if ticket.status != 'READY_FOR_PICKUP' and ticket.status != 'CLOSED' %}
+    <form method="post" action="{{ url_for('inventory_requests.admin_mark_ready', ticket_id=ticket.id) }}">
+      <button type="submit" class="btn btn-gold">Marcar listo para recoger</button>
+    </form>
+    {% endif %}
+
+    {% if ticket.status != 'CLOSED' %}
+    <form method="post" action="{{ url_for('inventory_requests.admin_close_ticket', ticket_id=ticket.id) }}">
+      <button type="submit" class="btn btn-ghost">Cerrar ticket</button>
+    </form>
+    {% endif %}
+  </div>
+</section>
+
+<section class="table-card" style="margin-top:16px;">
+  <div class="table-wrap">
+    <table class="inventory-table" style="min-width:750px;">
+      <thead>
+        <tr>
+          <th>Material</th>
+          <th>Cantidad solicitada</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in ticket.items %}
+        <tr>
+          <td>{{ item.material.name if item.material else ('ID ' ~ item.material_id) }}</td>
+          <td>{{ item.quantity_requested }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
