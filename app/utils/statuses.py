@@ -25,9 +25,12 @@ class TicketItemStatus:
 
 
 class DebtStatus:
-    OPEN = "OPEN"
+    PENDING = "PENDING"
     PAID = "PAID"
-    CANCELED = "CANCELED"
+    CANCELLED = "CANCELLED"
+
+    # Alias legacy para compatibilidad con código antiguo
+    OPEN = PENDING
 
 
 class InventoryRequestStatus:
