@@ -24,16 +24,6 @@
     <a class="btn btn-ghost" href="{{ url_for('inventory.inventory_list') }}"><i class="ph ph-arrow-left"></i><span>Volver al inventario</span></a>
     {% if current_user.is_authenticated and is_admin_role(current_user.role) %}
     <a class="btn btn-gold" href="{{ url_for('inventory.admin_edit_material', material_id=material.id) }}"><i class="ph ph-pencil-simple"></i><span>Editar</span></a>
-    <form method="post" action="{{ url_for('inventory.admin_toggle_material_active', material_id=material.id) }}" style="display:inline-flex; gap:8px;">
-      <input
-        type="text"
-        name="reason"
-        class="form-control"
-        placeholder="{{ 'Motivo de reactivación (opcional)' if (material.status|lower) in ['baja', 'de baja', 'inactivo'] else 'Motivo de baja (obligatorio)' }}"
-        {% if (material.status|lower) not in ['baja', 'de baja', 'inactivo'] %}required{% endif %}
-      >
-      <button type="submit" class="btn btn-ghost">{{ 'Reactivar' if (material.status|lower) in ['baja', 'de baja', 'inactivo'] else 'Dar de baja' }}</button>
-    </form>
     {% endif %}
   </div>
   <div class="table-wrap">
@@ -49,7 +39,7 @@
         <tr><td><strong>Hoja fuente</strong></td><td>{{ material.source_sheet or '-' }}</td></tr>
         <tr><td><strong>Fila fuente</strong></td><td>{{ material.source_row or '-' }}</td></tr>
         {% if material.tutorial_url %}
-          <tr><td><strong>Tutorial</strong></td><td><a class="item-link" target="_blank" rel="noopener noreferrer" href="{{ material.tutorial_url }}">{{ material.tutorial_url }}</a></td></tr>
+          <tr><td><strong>Manual</strong></td><td><a class="item-link" target="_blank" rel="noopener noreferrer" href="{{ material.tutorial_url }}">{{ material.tutorial_url }}</a></td></tr>
         {% endif %}
       </tbody>
     </table>

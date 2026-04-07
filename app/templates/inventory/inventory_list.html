@@ -99,20 +99,32 @@
     <table class="inventory-table">
       <thead>
         <tr>
-          <th>Laboratorio</th><th>Carrera</th><th>Categoría</th><th>Equipo / Material</th><th>Ubicación</th><th>Piezas</th><th>Estado</th><th>Observaciones</th><th class="th-actions">Acciones</th>
+          <th>Material</th>
+          <th>Laboratorio</th>
+          <th>Carrera</th>
+          <th>Categoría</th>
+          <th>Ubicación</th>
+          <th class="td-center">Piezas</th>
+          <th class="td-center">Estado</th>
+          <th>Observaciones</th>
+          <th class="th-actions">Acciones</th>
         </tr>
       </thead>
       <tbody>
         {% for m in materials %}
+          {% set normalized_status = (m.status or '') | lower %}
           <tr>
-            <td>{{ m.lab.name }}</td>
+            <td>
+              <a href="{{ url_for('inventory.material_detail', material_id=m.id) }}" class="item-link material-name">{{ m.name | smart_title }}</a>
+              <div class="material-subtext">{{ m.code or 'Sin código' }}</div>
+            </td>
+            <td><span class="status-badge status-neutral">{{ m.lab.name }}</span></td>
             <td>{{ m.career.name if m.career else 'Sin carrera' }}</td>
-            <td>{{ m.category or 'Sin categoría' }}</td>
-            <td><a href="{{ url_for('inventory.material_detail', material_id=m.id) }}" class="item-link">{{ m.name | smart_title }}</a></td>
+            <td><span class="status-badge status-neutral">{{ m.category or 'Sin categoría' }}</span></td>
             <td>{{ m.location | smart_title }}</td>
             <td class="td-center">{{ m.pieces_text }}</td>
-            <td>
-              <span class="status-badge {% if 'disponible' in (m.status|lower) %}status-ok{% elif 'mantenimiento' in (m.status|lower) %}status-warn{% elif 'dañado' in (m.status|lower) or 'danado' in (m.status|lower) %}status-bad{% else %}status-neutral{% endif %}">
+            <td class="td-center">
+              <span class="status-badge {% if 'disponible' in normalized_status %}status-ok{% elif 'baja' in normalized_status or 'inactivo' in normalized_status %}status-bad{% elif 'mantenimiento' in normalized_status %}status-warn{% else %}status-neutral{% endif %}">
                 {{ m.status | smart_title }}
               </span>
             </td>
@@ -140,10 +152,16 @@
   </div>
 </section>
 {% else %}
-<section class="empty-state">
+<section class="empty-state empty-state--inventory">
   <i class="ph ph-package empty-icon"></i>
-  <h3>Sin resultados</h3>
-  <p>No hay materiales para mostrar con los filtros actuales.</p>
+  <h3>No encontramos materiales con estos filtros</h3>
+  <p>Prueba limpiar los filtros o realizar una búsqueda diferente para ver resultados.</p>
+  <div class="toolbar-actions" style="justify-content:center; margin-top: 14px;">
+    <a href="{{ url_for('inventory.inventory_list') }}" class="btn btn-ghost"><i class="ph ph-arrow-counter-clockwise"></i><span>Limpiar filtros</span></a>
+    {% if current_user.is_authenticated and is_admin_role(current_user.role) %}
+    <a href="{{ url_for('inventory.admin_new_material') }}" class="btn btn-gold"><i class="ph ph-plus-circle"></i><span>Registrar material</span></a>
+    {% endif %}
+  </div>
 </section>
 {% endif %}
 {% endblock %}

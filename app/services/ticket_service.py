@@ -13,6 +13,7 @@ from app.models.ticket_item import TicketItem
 from app.models.user import User
 from app.services.audit_service import log_event
 from app.services.debt_service import create_debt_for_ticket
+from app.controllers.inventory_controller import _is_inactive_status
 from app.utils.statuses import (
     LabTicketStatus,
     TicketItemStatus,
@@ -109,6 +110,17 @@ def add_material_to_ticket(ticket: LabTicket, material: Material, quantity: int,
             ticket=ticket,
             reason=message,
             metadata={"material_id": getattr(material, "id", None), "quantity_attempted": quantity},
+        )
+        return ServiceResult.failure(message)
+
+    if _is_inactive_status(material.status):
+        message = f"{material.name}: está inactivo y no se puede solicitar."
+        _log_ticket_rejected(
+            action="LAB_TICKET_ITEM_REQUEST_REJECTED",
+            actor_user=actor_user,
+            ticket=ticket,
+            reason=message,
+            metadata={"material_id": material.id, "quantity_attempted": quantity, "material_status": material.status},
         )
         return ServiceResult.failure(message)
 
