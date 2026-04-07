@@ -14,12 +14,16 @@ from app.services.token_service import (
     generate_verify_token,
 )
 from app.utils.landing import resolve_landing_endpoint
-from app.utils.roles import ROLE_PENDING, infer_role_from_email
+from app.utils.roles import ROLE_PENDING, ROLE_STUDENT, ROLE_TEACHER, infer_role_from_email, normalize_role
 
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 EMAIL_CHANGE_LIMIT_PER_HOUR = 3
 INSTITUTIONAL_EMAIL_RE = re.compile(r"^(\d{8}|[a-z]+(?:\.[a-z]+)*)@utpn\.edu\.mx$")
+
+
+def _requires_profile_completion(role: str | None) -> bool:
+    return normalize_role(role) in {ROLE_STUDENT, ROLE_TEACHER}
 
 
 def _render_auth(mode: str = "login"):
@@ -101,7 +105,7 @@ def login():
             return redirect(url_for("auth.auth_page", mode="login"))
 
         login_user(user)
-        if not user.profile_completed:
+        if _requires_profile_completion(user.role) and not user.profile_completed:
             return redirect(url_for("profile.complete_profile"))
         return redirect(url_for(resolve_landing_endpoint(user.role)))
 
@@ -196,7 +200,7 @@ def verify(token):
     if user.is_verified:
         flash("Correo verificado")
         login_user(user)
-        if not user.profile_completed:
+        if _requires_profile_completion(user.role) and not user.profile_completed:
             return redirect(url_for("profile.complete_profile"))
         return redirect(url_for(resolve_landing_endpoint(user.role)))
 
@@ -210,7 +214,7 @@ def verify(token):
     session.pop("pending_verify_email", None)
     flash("Correo verificado")
     login_user(user)
-    if not user.profile_completed:
+    if _requires_profile_completion(user.role) and not user.profile_completed:
         return redirect(url_for("profile.complete_profile"))
     return redirect(url_for(resolve_landing_endpoint(user.role)))
 
