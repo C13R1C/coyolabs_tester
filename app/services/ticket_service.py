@@ -1,8 +1,9 @@
+import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
-from flask import url_for
+from flask import current_app, has_app_context, url_for
 
 from app.extensions import db
 from app.models.lab_ticket import LabTicket
@@ -18,6 +19,8 @@ from app.utils.statuses import (
     is_active_lab_ticket_status,
     is_lab_ticket_closure_requested,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -347,7 +350,13 @@ def close_ticket(ticket: LabTicket, actor_user: User) -> ServiceResult:
         db.session.commit()
     except Exception as exc:
         db.session.rollback()
-        message = "No se pudo cerrar el ticket por un error inesperado."
+        logger.exception(
+            "Error cerrando ticket con posible generación de adeudo",
+            extra={"ticket_id": getattr(ticket, "id", None), "actor_user_id": getattr(actor_user, "id", None)},
+        )
+        message = f"No se pudo cerrar el ticket ({exc.__class__.__name__})."
+        if has_app_context() and current_app.debug:
+            message = f"{message} {exc}"
         technical_reason = f"{message} [{exc.__class__.__name__}: {exc}]"
         _log_ticket_rejected(
             action="LAB_TICKET_CLOSE_REJECTED",
