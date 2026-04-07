@@ -407,6 +407,16 @@ body.mode-register .link:hover{ color: #00BCD4; }
 .change-email-panel{
   margin-top: 8px;
 }
+#forgotPasswordPanel[hidden]{
+  display: none !important;
+}
+.secondary-panel{
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px dashed rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.03);
+}
 #changeEmailStatus.good{
   color: rgba(170, 255, 210, 0.95);
 }

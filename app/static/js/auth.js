@@ -41,6 +41,11 @@
       body.classList.add("mode-register");
       title.textContent = "Registro institucional";
       subtitle.textContent = "CoyoLabs Universidad — Crear cuenta";
+      if (forgotPasswordPanel) forgotPasswordPanel.setAttribute("hidden", "");
+      if (toggleForgotPassword) {
+        toggleForgotPassword.setAttribute("aria-expanded", "false");
+        toggleForgotPassword.textContent = "¿Olvidaste tu contraseña?";
+      }
     } else {
       body.classList.remove("mode-register");
       body.classList.add("mode-login");
@@ -170,8 +175,12 @@
     if (isHidden) {
       forgotPasswordPanel.removeAttribute("hidden");
       forgotPasswordPanel.querySelector("input")?.focus();
+      toggleForgotPassword.setAttribute("aria-expanded", "true");
+      toggleForgotPassword.textContent = "Ocultar recuperación";
     } else {
       forgotPasswordPanel.setAttribute("hidden", "");
+      toggleForgotPassword.setAttribute("aria-expanded", "false");
+      toggleForgotPassword.textContent = "¿Olvidaste tu contraseña?";
     }
   });
 

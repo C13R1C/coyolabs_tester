@@ -87,7 +87,15 @@
           </div>
 
           <div class="switch" style="justify-content:flex-end; margin-top:-4px;">
-            <button type="button" class="link" id="toggleForgotPassword">¿Olvidaste tu contraseña?</button>
+            <button
+              type="button"
+              class="link"
+              id="toggleForgotPassword"
+              aria-controls="forgotPasswordPanel"
+              aria-expanded="false"
+            >
+              ¿Olvidaste tu contraseña?
+            </button>
           </div>
 
           <button type="submit" class="btn btn-gold">Entrar</button>
@@ -132,7 +140,7 @@
         </form>
 
         <form
-          class="form form-login change-email-panel"
+          class="form form-login change-email-panel secondary-panel"
           id="forgotPasswordPanel"
           method="post"
           action="{{ url_for('auth.forgot_password') }}"
