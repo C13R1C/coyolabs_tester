@@ -35,9 +35,6 @@
         <tr><td><strong>Código</strong></td><td>{{ material.code or '-' }}</td></tr>
         <tr><td><strong>Serie</strong></td><td>{{ material.serial or '-' }}</td></tr>
         <tr><td><strong>Observaciones</strong></td><td>{{ material.notes or 'Sin observaciones' }}</td></tr>
-        <tr><td><strong>Archivo fuente</strong></td><td>{{ material.source_file or '-' }}</td></tr>
-        <tr><td><strong>Hoja fuente</strong></td><td>{{ material.source_sheet or '-' }}</td></tr>
-        <tr><td><strong>Fila fuente</strong></td><td>{{ material.source_row or '-' }}</td></tr>
         {% if material.tutorial_url %}
           <tr><td><strong>Manual</strong></td><td><a class="item-link" target="_blank" rel="noopener noreferrer" href="{{ material.tutorial_url }}">{{ material.tutorial_url }}</a></td></tr>
         {% endif %}
