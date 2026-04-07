@@ -124,3 +124,21 @@ def mark_all_read():
         "updated": int(updated_rows or 0),
         "unread_count": unread_count,
     })
+
+
+@notifications_bp.route("/clear-read", methods=["POST"])
+@min_role_required("STUDENT")
+def clear_read():
+    deleted_rows = (
+        Notification.query
+        .filter(Notification.user_id == current_user.id, Notification.is_read.is_(True))
+        .delete(synchronize_session=False)
+    )
+    db.session.commit()
+    unread_count = get_unread_count(current_user.id)
+
+    return jsonify({
+        "ok": True,
+        "deleted": int(deleted_rows or 0),
+        "unread_count": unread_count,
+    })
