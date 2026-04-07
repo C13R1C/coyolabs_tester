@@ -36,6 +36,7 @@ from app.services.ticket_service import (
     sync_ticket_ready_status,
     validate_ticket_active,
 )
+from app.controllers.inventory_controller import _is_inactive_status
 from app.utils.authz import min_role_required
 from app.utils.statuses import (
     BLOCKING_LAB_TICKET_STATUSES,
@@ -50,6 +51,7 @@ from app.constants import ROOMS
 
 reservations_bp = Blueprint("reservations", __name__, url_prefix="/reservations")
 logger = logging.getLogger(__name__)
+INACTIVE_MATERIAL_STATUSES = ("baja", "de baja", "inactivo")
 
 
 def _is_professor_role(role: str | None) -> bool:
@@ -76,6 +78,11 @@ def _is_ticket_operable_for_item_updates(status: str | None) -> bool:
         LabTicketStatus.READY_FOR_PICKUP,
         LabTicketStatus.CLOSURE_REQUESTED,
     }
+
+
+def _exclude_inactive_materials(query):
+    normalized_status = func.trim(func.lower(func.coalesce(Material.status, "")))
+    return query.filter(~normalized_status.in_(INACTIVE_MATERIAL_STATUSES))
 
 
 def _sync_ticket_ready_status(ticket: LabTicket) -> None:
@@ -351,6 +358,9 @@ def my_active_ticket(reservation_id: int):
         if not material:
             flash("Material no encontrado.", "error")
             return redirect(url_for("reservations.my_active_ticket", reservation_id=reservation.id))
+        if _is_inactive_status(material.status):
+            flash("El material seleccionado no está activo para solicitudes.", "error")
+            return redirect(url_for("reservations.my_active_ticket", reservation_id=reservation.id))
 
         if _is_student_role(current_user.role) and material.career_id != current_user.career_id:
             flash("No puedes solicitar materiales de otra carrera.", "error")
@@ -373,8 +383,7 @@ def my_active_ticket(reservation_id: int):
         return redirect(url_for("reservations.my_active_ticket", reservation_id=reservation.id))
 
     available_materials = (
-        Material.query
-        .filter(func.lower(func.coalesce(Material.status, "")) != "baja")
+        _exclude_inactive_materials(Material.query)
         .filter(Material.career_id == current_user.career_id if _is_student_role(current_user.role) else True)
         .order_by(Material.name.asc())
         .all()
@@ -569,6 +578,10 @@ def request_reservation():
             material = Material.query.get(material_id)
             if not material:
                 continue
+            if _is_inactive_status(material.status):
+                db.session.rollback()
+                flash(f"{material.name}: está inactivo y no se puede solicitar.", "error")
+                return redirect(url_for("reservations.request_reservation"))
             if _is_student_role(current_user.role) and material.career_id != current_user.career_id:
                 db.session.rollback()
                 flash(f"{material.name}: no pertenece a tu carrera.", "error")
@@ -622,8 +635,7 @@ def request_reservation():
         return redirect(url_for("reservations.my_reservations"))
 
     materials = (
-        Material.query
-        .filter(func.lower(func.coalesce(Material.status, "")) != "baja")
+        _exclude_inactive_materials(Material.query)
         .filter(Material.career_id == current_user.career_id if _is_student_role(current_user.role) else True)
         .order_by(Material.name.asc())
         .all()
