@@ -32,6 +32,7 @@ STATUS_LABELS = {
     "REPORTED": "Reportado",
     "IN_STORAGE": "En resguardo",
     TicketItemStatus.RETURNED: "Devuelto",
+    DebtStatus.PENDING: "Pendiente",
     DebtStatus.PAID: "Pagado",
     "CANCELLED": "Cancelado",
     DebtStatus.CANCELED: "Cancelado",

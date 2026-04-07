@@ -24,7 +24,7 @@
 <section class="stats-row">
   <article class="stat-card">
     <span class="stat-label">Adeudos abiertos</span>
-    <strong>{{ debts | selectattr("status","equalto","OPEN") | list | length }}</strong>
+    <strong>{{ debts | selectattr("status","equalto","PENDING") | list | length }}</strong>
   </article>
 
   <article class="stat-card">
@@ -57,7 +57,7 @@
 <section class="toolbar-card">
   <div class="toolbar-actions" style="gap:10px;">
     <button class="btn btn-ghost" onclick="filterTable('ALL')">Todos</button>
-    <button class="btn btn-ghost" onclick="filterTable('OPEN')">Abiertos</button>
+    <button class="btn btn-ghost" onclick="filterTable('PENDING')">Abiertos</button>
     <button class="btn btn-ghost" onclick="filterTable('PAID')">Pagados</button>
   </div>
 </section>
@@ -81,7 +81,7 @@
 
         <tbody>
         {% for d in debts %}
-          <tr data-status="{{ d.status|status_label }}">
+          <tr data-status="{{ d.status }}">
             <td>{{ d.id }}</td>
 
             <td>
@@ -89,7 +89,7 @@
             </td>
 
             <td>
-              <span class="status-badge {% if d.status == 'OPEN' %}status-bad{% else %}status-ok{% endif %}">
+              <span class="status-badge {% if d.status == 'PENDING' %}status-bad{% else %}status-ok{% endif %}">
                 {{ d.status|status_label }}
               </span>
             </td>
@@ -107,7 +107,7 @@
             <td>{{ d.created_at }}</td>
 
             <td>
-              {% if d.status == "OPEN" %}
+              {% if d.status == "PENDING" %}
                 <form method="post" action="{{ url_for('debts.admin_close', debt_id=d.id) }}">
                   <button type="submit" class="btn btn-gold">Marcar pagado</button>
                 </form>

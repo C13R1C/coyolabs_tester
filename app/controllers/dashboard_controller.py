@@ -45,7 +45,7 @@ def _build_operational_snapshot(activity_limit: int = 8) -> dict:
         .scalar_subquery()
         .label("closure_requested_tickets"),
         db.select(func.count(Debt.id))
-        .where(Debt.status == DebtStatus.OPEN)
+        .where(Debt.status == DebtStatus.PENDING)
         .scalar_subquery()
         .label("open_debts"),
     ).first()
@@ -66,7 +66,7 @@ def _build_operational_snapshot(activity_limit: int = 8) -> dict:
         .scalar_subquery()
         .label("closed_with_debt"),
         db.select(func.count(Debt.id))
-        .where(Debt.status == DebtStatus.OPEN)
+        .where(Debt.status == DebtStatus.PENDING)
         .scalar_subquery()
         .label("open_debts"),
     ).first()
@@ -124,7 +124,7 @@ def _build_operational_snapshot(activity_limit: int = 8) -> dict:
     open_debts_recent = (
         Debt.query
         .options(joinedload(Debt.user), joinedload(Debt.material))
-        .filter(Debt.status == DebtStatus.OPEN)
+        .filter(Debt.status == DebtStatus.PENDING)
         .order_by(Debt.created_at.desc())
         .limit(activity_limit)
         .all()
@@ -246,7 +246,7 @@ def dashboard_home():
         .scalar_subquery()
         .label("closed_with_debt"),
         db.select(func.count(Debt.id))
-        .where(Debt.status == DebtStatus.OPEN)
+        .where(Debt.status == DebtStatus.PENDING)
         .scalar_subquery()
         .label("open_debts"),
     ).first()
@@ -313,7 +313,7 @@ def dashboard_home():
             func.count(Debt.id).label("total_open")
         )
         .join(Debt, Debt.user_id == User.id)
-        .filter(Debt.status == DebtStatus.OPEN)
+        .filter(Debt.status == DebtStatus.PENDING)
         .group_by(User.id, User.email)
         .order_by(func.count(Debt.id).desc())
         .limit(5)
