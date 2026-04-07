@@ -8,7 +8,7 @@
     <p class="page-kicker">Adeudos</p>
     <h1>Mis adeudos</h1>
     <p class="page-subtitle">Revisa el estado de tus adeudos activos y pagados.</p>
-    <h2>Total pendientes: {{ debts | selectattr("status","equalto","OPEN") | list | length }}</h2>
+    <h2>Total pendientes: {{ debts | selectattr("status","equalto","PENDING") | list | length }}</h2>
   </div>
 
   {% if current_user.is_authenticated and is_staff_role(current_user.role) %}
@@ -50,7 +50,7 @@
               <tr>
                 <td>{{ d.id }}</td>
                 <td>
-                  <span class="status-badge {% if d.status == 'OPEN' %}status-bad{% else %}status-ok{% endif %}">
+                  <span class="status-badge {% if d.status == 'PENDING' %}status-bad{% else %}status-ok{% endif %}">
                     {{ d.status|status_label }}
                   </span>
                 </td>

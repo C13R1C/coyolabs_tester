@@ -129,7 +129,7 @@ def admin_create():
         debt = Debt(
             user_id=user.id,
             material_id=material.id if material else None,
-            status=DebtStatus.OPEN,
+            status=DebtStatus.PENDING,
             reason=reason or None,
         )
 
