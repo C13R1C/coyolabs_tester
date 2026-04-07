@@ -13,6 +13,8 @@
   const pw = document.getElementById("password_reg");
   const pw2 = document.getElementById("confirm_password_reg");
   const pwHint = document.getElementById("pwHint");
+  const registerEmail = document.getElementById("email_reg");
+  const emailRegHint = document.getElementById("emailRegHint");
   const registerForm = document.getElementById("registerForm");
   const verifyEmailBox = document.getElementById("verifyEmailBox");
   const toggleForgotPassword = document.getElementById("toggleForgotPassword");
@@ -39,6 +41,11 @@
       body.classList.add("mode-register");
       title.textContent = "Registro institucional";
       subtitle.textContent = "CoyoLabs Universidad — Crear cuenta";
+      if (forgotPasswordPanel) forgotPasswordPanel.setAttribute("hidden", "");
+      if (toggleForgotPassword) {
+        toggleForgotPassword.setAttribute("aria-expanded", "false");
+        toggleForgotPassword.textContent = "¿Olvidaste tu contraseña?";
+      }
     } else {
       body.classList.remove("mode-register");
       body.classList.add("mode-login");
@@ -102,10 +109,39 @@
   pw?.addEventListener("input", validateConfirm);
   pw2?.addEventListener("input", validateConfirm);
 
+  const institutionalEmailRe = /^(\d{8}|[a-z]+(?:\.[a-z]+)*)@utpn\.edu\.mx$/;
+  const validateRegisterEmail = () => {
+    if (!registerEmail || !emailRegHint) return true;
+
+    const raw = registerEmail.value || "";
+    const email = raw.trim().toLowerCase();
+    if (!email) {
+      emailRegHint.textContent = "";
+      emailRegHint.className = "hint";
+      return true;
+    }
+
+    const ok = institutionalEmailRe.test(email);
+    emailRegHint.textContent = ok
+      ? "✅ Correo institucional válido."
+      : "❌ Usa matrícula@utpn.edu.mx o nombre.apellido@utpn.edu.mx";
+    emailRegHint.className = ok ? "hint good" : "hint bad";
+    return ok;
+  };
+
+  registerEmail?.addEventListener("input", validateRegisterEmail);
+  registerEmail?.addEventListener("blur", validateRegisterEmail);
+
   registerForm?.addEventListener("submit", (e) => {
-    if (!validateConfirm()) {
+    const isEmailOk = validateRegisterEmail();
+    const isConfirmOk = validateConfirm();
+    if (!isEmailOk || !isConfirmOk) {
       e.preventDefault();
-      pw2?.focus();
+      if (!isEmailOk) {
+        registerEmail?.focus();
+      } else {
+        pw2?.focus();
+      }
     }
   });
 
@@ -139,8 +175,12 @@
     if (isHidden) {
       forgotPasswordPanel.removeAttribute("hidden");
       forgotPasswordPanel.querySelector("input")?.focus();
+      toggleForgotPassword.setAttribute("aria-expanded", "true");
+      toggleForgotPassword.textContent = "Ocultar recuperación";
     } else {
       forgotPasswordPanel.setAttribute("hidden", "");
+      toggleForgotPassword.setAttribute("aria-expanded", "false");
+      toggleForgotPassword.textContent = "¿Olvidaste tu contraseña?";
     }
   });
 

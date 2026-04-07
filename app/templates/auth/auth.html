@@ -28,16 +28,21 @@
       <h1 class="title" id="title">Iniciar sesión</h1>
       <p class="subtitle" id="subtitle">Acceso institucional</p>
 
-      {% with messages = get_flashed_messages() %}
+      {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
           <div id="notification-container" class="auth-notification-stack" aria-live="polite" aria-atomic="true">
-            {% for message in messages %}
-              <article class="notification notification--info" role="alert">
+            {% for category, message in messages %}
+              {% set level = category if category in ['success', 'error', 'warning', 'info'] else 'info' %}
+              <article class="notification notification--{{ level }}" role="alert">
                 <div class="notification__progress"></div>
                 <div class="notification__body">
-                  <span class="notification__icon" aria-hidden="true">!</span>
+                  <span class="notification__icon" aria-hidden="true">
+                    {% if level == 'success' %}✓{% elif level == 'error' %}×{% elif level == 'warning' %}!{% else %}i{% endif %}
+                  </span>
                   <div>
-                    <div class="notification__header">Sistema</div>
+                    <div class="notification__header">
+                      {% if level == 'success' %}Éxito{% elif level == 'error' %}Error{% elif level == 'warning' %}Atención{% else %}Información{% endif %}
+                    </div>
                     <p class="notification__text">{{ message }}</p>
                   </div>
                   <button type="button" class="notification__close" aria-label="Cerrar alerta">×</button>
@@ -82,21 +87,15 @@
           </div>
 
           <div class="switch" style="justify-content:flex-end; margin-top:-4px;">
-            <button type="button" class="link" id="toggleForgotPassword">¿Olvidaste tu contraseña?</button>
-          </div>
-
-          <div class="change-email-panel" id="forgotPasswordPanel" hidden>
-            <label for="forgot_email_input">Correo institucional</label>
-            <div class="field">
-              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/>
-              </svg>
-              <input id="forgot_email_input" type="email" name="email" form="forgotPasswordForm" placeholder="tu.correo@utpn.edu.mx" required>
-            </div>
-            <form id="forgotPasswordForm" method="post" action="{{ url_for('auth.forgot_password') }}" style="margin-top:8px;">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-              <button type="submit" class="btn btn-ghost">Enviar enlace de recuperación</button>
-            </form>
+            <button
+              type="button"
+              class="link"
+              id="toggleForgotPassword"
+              aria-controls="forgotPasswordPanel"
+              aria-expanded="false"
+            >
+              ¿Olvidaste tu contraseña?
+            </button>
           </div>
 
           <button type="submit" class="btn btn-gold">Entrar</button>
@@ -140,6 +139,26 @@
           </div>
         </form>
 
+        <form
+          class="form form-login change-email-panel secondary-panel"
+          id="forgotPasswordPanel"
+          method="post"
+          action="{{ url_for('auth.forgot_password') }}"
+          hidden
+        >
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <div>
+            <label for="forgot_email_input">Correo institucional</label>
+            <div class="field">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/>
+              </svg>
+              <input id="forgot_email_input" type="email" name="email" placeholder="tu.correo@utpn.edu.mx" required>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-ghost">Enviar enlace de recuperación</button>
+        </form>
+
         <!-- REGISTER -->
        <form class="form form-register" id="registerForm" method="post" action="/auth/register" autocomplete="on">
   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -157,6 +176,7 @@
         title="Debe ser matrícula (8 dígitos) o correo nominal institucional @utpn.edu.mx" 
       />
     </div>
+    <p class="hint" id="emailRegHint" aria-live="polite"></p>
   </div>
 
   <div>
@@ -236,12 +256,6 @@
       <a href="{{ url_for('legal.terms_and_conditions') }}">Términos y condiciones</a>
     </footer>
   </div>
-
-  <footer style="text-align:center; margin: 14px 0 24px 0;">
-    <a href="{{ url_for('legal.privacy_notice') }}" style="color:#d5d8e3; font-size:.9rem; text-decoration:none;">Aviso de privacidad</a>
-    <span style="color:#8f96ab; margin:0 8px;">•</span>
-    <a href="{{ url_for('legal.terms_and_conditions') }}" style="color:#d5d8e3; font-size:.9rem; text-decoration:none;">Términos y condiciones</a>
-  </footer>
 
   <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
 </body>
