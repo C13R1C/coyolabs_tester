@@ -845,7 +845,7 @@ textarea.form-control{
   padding: 16px 18px;
   border-bottom: 1px solid rgba(102,81,45,0.08);
   color: var(--text-soft);
-  vertical-align: top;
+  vertical-align: middle;
   font-size: 0.95rem;
   background: rgba(255,255,255,0.18);
 }
@@ -871,6 +871,18 @@ textarea.form-control{
   text-decoration: none;
   font-weight: 700;
   transition: color .18s ease;
+}
+
+.material-name{
+  display: inline-block;
+  font-size: 1rem;
+  line-height: 1.25;
+}
+
+.material-subtext{
+  margin-top: 4px;
+  color: var(--text-dim);
+  font-size: 0.82rem;
 }
 
 .item-link:hover{
@@ -1025,6 +1037,11 @@ textarea.form-control{
 
 .empty-state p{
   color: var(--text-soft);
+}
+
+.empty-state--inventory{
+  max-width: 760px;
+  margin: 0 auto;
 }
 
 /* Preview helpers */
