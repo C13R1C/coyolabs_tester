@@ -18,7 +18,7 @@ class Debt(db.Model):
     ticket = db.relationship("LabTicket", back_populates="debts")
 
     # Estado del adeudo
-    status = db.Column(db.String(20), nullable=False, default=DebtStatus.OPEN)
+    status = db.Column(db.String(20), nullable=False, default=DebtStatus.PENDING)
 
     # Motivo / detalle
     reason = db.Column(db.Text, nullable=True)

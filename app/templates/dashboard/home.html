@@ -684,7 +684,7 @@
       <tbody>
         {% for d in recent_debts %}
           {% set debt_badge = "status-ok" %}
-          {% if d.status == "OPEN" %}
+          {% if d.status == "PENDING" %}
             {% set debt_badge = "status-bad" %}
           {% endif %}
         <tr>

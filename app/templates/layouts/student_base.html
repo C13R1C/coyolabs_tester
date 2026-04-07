@@ -16,6 +16,7 @@
       border: none;
       cursor: pointer;
       transition: transform .16s ease, box-shadow .16s ease;
+      isolation: isolate;
     }
     .brand-logo-shell--button:hover { transform: translateY(-1px); }
     .brand-logo-shell--button:focus-visible {
@@ -24,20 +25,24 @@
     }
     .notification-badge {
       position: absolute;
-      right: -4px;
-      top: -4px;
-      min-width: 20px;
-      height: 20px;
+      right: -8px;
+      top: -8px;
+      min-width: 22px;
+      height: 22px;
       border-radius: 999px;
-      background: #d93d3d;
+      background: #ff3b30;
       color: #fff;
-      font-size: .68rem;
-      font-weight: 700;
+      font-size: .66rem;
+      font-weight: 800;
+      letter-spacing: .01em;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       padding: 0 6px;
-      box-shadow: 0 3px 10px rgba(0,0,0,.18);
+      border: 1.5px solid rgba(255,255,255,.88);
+      box-shadow: 0 8px 22px rgba(255,59,48,.42), 0 2px 8px rgba(0,0,0,.2);
+      transform-origin: center center;
+      animation: badge-pop .42s cubic-bezier(.22,1.25,.38,1) both;
     }
     .notification-badge.is-hidden { display: none; }
     .notification-center {
@@ -47,31 +52,44 @@
       top: 74px;
       z-index: 95;
       display: none;
+      perspective: 800px;
     }
     .notification-center.is-open { display: block; }
     .notification-center__panel {
-      border: 1px solid var(--stroke);
-      border-radius: 14px;
-      background: var(--panel);
-      box-shadow: 0 14px 28px rgba(0,0,0,.13);
+      border: 1px solid rgba(255,255,255,.25);
+      border-radius: 18px;
+      background: linear-gradient(145deg, rgba(255,255,255,.72), rgba(255,255,255,.48));
+      backdrop-filter: blur(16px) saturate(150%);
+      -webkit-backdrop-filter: blur(16px) saturate(150%);
+      box-shadow: 0 20px 42px rgba(4,8,18,.26), inset 0 1px 0 rgba(255,255,255,.55);
       overflow: hidden;
+      transform: translateY(0) rotateX(0deg);
+      transform-origin: top center;
+      animation: panel-in .24s ease both;
     }
     .notification-center__header {
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 8px;
-      padding: 10px 12px;
-      border-bottom: 1px solid var(--stroke);
-      background: rgba(255,255,255,.45);
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(255,255,255,.34);
+      background: rgba(255,255,255,.2);
     }
     .notification-center__list {
       max-height: 360px;
       overflow: auto;
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      padding: 10px;
+      gap: 10px;
+      padding: 12px;
+    }
+    .notification-center__list::-webkit-scrollbar { width: 10px; }
+    .notification-center__list::-webkit-scrollbar-thumb {
+      background: rgba(0,0,0,.18);
+      border: 2px solid transparent;
+      border-radius: 999px;
+      background-clip: padding-box;
     }
     .notification-center__empty {
       padding: 16px 10px;
@@ -79,12 +97,16 @@
       color: var(--text-dim);
     }
     .notification-center-item {
-      border: 1px solid var(--stroke);
-      border-radius: 10px;
-      background: var(--panel-2);
-      padding: 10px;
+      border: 1px solid rgba(255,255,255,.45);
+      border-radius: 14px;
+      background: rgba(255,255,255,.58);
+      box-shadow: 0 6px 18px rgba(0,0,0,.08);
+      padding: 12px;
     }
-    .notification-center-item--unread { border-color: rgba(224,177,44,.5); }
+    .notification-center-item--unread {
+      border-color: rgba(255,179,40,.85);
+      background: linear-gradient(145deg, rgba(255,245,214,.72), rgba(255,255,255,.62));
+    }
     .notification-center-item__title { font-weight: 700; margin-bottom: 4px; }
     .notification-center-item__message { font-size: .9rem; margin-bottom: 8px; }
     .notification-center-item__meta {
@@ -94,6 +116,15 @@
       gap: 8px;
       font-size: .78rem;
       color: var(--text-dim);
+    }
+    @keyframes badge-pop {
+      0% { transform: scale(.42); opacity: .45; }
+      60% { transform: scale(1.14); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    @keyframes panel-in {
+      from { opacity: 0; transform: translateY(-8px) rotateX(-6deg); }
+      to { opacity: 1; transform: translateY(0) rotateX(0deg); }
     }
     #notification-container {
       position: fixed;
@@ -488,33 +519,10 @@
               <span>${n.created_at_label || ""}</span>
               <span style="display:flex; gap:6px;">
                 ${n.link ? `<a href="${n.link}" class="btn btn-ghost">Abrir</a>` : ""}
-                ${!n.is_read ? `<button type="button" class="btn btn-ghost notif-mark-read" data-id="${n.id}">Marcar leída</button>` : ""}
               </span>
             </div>
           `;
           panelList.appendChild(wrapper);
-        });
-
-        panelList.querySelectorAll(".notif-mark-read").forEach((btn) => {
-          btn.addEventListener("click", async () => {
-            const notifId = btn.getAttribute("data-id");
-            try {
-              const body = new URLSearchParams();
-              body.set("csrf_token", csrfToken);
-              const resp = await fetch(`/notifications/${notifId}/read`, {
-                method: "POST",
-                headers: { "X-Requested-With": "XMLHttpRequest", "Content-Type": "application/x-www-form-urlencoded" },
-                body: body.toString(),
-                credentials: "same-origin"
-              });
-              if (!resp.ok) return;
-              const data = await resp.json();
-              const found = state.items.find((item) => String(item.id) === String(notifId));
-              if (found) found.is_read = true;
-              updateBadge(data.unread_count || 0);
-              renderNotificationPanel();
-            } catch (_) {}
-          });
         });
       }
 
@@ -628,6 +636,29 @@
         });
       }
 
+      async function markAllNotificationsRead() {
+        if (state.unreadCount <= 0) return;
+        state.items = state.items.map((item) => ({ ...item, is_read: true }));
+        updateBadge(0);
+        renderNotificationPanel();
+        try {
+          const body = new URLSearchParams();
+          body.set("csrf_token", csrfToken);
+          const resp = await fetch("{{ url_for('notifications.mark_all_read') }}", {
+            method: "POST",
+            headers: {
+              "X-Requested-With": "XMLHttpRequest",
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: body.toString(),
+            credentials: "same-origin",
+          });
+          if (!resp.ok) return;
+          const data = await resp.json();
+          updateBadge(data.unread_count || 0);
+        } catch (_) {}
+      }
+
       const flashRaw = document.getElementById("flashMessagesData")?.textContent || "[]";
       let flashMessages = [];
       try {
@@ -643,7 +674,11 @@
         });
       });
 
-      logoToggle.addEventListener("click", () => center.classList.toggle("is-open"));
+      logoToggle.addEventListener("click", () => {
+        const willOpen = !center.classList.contains("is-open");
+        center.classList.toggle("is-open");
+        if (willOpen) markAllNotificationsRead();
+      });
       document.addEventListener("click", (evt) => {
         if (!evt.target.closest(".brand")) center.classList.remove("is-open");
       });

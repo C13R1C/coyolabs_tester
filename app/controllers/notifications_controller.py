@@ -106,3 +106,21 @@ def mark_read(notif_id: int):
         return redirect(notif.link)
 
     return redirect(url_for("notifications.list_notifications"))
+
+
+@notifications_bp.route("/mark-all-read", methods=["POST"])
+@min_role_required("STUDENT")
+def mark_all_read():
+    updated_rows = (
+        Notification.query
+        .filter(Notification.user_id == current_user.id, Notification.is_read.is_(False))
+        .update({Notification.is_read: True}, synchronize_session=False)
+    )
+    db.session.commit()
+    unread_count = get_unread_count(current_user.id)
+
+    return jsonify({
+        "ok": True,
+        "updated": int(updated_rows or 0),
+        "unread_count": unread_count,
+    })
