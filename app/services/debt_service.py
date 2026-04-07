@@ -52,7 +52,7 @@ def _log_debt_rejected(action: str, actor_user: User | None, debt: Debt | None, 
 def user_has_open_debts(user_id: int) -> bool:
     return (
         Debt.query
-        .filter(Debt.user_id == user_id, Debt.status == DebtStatus.OPEN)
+        .filter(Debt.user_id == user_id, Debt.status == DebtStatus.PENDING)
         .count()
         > 0
     )
@@ -64,7 +64,7 @@ def create_debt_for_ticket(ticket: LabTicket, item: TicketItem, missing_qty: int
         .filter(
             Debt.user_id == ticket.owner_user_id,
             Debt.material_id == item.material_id,
-            Debt.status == DebtStatus.OPEN,
+            Debt.status == DebtStatus.PENDING,
             or_(
                 Debt.ticket_id == ticket.id,
                 Debt.ticket_id.is_(None),
@@ -78,13 +78,19 @@ def create_debt_for_ticket(ticket: LabTicket, item: TicketItem, missing_qty: int
             existing_debt.ticket_id = ticket.id
         return ServiceResult.success(debt=existing_debt, created=False)
 
+    missing = max(0, missing_qty)
+    if missing <= 0:
+        return ServiceResult.success(created=False)
+
     material_name = item.material.name if item.material else f"Material ID {item.material_id}"
+
     debt = Debt(
         user_id=ticket.owner_user_id,
         material_id=item.material_id,
         ticket_id=ticket.id,
-        status=DebtStatus.OPEN,
-        reason=f"Faltante de {missing_qty} unidad(es) en ticket #{ticket.id} - {material_name}",
+        status=DebtStatus.PENDING,
+        reason=f"Faltante de {missing} unidad(es) en ticket #{ticket.id} - {material_name}",
+        amount=missing,
     )
     db.session.add(debt)
     db.session.flush()
@@ -102,7 +108,7 @@ def create_debt_for_ticket(ticket: LabTicket, item: TicketItem, missing_qty: int
             "ticket_id": ticket.id,
             "target_user_id": ticket.owner_user_id,
             "material_id": item.material_id,
-            "missing_qty": missing_qty,
+            "missing_qty": missing,
             "origin": "LAB_TICKET_CLOSE",
         },
         material_id=item.material_id,
@@ -121,7 +127,7 @@ def sync_ticket_after_debt_resolution(debt: Debt) -> ServiceResult:
 
     remaining_open_debts = (
         Debt.query
-        .filter(Debt.user_id == debt.user_id, Debt.status == DebtStatus.OPEN)
+        .filter(Debt.user_id == debt.user_id, Debt.status == DebtStatus.PENDING)
         .filter(
             or_(
                 Debt.ticket_id == ticket_id,
@@ -140,7 +146,7 @@ def sync_ticket_after_debt_resolution(debt: Debt) -> ServiceResult:
 def resolve_debt(debt: Debt, actor_user: User) -> ServiceResult:
     updated_rows = (
         Debt.query
-        .filter(Debt.id == debt.id, Debt.status == DebtStatus.OPEN)
+        .filter(Debt.id == debt.id, Debt.status == DebtStatus.PENDING)
         .update(
             {
                 Debt.status: DebtStatus.PAID,
@@ -159,7 +165,7 @@ def resolve_debt(debt: Debt, actor_user: User) -> ServiceResult:
         return ServiceResult.failure(message)
 
     db.session.refresh(debt)
-    previous_status = DebtStatus.OPEN
+    previous_status = DebtStatus.PENDING
 
     log_event(
         module="DEBTS",
