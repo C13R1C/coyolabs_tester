@@ -102,7 +102,7 @@ def mark_read(notif_id: int):
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
         return jsonify({"ok": True, "unread_count": unread_count})
 
-    if notif.link:
+    if notif.link and notif.link.startswith("/"):
         return redirect(notif.link)
 
     return redirect(url_for("notifications.list_notifications"))

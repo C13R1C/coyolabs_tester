@@ -31,17 +31,19 @@ def _is_student_role(role: str | None) -> bool:
     return normalize_role(role) == ROLE_STUDENT
 
 
-def _notify_admins_for_ticket(ticket: InventoryRequestTicket, message: str) -> None:
+def _notify_admins_for_ticket(ticket: InventoryRequestTicket, message: str) -> list[Notification]:
     admins = User.query.filter(User.role.in_(["ADMIN", "SUPERADMIN"])).all()
+    notifications_created: list[Notification] = []
     for admin in admins:
-        db.session.add(
-            Notification(
-                user_id=admin.id,
-                title="Pedido diario actualizado",
-                message=message,
-                link=url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id),
-            )
+        notif = Notification(
+            user_id=admin.id,
+            title="Pedido diario actualizado",
+            message=message,
+            link=url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id),
         )
+        db.session.add(notif)
+        notifications_created.append(notif)
+    return notifications_created
 
 
 def _close_stale_open_tickets() -> None:
@@ -191,15 +193,16 @@ def add_to_daily_request():
                 )
             )
 
+    admin_notifications: list[Notification] = []
     if ticket.status == STATUS_READY:
         ticket.status = STATUS_OPEN
         ticket.ready_at = None
-        _notify_admins_for_ticket(
+        admin_notifications = _notify_admins_for_ticket(
             ticket,
             f"El usuario {current_user.email} actualizó el pedido diario #{ticket.id}; requiere nueva revisión.",
         )
     elif created_new:
-        _notify_admins_for_ticket(
+        admin_notifications = _notify_admins_for_ticket(
             ticket,
             f"El usuario {current_user.email} creó el pedido diario #{ticket.id}.",
         )
@@ -214,6 +217,8 @@ def add_to_daily_request():
     )
 
     db.session.commit()
+    for notif in admin_notifications:
+        publish_notification_created(notif)
 
     if created_new:
         flash(f"Pedido del día creado (ticket #{ticket.id}).", "success")

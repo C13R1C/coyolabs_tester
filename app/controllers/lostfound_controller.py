@@ -9,6 +9,7 @@ from app.models.lost_found import LostFound
 from app.models.material import Material
 from app.models.notification import Notification
 from app.models.user import User
+from app.services.notification_realtime_service import publish_notification_created
 from app.utils.authz import min_role_required
 from app.utils.roles import is_admin_role
 
@@ -139,6 +140,7 @@ def admin_new():
             User.role.in_(["STUDENT", "TEACHER"])
         ).all()
 
+        notifications_created: list[Notification] = []
         for user in users:
             notif = Notification(
                 user_id=user.id,
@@ -148,8 +150,11 @@ def admin_new():
                 is_read=False,
             )
             db.session.add(notif)
+            notifications_created.append(notif)
 
         db.session.commit()
+        for notif in notifications_created:
+            publish_notification_created(notif)
 
         flash("Registro creado.", "success")
         return redirect(url_for("lostfound.detail", item_id=item.id))
