@@ -210,11 +210,7 @@
 
       <hr style="margin:16px 0; border:none; border-top:1px solid var(--stroke);">
       <div style="display:flex; flex-direction:column; gap:10px;">
-        <button type="button" id="togglePasswordPanel" class="btn btn-ghost">
-          Cambiar contraseña de acceso
-        </button>
-
-        <form id="passwordChangeForm" method="post" action="{{ url_for('profile.change_password') }}" class="toolbar" style="grid-template-columns:1fr;" hidden>
+        <form id="passwordChangeForm" method="post" action="{{ url_for('profile.change_password') }}" class="toolbar" style="grid-template-columns:1fr;">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
           <div class="toolbar-group">
@@ -500,15 +496,4 @@
   {% endif %}
 </section>
 
-<script>
-(() => {
-  const toggleBtn = document.getElementById("togglePasswordPanel");
-  const panel = document.getElementById("passwordChangeForm");
-  if (!toggleBtn || !panel) return;
-
-  toggleBtn.addEventListener("click", () => {
-    panel.hidden = !panel.hidden;
-  });
-})();
-</script>
 {% endblock %}

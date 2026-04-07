@@ -63,6 +63,14 @@ def _bad_register_request(message: str):
     return _render_auth("register"), 400
 
 
+def _is_accept_terms_valid(raw_value) -> bool:
+    if isinstance(raw_value, bool):
+        return raw_value
+    if raw_value is None:
+        return False
+    return str(raw_value).strip().lower() in {"1", "true", "on", "yes"}
+
+
 @auth_bp.route("/", methods=["GET"])
 def auth_page():
     if current_user.is_authenticated:
@@ -122,12 +130,16 @@ def register():
 
         email = (data.get("email") or "").strip().lower()
         password = data.get("password") or ""
+        accept_terms = data.get("accept_terms")
         confirm_password = (
             data.get("confirm_password")
             or data.get("confirmPassword")
             or data.get("password_confirm")
             or ""
         )
+
+        if not _is_accept_terms_valid(accept_terms):
+            return _bad_register_request("Debes aceptar el Aviso de privacidad y los Términos y condiciones.")
 
         if not confirm_password:
             return _bad_register_request("confirm_password es obligatorio.")

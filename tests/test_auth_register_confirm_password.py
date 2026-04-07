@@ -38,6 +38,7 @@ class RegisterConfirmPasswordTests(unittest.TestCase):
             json={
                 "email": "24310116@utpn.edu.mx",
                 "password": "secreto123",
+                "accept_terms": True,
                 "confirmPassword": "secreto123",
             },
         )
@@ -54,6 +55,7 @@ class RegisterConfirmPasswordTests(unittest.TestCase):
             json={
                 "email": "24310116@utpn.edu.mx",
                 "password": "secreto123",
+                "accept_terms": True,
             },
         )
 
@@ -66,6 +68,7 @@ class RegisterConfirmPasswordTests(unittest.TestCase):
             json={
                 "email": "24310116@utpn.edu.mx",
                 "password": "secreto123",
+                "accept_terms": True,
                 "confirm_password": "otra123",
             },
         )
@@ -95,6 +98,7 @@ class RegisterConfirmPasswordTests(unittest.TestCase):
             json={
                 "email": "wendy.nevarez@utpn.edu.mx",
                 "password": "secreto123",
+                "accept_terms": True,
                 "confirm_password": "secreto123",
             },
         )
@@ -114,6 +118,22 @@ class RegisterConfirmPasswordTests(unittest.TestCase):
         self.assertTrue(role_at_least("ADMIN", ROLE_STAFF))
         self.assertTrue(role_at_least("ADMIN", "TEACHER"))
         self.assertFalse(role_at_least(ROLE_STUDENT, ROLE_STAFF))
+
+    def test_register_returns_400_when_accept_terms_missing(self):
+        response = self.client.post(
+            "/auth/register",
+            json={
+                "email": "24310116@utpn.edu.mx",
+                "password": "secreto123",
+                "confirm_password": "secreto123",
+            },
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.get_json(),
+            {"error": "Debes aceptar el Aviso de privacidad y los Términos y condiciones."},
+        )
 
 
 if __name__ == "__main__":

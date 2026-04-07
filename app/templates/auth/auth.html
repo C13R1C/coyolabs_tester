@@ -85,20 +85,6 @@
             <button type="button" class="link" id="toggleForgotPassword">¿Olvidaste tu contraseña?</button>
           </div>
 
-          <div class="change-email-panel" id="forgotPasswordPanel" hidden>
-            <label for="forgot_email_input">Correo institucional</label>
-            <div class="field">
-              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/>
-              </svg>
-              <input id="forgot_email_input" type="email" name="email" form="forgotPasswordForm" placeholder="tu.correo@utpn.edu.mx" required>
-            </div>
-            <form id="forgotPasswordForm" method="post" action="{{ url_for('auth.forgot_password') }}" style="margin-top:8px;">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-              <button type="submit" class="btn btn-ghost">Enviar enlace de recuperación</button>
-            </form>
-          </div>
-
           <button type="submit" class="btn btn-gold">Entrar</button>
 
           <div class="switch">
@@ -138,6 +124,26 @@
 
             <p class="hint" id="changeEmailStatus" aria-live="polite"></p>
           </div>
+        </form>
+
+        <form
+          class="form form-login change-email-panel"
+          id="forgotPasswordPanel"
+          method="post"
+          action="{{ url_for('auth.forgot_password') }}"
+          hidden
+        >
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <div>
+            <label for="forgot_email_input">Correo institucional</label>
+            <div class="field">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/>
+              </svg>
+              <input id="forgot_email_input" type="email" name="email" placeholder="tu.correo@utpn.edu.mx" required>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-ghost">Enviar enlace de recuperación</button>
         </form>
 
         <!-- REGISTER -->
@@ -236,12 +242,6 @@
       <a href="{{ url_for('legal.terms_and_conditions') }}">Términos y condiciones</a>
     </footer>
   </div>
-
-  <footer style="text-align:center; margin: 14px 0 24px 0;">
-    <a href="{{ url_for('legal.privacy_notice') }}" style="color:#d5d8e3; font-size:.9rem; text-decoration:none;">Aviso de privacidad</a>
-    <span style="color:#8f96ab; margin:0 8px;">•</span>
-    <a href="{{ url_for('legal.terms_and_conditions') }}" style="color:#d5d8e3; font-size:.9rem; text-decoration:none;">Términos y condiciones</a>
-  </footer>
 
   <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
 </body>
