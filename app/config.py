@@ -42,3 +42,6 @@ class Config:
                 raise RuntimeError(
                     f"Configuración insegura: {_name} usa valor por defecto en entorno '{ENV}'."
                 )
+
+    BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+    UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")

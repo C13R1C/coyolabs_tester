@@ -131,10 +131,15 @@ def mark_all_read():
 def clear_read():
     deleted_rows = (
         Notification.query
-        .filter(Notification.user_id == current_user.id, Notification.is_read.is_(True))
+        .filter(
+            Notification.user_id == current_user.id,
+            Notification.is_read == True
+        )
         .delete(synchronize_session=False)
     )
+
     db.session.commit()
+
     unread_count = get_unread_count(current_user.id)
 
     return jsonify({

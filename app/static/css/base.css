@@ -1486,3 +1486,48 @@ textarea.form-control{
 .clock-picker-actions .btn{
   min-width: 112px;
 }
+.brand-logo-shell {
+  position: relative;
+  width: 88px;
+  height: 88px;
+  border-radius: 20px;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 24px rgba(0,0,0,.08);
+  overflow: visible;
+}
+
+.brand-logo {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+}
+
+.notification-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: #ff3b30;
+  color: #fff;
+
+  font-size: 10px;
+  font-weight: 700;
+
+  border-radius: 999px;
+  border: 2px solid #fff;
+
+  box-shadow: 0 4px 10px rgba(0,0,0,.2);
+
+  z-index: 10;
+}

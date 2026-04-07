@@ -7,6 +7,8 @@ from werkzeug.utils import secure_filename
 from app.extensions import db
 from app.models.lost_found import LostFound
 from app.models.material import Material
+from app.models.notification import Notification
+from app.models.user import User
 from app.utils.authz import min_role_required
 from app.utils.roles import is_admin_role
 
@@ -131,6 +133,22 @@ def admin_new():
         )
 
         db.session.add(item)
+        db.session.commit()
+
+        users = User.query.filter(
+            User.role.in_(["STUDENT", "TEACHER"])
+        ).all()
+
+        for user in users:
+            notif = Notification(
+                user_id=user.id,
+                title="Nuevo objeto perdido registrado",
+                message=f"Se registró un nuevo objeto: {item.title}",
+                link=url_for("lostfound.list_items"),
+                is_read=False,
+            )
+            db.session.add(notif)
+
         db.session.commit()
 
         flash("Registro creado.", "success")

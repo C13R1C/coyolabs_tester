@@ -1,6 +1,9 @@
 #app init
 import secrets
 
+import os
+from flask import send_file, current_app, abort
+
 from flask import Flask, redirect, request, session, url_for, abort
 from app.utils.roles import is_admin_role, is_staff_role
 from app.utils.landing import resolve_landing_endpoint
@@ -171,6 +174,27 @@ def create_app():
             return None
 
         return redirect(url_for("profile.complete_profile"))
+
+    @app.route("/uploads/<path:filename>")
+    def upload_file(filename):
+        normalized = filename.replace("\\", "/").replace("uploads/", "").lstrip("/")
+
+        candidates = [
+            os.path.join(current_app.root_path, "uploads", normalized),
+            os.path.join(os.path.dirname(current_app.root_path), "uploads", normalized),
+            os.path.join(current_app.root_path, "static", "uploads", normalized),
+        ]
+
+        for full_path in candidates:
+            full_path = os.path.normpath(full_path)
+            if os.path.exists(full_path):
+                return send_file(full_path)
+
+        print("NO FILE FOUND. Tried:")
+        for path in candidates:
+            print(" -", os.path.normpath(path))
+
+        abort(404)
 
     @app.before_request
     def enforce_csrf():

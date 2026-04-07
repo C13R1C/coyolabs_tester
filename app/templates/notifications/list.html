@@ -8,12 +8,31 @@
     width: 100%;
     text-align: left;
   }
+
+  .notifications-topbar-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
 </style>
+
 <header class="topbar">
   <div class="topbar-left">
     <p class="page-kicker">Sistema</p>
     <h1>Notificaciones</h1>
     <p class="page-subtitle">Eventos recientes y avisos del sistema.</p>
+  </div>
+
+  <div class="notifications-topbar-actions">
+    <button type="button" class="btn btn-gold" id="markAllReadPageBtn">
+      <i class="ph ph-check-circle"></i>
+      <span>Marcar todo leído</span>
+    </button>
+
+    <button type="button" class="btn btn-danger" id="clearReadPageBtn">
+      <i class="ph ph-trash"></i>
+      <span>Limpiar leídas</span>
+    </button>
   </div>
 </header>
 
@@ -24,22 +43,22 @@
     <form method="post"
       action="{{ url_for('notifications.mark_read', notif_id=n.id) }}"
       class="toolbar-card"
-      style = "margin-bottom:0; {% if not n.is_read %}border:1px solid rgba(199,159,51,0.35);{% endif %}">
+      style="margin-bottom:0; {% if not n.is_read %}border:1px solid rgba(199,159,51,0.35);{% endif %}">
       <button type="submit" class="btn btn-ghost notifications-row-btn">
-      <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap;">
-        <div>
-          <div style="display:flex; gap:10px; align-items:center; margin-bottom:6px;">
-            <strong>{{ n.title }}</strong>
-            {% if not n.is_read %}
-              <span class="status-badge status-warn">NUEVA</span>
-            {% else %}
-              <span class="status-badge status-neutral">LEÍDA</span>
-            {% endif %}
+        <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap; width:100%;">
+          <div>
+            <div style="display:flex; gap:10px; align-items:center; margin-bottom:6px;">
+              <strong>{{ n.title }}</strong>
+              {% if not n.is_read %}
+                <span class="status-badge status-warn">NUEVA</span>
+              {% else %}
+                <span class="status-badge status-neutral">LEÍDA</span>
+              {% endif %}
+            </div>
+            <div class="text-dim">{{ n.message }}</div>
           </div>
-          <div class="text-dim">{{ n.message }}</div>
+          <div class="text-dim">{{ n.created_at }}</div>
         </div>
-        <div class="text-dim">{{ n.created_at }}</div>
-      </div>
       </button>
     </form>
     {% endfor %}
@@ -52,4 +71,46 @@
   <p>No tienes avisos pendientes.</p>
 </section>
 {% endif %}
+
+<script>
+document.getElementById("markAllReadPageBtn")?.addEventListener("click", async () => {
+  const body = new URLSearchParams();
+  body.set("csrf_token", "{{ csrf_token }}");
+
+  const resp = await fetch("{{ url_for('notifications.mark_all_read') }}", {
+    method: "POST",
+    headers: {
+      "X-Requested-With": "XMLHttpRequest",
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: body.toString(),
+    credentials: "same-origin",
+  });
+
+  if (resp.ok) {
+    window.location.reload();
+  }
+});
+
+document.getElementById("clearReadPageBtn")?.addEventListener("click", async () => {
+  if (!confirm("Esto eliminará todas las notificaciones leídas. ¿Continuar?")) return;
+
+  const body = new URLSearchParams();
+  body.set("csrf_token", "{{ csrf_token }}");
+
+  const resp = await fetch("{{ url_for('notifications.clear_read') }}", {
+    method: "POST",
+    headers: {
+      "X-Requested-With": "XMLHttpRequest",
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: body.toString(),
+    credentials: "same-origin",
+  });
+
+  if (resp.ok) {
+    window.location.reload();
+  }
+});
+</script>
 {% endblock %}
