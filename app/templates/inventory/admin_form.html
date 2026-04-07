@@ -72,6 +72,25 @@
         </select>
       </div>
     </div>
+    {% if is_edit %}
+    <div
+      id="statusReasonGroup"
+      class="toolbar-group"
+      style="grid-column:1 / -1; display:none;"
+      data-original-status="{{ material.status or '' }}"
+      data-reason-label-down="Motivo de baja"
+      data-reason-label-up="Motivo de reactivación"
+    >
+      <label for="status_change_reason" id="statusReasonLabel">Motivo</label>
+      <textarea
+        id="status_change_reason"
+        name="status_change_reason"
+        rows="3"
+        class="form-control"
+        placeholder="Describe brevemente el motivo del cambio de estado"
+      >{{ data.get('status_change_reason', '') }}</textarea>
+    </div>
+    {% endif %}
     <div class="toolbar-group"><label for="pieces_text">Descripción de piezas (opcional)</label><div class="search-box"><input id="pieces_text" name="pieces_text" placeholder="Ej. 20/20, kit completo, faltan tapas" value="{{ data.get('pieces_text', material.pieces_text if material else '') }}"></div></div>
     <div class="toolbar-group"><label for="pieces_qty">Cantidad</label><div class="search-box"><input id="pieces_qty" name="pieces_qty" type="number" min="0" placeholder="Ej. 20" value="{{ data.get('pieces_qty', material.pieces_qty if material else '') }}"></div></div>
     <div class="toolbar-group"><label for="brand">Marca</label><div class="search-box"><input id="brand" name="brand" value="{{ data.get('brand', material.brand if material else '') }}"></div></div>
@@ -92,6 +111,42 @@
   (() => {
     const form = document.querySelector("form[data-single-submit]");
     if (!form) return;
+    const statusSelect = form.querySelector("#status");
+    const reasonGroup = form.querySelector("#statusReasonGroup");
+    const reasonLabel = form.querySelector("#statusReasonLabel");
+    const reasonInput = form.querySelector("#status_change_reason");
+
+    const isInactive = (value) => {
+      const normalized = (value || "").toString().trim().toLowerCase();
+      return normalized === "baja" || normalized === "de baja" || normalized === "inactivo";
+    };
+
+    const refreshStatusReason = () => {
+      if (!statusSelect || !reasonGroup || !reasonInput || !reasonLabel) return;
+      const originalStatus = reasonGroup.dataset.originalStatus || "";
+      const oldInactive = isInactive(originalStatus);
+      const newInactive = isInactive(statusSelect.value);
+
+      if (oldInactive === newInactive) {
+        reasonGroup.style.display = "none";
+        reasonInput.required = false;
+        return;
+      }
+
+      reasonGroup.style.display = "flex";
+      if (!oldInactive && newInactive) {
+        reasonLabel.textContent = reasonGroup.dataset.reasonLabelDown || "Motivo de baja";
+      } else {
+        reasonLabel.textContent = reasonGroup.dataset.reasonLabelUp || "Motivo de reactivación";
+      }
+      reasonInput.required = true;
+    };
+
+    if (statusSelect && reasonGroup) {
+      statusSelect.addEventListener("change", refreshStatusReason);
+      refreshStatusReason();
+    }
+
     form.addEventListener("submit", () => {
       const submitBtn = form.querySelector('button[type="submit"]');
       if (!submitBtn || submitBtn.disabled) return;

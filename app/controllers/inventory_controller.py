@@ -107,6 +107,16 @@ def _material_payload_from_form(material: Material | None = None) -> tuple[dict,
     return payload, None
 
 
+def _status_change_reason_requirement(old_status: str | None, new_status: str | None) -> tuple[str | None, str | None]:
+    old_is_inactive = _is_inactive_status(old_status)
+    new_is_inactive = _is_inactive_status(new_status)
+    if old_is_inactive == new_is_inactive:
+        return None, None
+    if not old_is_inactive and new_is_inactive:
+        return "deactivation", "Motivo de baja"
+    return "reactivation", "Motivo de reactivación"
+
+
 @inventory_bp.route("/", methods=["GET"])
 @min_role_required("STUDENT")
 def inventory_list():
@@ -255,6 +265,12 @@ def admin_edit_material(material_id: int):
     if request.method == "POST":
         payload, error = _material_payload_from_form(material)
         form_data = dict(request.form)
+        reason_value = normalize_spaces(request.form.get("status_change_reason") or "")
+
+        reason_type, reason_label = _status_change_reason_requirement(material.status, payload.get("status") if payload else None)
+        if not error and reason_type and not reason_value:
+            error = f"Debes indicar {reason_label.lower()}."
+
         if error:
             flash(error, "error")
             return render_template(
@@ -284,6 +300,8 @@ def admin_edit_material(material_id: int):
                 "old_status": old_status,
                 "new_status": material.status,
                 "category": material.category,
+                "status_change_reason": reason_value or None,
+                "status_change_reason_type": reason_type,
             },
         )
         db.session.commit()
