@@ -257,6 +257,7 @@
                 <a href="{{ url_for('notifications.list_notifications') }}" class="btn btn-ghost">Ver todo</a>
               </div>
             </header>
+            <div style="padding: 0 16px 8px; color: var(--text-dim); font-size: .82rem;">Mostrando 5 recientes</div>
             <div id="notificationPanelList" class="notification-center__list"></div>
           </section>
         </div>
@@ -646,9 +647,6 @@
       }
 
       async function markAllNotificationsRead() {
-        state.items = state.items.map((item) => ({ ...item, is_read: true }));
-        updateBadge(0);
-        renderNotificationPanel();
         try {
           const body = new URLSearchParams();
           body.set("csrf_token", csrfToken);
@@ -661,18 +659,28 @@
             body: body.toString(),
             credentials: "same-origin",
           });
-          if (!resp.ok) return;
+          if (!resp.ok) {
+            createNotification({
+              title: "Notificaciones",
+              message: "No se pudo marcar todo como leído. Intenta nuevamente.",
+              type: "error",
+            });
+            return;
+          }
           const data = await resp.json();
+          state.items = state.items.map((item) => ({ ...item, is_read: true }));
           updateBadge(data.unread_count || 0);
-        } catch (_) {}
+          renderNotificationPanel();
+        } catch (_) {
+          createNotification({
+            title: "Notificaciones",
+            message: "Error de conexión al marcar notificaciones como leídas.",
+            type: "error",
+          });
+        }
       }
 
       async function clearReadNotifications() {
-        const hadReadItems = state.items.some((item) => !!item.is_read);
-        if (hadReadItems) {
-          state.items = state.items.filter((item) => !item.is_read);
-          renderNotificationPanel();
-        }
         try {
           const body = new URLSearchParams();
           body.set("csrf_token", csrfToken);
@@ -685,13 +693,29 @@
             body: body.toString(),
             credentials: "same-origin",
           });
-          if (!resp.ok) return;
+          if (!resp.ok) {
+            createNotification({
+              title: "Notificaciones",
+              message: "No se pudieron limpiar las notificaciones leídas.",
+              type: "error",
+            });
+            return;
+          }
           const data = await resp.json();
           updateBadge(data.unread_count || 0);
-          if (!hadReadItems && (data.deleted || 0) > 0) {
-            await loadInitialFeed();
-          }
-        } catch (_) {}
+          await loadInitialFeed();
+          createNotification({
+            title: "Notificaciones",
+            message: "Notificaciones leídas limpiadas correctamente.",
+            type: "success",
+          });
+        } catch (_) {
+          createNotification({
+            title: "Notificaciones",
+            message: "Error de conexión al limpiar notificaciones leídas.",
+            type: "error",
+          });
+        }
       }
 
       const flashRaw = document.getElementById("flashMessagesData")?.textContent || "[]";

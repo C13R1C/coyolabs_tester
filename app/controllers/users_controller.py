@@ -8,6 +8,7 @@ from app.models.profile_change_request import ProfileChangeRequest
 from app.models.critical_action_request import CriticalActionRequest
 from app.models.user import User
 from app.services.audit_service import log_event
+from app.services.notification_realtime_service import publish_notification_created
 from app.utils.authz import min_role_required
 from app.utils.roles import (
     ROLE_ADMIN,
@@ -83,15 +84,16 @@ def _create_critical_action_request(target_user: User, action_type: str, reason:
     db.session.add(req)
 
     superadmins = User.query.filter(User.role == ROLE_SUPERADMIN).all()
+    notifications_created: list[Notification] = []
     for superadmin in superadmins:
-        db.session.add(
-            Notification(
-                user_id=superadmin.id,
-                title="Nueva solicitud de acción crítica",
-                message=f"{current_user.email} solicitó {CRITICAL_ACTION_TYPES.get(action_type, action_type)} para {target_user.email}.",
-                link=url_for("users.critical_action_requests"),
-            )
+        notif = Notification(
+            user_id=superadmin.id,
+            title="Nueva solicitud de acción crítica",
+            message=f"{current_user.email} solicitó {CRITICAL_ACTION_TYPES.get(action_type, action_type)} para {target_user.email}.",
+            link=url_for("users.critical_action_requests"),
         )
+        db.session.add(notif)
+        notifications_created.append(notif)
 
     _log_admin_event(
         action="CRITICAL_ACTION_REQUEST_CREATED",
@@ -99,6 +101,8 @@ def _create_critical_action_request(target_user: User, action_type: str, reason:
         metadata={"target_user_id": target_user.id, "action_type": action_type},
     )
     db.session.commit()
+    for notif in notifications_created:
+        publish_notification_created(notif)
     flash("Solicitud crítica enviada a SUPERADMIN para aprobación.", "info")
 
 
@@ -273,20 +277,20 @@ def approve_critical_action_request(request_id: int):
     req.reviewed_by = current_user.id
     req.reviewed_at = db.func.now()
 
-    db.session.add(
-        Notification(
-            user_id=req.requester_id,
-            title="Solicitud crítica aprobada",
-            message=f"La acción {CRITICAL_ACTION_TYPES.get(req.action_type, req.action_type)} fue aprobada por SUPERADMIN.",
-            link=url_for("users.critical_action_requests"),
-        )
+    requester_notification = Notification(
+        user_id=req.requester_id,
+        title="Solicitud crítica aprobada",
+        message=f"La acción {CRITICAL_ACTION_TYPES.get(req.action_type, req.action_type)} fue aprobada por SUPERADMIN.",
+        link=url_for("users.critical_action_requests"),
     )
+    db.session.add(requester_notification)
     _log_admin_event(
         action="CRITICAL_ACTION_REQUEST_APPROVED",
         description=f"{current_user.email} aprobó solicitud crítica #{req.id}",
         metadata={"request_id": req.id, "target_user_id": req.target_user_id, "action_type": req.action_type},
     )
     db.session.commit()
+    publish_notification_created(requester_notification)
     flash("Solicitud crítica aprobada y aplicada.", "success")
     return redirect(url_for("users.critical_action_requests"))
 
@@ -307,20 +311,20 @@ def reject_critical_action_request(request_id: int):
     req.reviewed_by = current_user.id
     req.reviewed_at = db.func.now()
 
-    db.session.add(
-        Notification(
-            user_id=req.requester_id,
-            title="Solicitud crítica rechazada",
-            message=f"La acción {CRITICAL_ACTION_TYPES.get(req.action_type, req.action_type)} fue rechazada por SUPERADMIN.",
-            link=url_for("users.critical_action_requests"),
-        )
+    requester_notification = Notification(
+        user_id=req.requester_id,
+        title="Solicitud crítica rechazada",
+        message=f"La acción {CRITICAL_ACTION_TYPES.get(req.action_type, req.action_type)} fue rechazada por SUPERADMIN.",
+        link=url_for("users.critical_action_requests"),
     )
+    db.session.add(requester_notification)
     _log_admin_event(
         action="CRITICAL_ACTION_REQUEST_REJECTED",
         description=f"{current_user.email} rechazó solicitud crítica #{req.id}",
         metadata={"request_id": req.id, "target_user_id": req.target_user_id, "action_type": req.action_type},
     )
     db.session.commit()
+    publish_notification_created(requester_notification)
     flash("Solicitud crítica rechazada.", "success")
     return redirect(url_for("users.critical_action_requests"))
 

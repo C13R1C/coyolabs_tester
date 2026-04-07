@@ -5,7 +5,7 @@ import os
 from flask import send_file, current_app, abort
 
 from flask import Flask, redirect, request, session, url_for, abort
-from app.utils.roles import is_admin_role, is_staff_role
+from app.utils.roles import ROLE_STUDENT, ROLE_TEACHER, is_admin_role, is_staff_role, normalize_role
 from app.utils.landing import resolve_landing_endpoint
 
 from app.models.user import User
@@ -161,6 +161,9 @@ def create_app():
             return None
 
         if getattr(current_user, "profile_completed", False):
+            return None
+
+        if normalize_role(getattr(current_user, "role", None)) not in {ROLE_STUDENT, ROLE_TEACHER}:
             return None
 
         endpoint = request.endpoint or ""
