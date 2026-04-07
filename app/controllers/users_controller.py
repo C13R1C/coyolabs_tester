@@ -23,6 +23,8 @@ PENDING_APPROVAL_ROLES = (ROLE_TEACHER, ROLE_STAFF, ROLE_ADMIN)
 ADMIN_PANEL_ROLE_FILTERS = (ROLE_PENDING, ROLE_STUDENT, ROLE_TEACHER, ROLE_STAFF, ROLE_ADMIN, ROLE_SUPERADMIN)
 SUPERADMIN_ASSIGNABLE_ROLES = (ROLE_STUDENT, ROLE_TEACHER, ROLE_ADMIN)
 ADMIN_ASSIGNABLE_ROLES = (ROLE_STUDENT, ROLE_TEACHER)
+STAFF_PENDING_ASSIGNABLE_ROLES = (ROLE_TEACHER, ROLE_STAFF)
+ADMIN_PENDING_ASSIGNABLE_ROLES = (ROLE_TEACHER, ROLE_STAFF, ROLE_ADMIN)
 CRITICAL_ACTION_TYPES = {
     "DISABLE_USER": "desactivar usuario",
     "ENABLE_USER": "reactivar usuario",
@@ -38,6 +40,13 @@ def _is_superadmin() -> bool:
 def _is_admin_or_superadmin() -> bool:
     role = normalize_role(current_user.role)
     return role in {ROLE_ADMIN, ROLE_SUPERADMIN}
+
+
+def _pending_assignable_roles() -> tuple[str, ...]:
+    role = normalize_role(current_user.role)
+    if role in {ROLE_ADMIN, ROLE_SUPERADMIN}:
+        return ADMIN_PENDING_ASSIGNABLE_ROLES
+    return STAFF_PENDING_ASSIGNABLE_ROLES
 
 
 def _log_admin_event(action: str, description: str, metadata: dict | None = None) -> None:
@@ -124,7 +133,7 @@ def pending_users():
     return render_template(
         "users/pending_list.html",
         users=users,
-        assignable_roles=PENDING_APPROVAL_ROLES,
+        assignable_roles=_pending_assignable_roles(),
         active_page="users",
     )
 
@@ -134,6 +143,13 @@ def pending_users():
 def assign_role(user_id: int):
     user = User.query.get_or_404(user_id)
     new_role = normalize_role(request.form.get("role"))
+
+    if new_role not in _pending_assignable_roles():
+        if new_role == ROLE_ADMIN:
+            flash("Solo ADMIN/SUPERADMIN puede asignar rol ADMIN.", "error")
+        else:
+            flash("Rol no permitido para tu nivel de acceso.", "error")
+        return redirect(url_for("users.pending_users"))
 
     if new_role not in PENDING_APPROVAL_ROLES:
         flash("Rol no permitido para asignación administrativa.", "error")

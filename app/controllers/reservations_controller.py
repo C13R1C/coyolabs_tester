@@ -69,6 +69,15 @@ def _is_ticket_closure_requested(status: str | None) -> bool:
     return is_lab_ticket_closure_requested(status)
 
 
+def _is_ticket_operable_for_item_updates(status: str | None) -> bool:
+    normalized = (status or "").strip().upper()
+    return normalized in {
+        LabTicketStatus.OPEN,
+        LabTicketStatus.READY_FOR_PICKUP,
+        LabTicketStatus.CLOSURE_REQUESTED,
+    }
+
+
 def _sync_ticket_ready_status(ticket: LabTicket) -> None:
     sync_ticket_ready_status(ticket)
 
@@ -83,8 +92,16 @@ def _professor_assignments(teacher_id: int) -> list[TeacherAcademicLoad]:
 
 
 def _build_requester_name() -> str:
-    full_name = f"{(current_user.first_name or '').strip()} {(current_user.last_name or '').strip()}".strip()
-    return full_name or (current_user.email or "").strip()
+    full_name = (getattr(current_user, "full_name", "") or "").strip()
+    if full_name:
+        return full_name
+
+    email = (getattr(current_user, "email", "") or "").strip()
+    if email:
+        return email
+
+    user_id = getattr(current_user, "id", None)
+    return f"Usuario #{user_id}" if user_id is not None else "Usuario"
 
 
 def _save_signature_image(signature_data_url: str) -> tuple[str | None, str | None]:
@@ -979,6 +996,12 @@ def admin_ticket_item_update(item_id: int):
     if not item:
         flash("Ítem del ticket no encontrado.", "error")
         return redirect(url_for("reservations.admin_approved"))
+    if not item.ticket:
+        flash("El ticket asociado al ítem no existe.", "error")
+        return redirect(url_for("reservations.admin_approved"))
+    if not _is_ticket_operable_for_item_updates(item.ticket.status):
+        flash("No se pueden actualizar materiales de un ticket cerrado.", "error")
+        return redirect(url_for("reservations.admin_ticket_detail", ticket_id=item.ticket_id))
 
     try:
         delivered = int(request.form.get("quantity_delivered") or 0)
@@ -1054,7 +1077,7 @@ def admin_ticket_item_mark_ready(item_id: int):
         flash("No hay pendientes por preparar en este material.", "warning")
         return redirect(url_for("reservations.admin_ticket_detail", ticket_id=ticket.id))
 
-    if item.status == TicketItemStatus.READY_FOR_PICKUP:
+    if ticket.status == LabTicketStatus.READY_FOR_PICKUP:
         flash("Este material ya está marcado como listo para recoger.", "warning")
         return redirect(url_for("reservations.admin_ticket_detail", ticket_id=ticket.id))
 
@@ -1062,8 +1085,8 @@ def admin_ticket_item_mark_ready(item_id: int):
         flash("No se puede marcar como listo un material ya devuelto.", "error")
         return redirect(url_for("reservations.admin_ticket_detail", ticket_id=ticket.id))
 
-    item.status = TicketItemStatus.READY_FOR_PICKUP
-    sync_ticket_ready_status(ticket)
+    item.status = TicketItemStatus.PENDING
+    ticket.status = LabTicketStatus.READY_FOR_PICKUP
 
     notif = Notification(
         user_id=ticket.owner_user_id,
@@ -1115,6 +1138,9 @@ def admin_ticket_update_all(ticket_id: int):
     if not ticket:
         flash("Ticket no encontrado.", "error")
         return redirect(url_for("reservations.admin_approved"))
+    if not _is_ticket_operable_for_item_updates(ticket.status):
+        flash("No se pueden actualizar materiales de un ticket cerrado.", "error")
+        return redirect(url_for("reservations.admin_ticket_detail", ticket_id=ticket_id))
 
     item_ids = request.form.getlist("item_id[]")
     delivered_list = request.form.getlist("quantity_delivered[]")

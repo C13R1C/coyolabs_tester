@@ -1,8 +1,9 @@
+import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
-from flask import url_for
+from flask import current_app, has_app_context, url_for
 
 from app.extensions import db
 from app.models.lab_ticket import LabTicket
@@ -18,6 +19,8 @@ from app.utils.statuses import (
     is_active_lab_ticket_status,
     is_lab_ticket_closure_requested,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -70,21 +73,17 @@ def validate_ticket_active(ticket: LabTicket | None) -> ServiceResult:
 
 
 def sync_ticket_ready_status(ticket: LabTicket) -> None:
-    has_ready_items = any((item.status or "").upper() == TicketItemStatus.READY_FOR_PICKUP for item in ticket.items)
-    if has_ready_items and ticket.status == LabTicketStatus.OPEN:
-        ticket.status = LabTicketStatus.READY_FOR_PICKUP
-    elif not has_ready_items and ticket.status == LabTicketStatus.READY_FOR_PICKUP:
+    has_pending_delivery = any(item.quantity_requested > item.quantity_delivered for item in ticket.items)
+    if not has_pending_delivery and ticket.status == LabTicketStatus.READY_FOR_PICKUP:
         ticket.status = LabTicketStatus.OPEN
     return None
 
 
 def apply_ticket_item_status(item: TicketItem, delivered: int, returned: int) -> None:
     if delivered == 0:
-        item.status = TicketItemStatus.REQUESTED
+        item.status = TicketItemStatus.PENDING
     elif returned == 0:
         item.status = TicketItemStatus.DELIVERED
-    elif returned < delivered:
-        item.status = TicketItemStatus.MISSING
     else:
         item.status = TicketItemStatus.RETURNED
     return None
@@ -285,7 +284,7 @@ def close_ticket(ticket: LabTicket, actor_user: User) -> ServiceResult:
             missing_qty = item.quantity_delivered - item.quantity_returned
             if missing_qty > 0:
                 has_missing = True
-                item.status = TicketItemStatus.MISSING
+                item.status = TicketItemStatus.DELIVERED
                 debt_result = create_debt_for_ticket(
                     ticket=ticket,
                     item=item,
@@ -351,7 +350,13 @@ def close_ticket(ticket: LabTicket, actor_user: User) -> ServiceResult:
         db.session.commit()
     except Exception as exc:
         db.session.rollback()
-        message = "No se pudo cerrar el ticket por un error inesperado."
+        logger.exception(
+            "Error cerrando ticket con posible generación de adeudo",
+            extra={"ticket_id": getattr(ticket, "id", None), "actor_user_id": getattr(actor_user, "id", None)},
+        )
+        message = f"No se pudo cerrar el ticket ({exc.__class__.__name__})."
+        if has_app_context() and current_app.debug:
+            message = f"{message} {exc}"
         technical_reason = f"{message} [{exc.__class__.__name__}: {exc}]"
         _log_ticket_rejected(
             action="LAB_TICKET_CLOSE_REJECTED",

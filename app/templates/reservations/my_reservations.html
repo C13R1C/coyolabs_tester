@@ -60,7 +60,7 @@
             <td>{{ r.end_time }}</td>
             <td>{{ r.subject }}</td>
             <td>{{ r.group_name }}</td>
-            <td>{{ ((r.user.first_name or '') ~ ' ' ~ (r.user.last_name or ''))|trim or r.user.email }}</td>
+            <td>{{ (r.user.full_name or '')|trim or r.user.email }}</td>
             <td>
               {% if r.signature_ref %}
                 <a href="{{ url_for('static', filename=r.signature_ref) }}" target="_blank" rel="noopener noreferrer" class="btn btn-ghost">Ver firma</a>
