@@ -24,7 +24,7 @@
     <a class="btn btn-ghost" href="{{ url_for('inventory.inventory_list') }}"><i class="ph ph-arrow-left"></i><span>Volver al inventario</span></a>
     {% if current_user.is_authenticated and is_admin_role(current_user.role) %}
     <a class="btn btn-gold" href="{{ url_for('inventory.admin_edit_material', material_id=material.id) }}"><i class="ph ph-pencil-simple"></i><span>Editar</span></a>
-    <form method="post" action="{{ url_for('inventory.admin_toggle_material_active', material_id=material.id) }}" style="display:inline-flex; gap:8px;">
+    <form method="post" action="{{ url_for('inventory.admin_toggle_material_active', material_id=material.id) }}" style="display:inline-flex; gap:8px;" data-single-submit>
       <input
         type="text"
         name="reason"
@@ -32,7 +32,13 @@
         placeholder="{{ 'Motivo de reactivación (opcional)' if (material.status|lower) in ['baja', 'de baja', 'inactivo'] else 'Motivo de baja (obligatorio)' }}"
         {% if (material.status|lower) not in ['baja', 'de baja', 'inactivo'] %}required{% endif %}
       >
-      <button type="submit" class="btn btn-ghost">{{ 'Reactivar' if (material.status|lower) in ['baja', 'de baja', 'inactivo'] else 'Dar de baja' }}</button>
+      <button
+        type="submit"
+        class="btn btn-ghost"
+        data-submit-label="{{ 'Reactivando...' if (material.status|lower) in ['baja', 'de baja', 'inactivo'] else 'Guardando...' }}"
+      >
+        {{ 'Reactivar' if (material.status|lower) in ['baja', 'de baja', 'inactivo'] else 'Dar de baja' }}
+      </button>
     </form>
     {% endif %}
   </div>
@@ -55,4 +61,17 @@
     </table>
   </div>
 </section>
+<script>
+  (() => {
+    const form = document.querySelector("form[data-single-submit]");
+    if (!form) return;
+    form.addEventListener("submit", () => {
+      const submitBtn = form.querySelector('button[type="submit"]');
+      if (!submitBtn || submitBtn.disabled) return;
+      submitBtn.disabled = true;
+      submitBtn.dataset.originalText = submitBtn.textContent;
+      submitBtn.textContent = submitBtn.dataset.submitLabel || "Guardando...";
+    });
+  })();
+</script>
 {% endblock %}

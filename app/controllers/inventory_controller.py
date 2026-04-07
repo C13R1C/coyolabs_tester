@@ -84,6 +84,10 @@ def _material_payload_from_form(material: Material | None = None) -> tuple[dict,
     if category and category not in MATERIAL_CATEGORIES:
         return {}, "Selecciona una categoría válida."
 
+    tutorial_url = normalize_spaces(request.form.get("tutorial_url") or "")
+    if tutorial_url and not (tutorial_url.startswith("http://") or tutorial_url.startswith("https://")):
+        return {}, "La URL del tutorial debe iniciar con http:// o https://."
+
     payload = {
         "lab_id": lab.id,
         "career_id": career.id,
@@ -97,7 +101,7 @@ def _material_payload_from_form(material: Material | None = None) -> tuple[dict,
         "model": normalize_spaces(request.form.get("model") or "") or None,
         "code": normalize_spaces(request.form.get("code") or "") or None,
         "serial": normalize_spaces(request.form.get("serial") or "") or None,
-        "tutorial_url": normalize_spaces(request.form.get("tutorial_url") or "") or None,
+        "tutorial_url": tutorial_url or None,
         "notes": normalize_spaces(request.form.get("notes") or "") or None,
     }
     return payload, None
