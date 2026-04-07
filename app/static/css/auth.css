@@ -349,6 +349,17 @@ body.mode-register .btn{
   font-size: 13px;
   padding: 10px 12px;
 }
+.btn.btn-ghost{
+  background: rgba(255,255,255,0.06) !important;
+  color: rgba(255,255,255,0.92) !important;
+  border: 1px solid rgba(255,255,255,0.22);
+  box-shadow: none;
+}
+body.mode-login .btn.btn-ghost:hover,
+body.mode-register .btn.btn-ghost:hover{
+  background: rgba(255,255,255,0.12) !important;
+  filter: none;
+}
 
 /* Switch */
 .switch{

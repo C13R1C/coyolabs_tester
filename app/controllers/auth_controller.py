@@ -59,7 +59,7 @@ def _bad_register_request(message: str):
     if request.is_json:
         return jsonify({"error": message}), 400
 
-    flash(message)
+    flash(message, "error")
     return _render_auth("register"), 400
 
 
@@ -92,24 +92,24 @@ def login():
         user = User.query.filter_by(email=email).first()
 
         if not user or not user.check_password(password):
-            flash("Credenciales incorrectas.")
+            flash("Credenciales incorrectas.", "error")
             return redirect(url_for("auth.auth_page", mode="login"))
 
         if not user.is_active:
-            flash("Tu cuenta está desactivada. Contacta al administrador.")
+            flash("Tu cuenta está desactivada. Contacta al administrador.", "warning")
             return redirect(url_for("auth.auth_page", mode="login"))
 
         if user.is_banned:
-            flash("Tu cuenta está bloqueada. Contacta al administrador.")
+            flash("Tu cuenta está bloqueada. Contacta al administrador.", "warning")
             return redirect(url_for("auth.auth_page", mode="login"))
 
         if not user.is_verified:
             _store_pending_verify_user(user)
-            flash("Verifica tu correo")
+            flash("Verifica tu correo institucional para continuar.", "info")
             return redirect(url_for("auth.auth_page", mode="login"))
 
         if user.role == ROLE_PENDING:
-            flash("Cuenta pendiente de aprobación por administrador.")
+            flash("Cuenta pendiente de aprobación por administrador.", "warning")
             return redirect(url_for("auth.auth_page", mode="login"))
 
         login_user(user)
@@ -150,17 +150,21 @@ def register():
         inferred_role = infer_role_from_email(email)
         if inferred_role is None:
             flash(
-                "Formato de correo no válido. Usa matrícula@utpn.edu.mx o nombre.apellido@utpn.edu.mx."
+                "Formato de correo no válido. Usa matrícula@utpn.edu.mx o nombre.apellido@utpn.edu.mx.",
+                "error",
             )
             return redirect(url_for("auth.auth_page", mode="register"))
 
         if len(password) < 6:
-            flash("La contraseña debe tener al menos 6 caracteres.")
+            flash("La contraseña debe tener al menos 6 caracteres.", "error")
             return redirect(url_for("auth.auth_page", mode="register"))
 
         existing = User.query.filter_by(email=email).first()
         if existing:
-            flash("Ese correo ya está registrado. Si no verificaste tu cuenta, revisa tu correo o solicita reenvío.")
+            flash(
+                "Ese correo ya está registrado. Inicia sesión o usa recuperación de contraseña si olvidaste tu acceso.",
+                "warning",
+            )
             return redirect(url_for("auth.auth_page", mode="login"))
 
         user = User(email=email, role=inferred_role, is_verified=False)
@@ -181,11 +185,11 @@ def register():
             print("=== ERROR ENVIANDO EMAIL CON RESEND ===")
             print(e)
             print("=== FIN ERROR EMAIL ===")
-            flash("La cuenta se creó, pero no se pudo enviar el correo de verificación.")
+            flash("La cuenta se creó, pero no se pudo enviar el correo de verificación.", "warning")
             return redirect(url_for("auth.auth_page", mode="login"))
 
         _store_pending_verify_user(user)
-        flash("Verifica tu correo")
+        flash("Te registraste correctamente. Verifica tu correo institucional para activar la cuenta.", "success")
         return redirect(url_for("auth.auth_page", mode="login"))
 
     return redirect(url_for("auth.auth_page", mode="register"))
@@ -195,7 +199,7 @@ def register():
 def verify(token):
     token_data = confirm_verify_token(token, max_age_seconds=3600)
     if not token_data:
-        flash("Token inválido o expirado")
+        flash("Token inválido o expirado.", "error")
         return redirect(url_for("auth.auth_page", mode="login"))
 
     email = str(token_data.get("email") or "").strip().lower()
@@ -203,14 +207,14 @@ def verify(token):
 
     user = User.query.filter_by(email=email).first()
     if not user:
-        flash("Usuario no encontrado.")
+        flash("Usuario no encontrado.", "error")
         return redirect(url_for("auth.auth_page", mode="register"))
     if token_version != (user.verify_token_version or 0):
-        flash("Token inválido o expirado")
+        flash("Token inválido o expirado.", "error")
         return redirect(url_for("auth.auth_page", mode="login"))
 
     if user.is_verified:
-        flash("Correo verificado")
+        flash("Correo ya verificado. Bienvenido.", "success")
         login_user(user)
         if _requires_profile_completion(user.role) and not user.profile_completed:
             return redirect(url_for("profile.complete_profile"))
@@ -224,7 +228,7 @@ def verify(token):
 
     session.pop("pending_verify_user_id", None)
     session.pop("pending_verify_email", None)
-    flash("Correo verificado")
+    flash("Correo verificado correctamente.", "success")
     login_user(user)
     if _requires_profile_completion(user.role) and not user.profile_completed:
         return redirect(url_for("profile.complete_profile"))
@@ -323,7 +327,7 @@ def forgot_password():
             print(e)
             print("=== FIN ERROR EMAIL RESET PASSWORD ===")
 
-    flash(generic_message)
+    flash(generic_message, "info")
     return redirect(url_for("auth.auth_page", mode="login"))
 
 
@@ -331,18 +335,18 @@ def forgot_password():
 def reset_password(token: str):
     token_data = confirm_password_reset_token(token, max_age_seconds=3600)
     if not token_data:
-        flash("El enlace de recuperación es inválido o expiró.")
+        flash("El enlace de recuperación es inválido o expiró.", "error")
         return redirect(url_for("auth.auth_page", mode="login"))
 
     email = str(token_data.get("email") or "").strip().lower()
     password_fingerprint = str(token_data.get("password_fingerprint") or "")
     user = User.query.filter_by(email=email).first()
     if not user or not user.is_active or user.is_banned:
-        flash("El enlace de recuperación es inválido o expiró.")
+        flash("El enlace de recuperación es inválido o expiró.", "error")
         return redirect(url_for("auth.auth_page", mode="login"))
 
     if password_fingerprint != user.password_hash:
-        flash("El enlace de recuperación es inválido o expiró.")
+        flash("El enlace de recuperación es inválido o expiró.", "error")
         return redirect(url_for("auth.auth_page", mode="login"))
 
     if request.method == "POST":
@@ -350,24 +354,24 @@ def reset_password(token: str):
         confirm_password = request.form.get("confirm_password") or ""
 
         if not password or not confirm_password:
-            flash("Debes completar ambos campos.")
+            flash("Debes completar ambos campos.", "warning")
             return redirect(url_for("auth.reset_password", token=token))
 
         if password != confirm_password:
-            flash("Las contraseñas no coinciden.")
+            flash("Las contraseñas no coinciden.", "error")
             return redirect(url_for("auth.reset_password", token=token))
 
         if len(password) < 6:
-            flash("La contraseña debe tener al menos 6 caracteres.")
+            flash("La contraseña debe tener al menos 6 caracteres.", "error")
             return redirect(url_for("auth.reset_password", token=token))
 
         if user.check_password(password):
-            flash("La nueva contraseña debe ser distinta a la actual.")
+            flash("La nueva contraseña debe ser distinta a la actual.", "warning")
             return redirect(url_for("auth.reset_password", token=token))
 
         user.set_password(password)
         db.session.commit()
-        flash("Tu contraseña se actualizó correctamente. Ya puedes iniciar sesión.")
+        flash("Tu contraseña se actualizó correctamente. Ya puedes iniciar sesión.", "success")
         return redirect(url_for("auth.auth_page", mode="login"))
 
     return render_template("auth/reset_password.html", token=token)
