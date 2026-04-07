@@ -57,14 +57,28 @@
     </div>
 
     <div class="toolbar-group"><label for="location">Ubicación</label><div class="search-box"><input id="location" name="location" value="{{ data.get('location', material.location if material else '') }}"></div></div>
-    <div class="toolbar-group"><label for="status">Estado</label><div class="search-box"><input id="status" name="status" value="{{ data.get('status', material.status if material else 'Disponible') }}"></div></div>
-    <div class="toolbar-group"><label for="pieces_text">Piezas (texto)</label><div class="search-box"><input id="pieces_text" name="pieces_text" value="{{ data.get('pieces_text', material.pieces_text if material else '') }}"></div></div>
-    <div class="toolbar-group"><label for="pieces_qty">Piezas (cantidad)</label><div class="search-box"><input id="pieces_qty" name="pieces_qty" type="number" min="0" value="{{ data.get('pieces_qty', material.pieces_qty if material else '') }}"></div></div>
+    <div class="toolbar-group">
+      <label for="status">Estado</label>
+      <div class="select-wrap">
+        {% set selected_status = data.get('status', material.status if material else 'Disponible') %}
+        <select id="status" name="status">
+          <option value="Disponible" {% if selected_status == 'Disponible' %}selected{% endif %}>Disponible</option>
+          <option value="En mantenimiento" {% if selected_status == 'En mantenimiento' %}selected{% endif %}>En mantenimiento</option>
+          <option value="Frágil" {% if selected_status == 'Frágil' %}selected{% endif %}>Frágil</option>
+          <option value="Baja" {% if selected_status == 'Baja' %}selected{% endif %}>Baja</option>
+          {% if selected_status and selected_status not in ['Disponible', 'En mantenimiento', 'Frágil', 'Baja'] %}
+          <option value="{{ selected_status }}" selected>{{ selected_status }}</option>
+          {% endif %}
+        </select>
+      </div>
+    </div>
+    <div class="toolbar-group"><label for="pieces_text">Descripción de piezas (opcional)</label><div class="search-box"><input id="pieces_text" name="pieces_text" placeholder="Ej. 20/20, kit completo, faltan tapas" value="{{ data.get('pieces_text', material.pieces_text if material else '') }}"></div></div>
+    <div class="toolbar-group"><label for="pieces_qty">Cantidad</label><div class="search-box"><input id="pieces_qty" name="pieces_qty" type="number" min="0" placeholder="Ej. 20" value="{{ data.get('pieces_qty', material.pieces_qty if material else '') }}"></div></div>
     <div class="toolbar-group"><label for="brand">Marca</label><div class="search-box"><input id="brand" name="brand" value="{{ data.get('brand', material.brand if material else '') }}"></div></div>
     <div class="toolbar-group"><label for="model">Modelo</label><div class="search-box"><input id="model" name="model" value="{{ data.get('model', material.model if material else '') }}"></div></div>
     <div class="toolbar-group"><label for="code">Código</label><div class="search-box"><input id="code" name="code" value="{{ data.get('code', material.code if material else '') }}"></div></div>
     <div class="toolbar-group"><label for="serial">Serie</label><div class="search-box"><input id="serial" name="serial" value="{{ data.get('serial', material.serial if material else '') }}"></div></div>
-    <div class="toolbar-group" style="grid-column:1 / -1;"><label for="tutorial_url">URL de tutorial</label><div class="search-box"><input id="tutorial_url" name="tutorial_url" value="{{ data.get('tutorial_url', material.tutorial_url if material else '') }}"></div></div>
+    <div class="toolbar-group" style="grid-column:1 / -1;"><label for="tutorial_url">Enlace al manual</label><div class="search-box"><input id="tutorial_url" name="tutorial_url" placeholder="https://..." value="{{ data.get('tutorial_url', material.tutorial_url if material else '') }}"></div></div>
     <div class="toolbar-group" style="grid-column:1 / -1;"><label for="notes">Observaciones</label><textarea id="notes" name="notes" rows="4" class="form-control">{{ data.get('notes', material.notes if material else '') }}</textarea></div>
 
     <div class="toolbar-actions" style="grid-column:1 / -1;">
