@@ -72,6 +72,17 @@ def _is_professor_role(role: str | None) -> bool:
     normalized = normalize_role(role)
     return normalized == ROLE_TEACHER
 
+
+def _requires_profile_completion(role: str | None) -> bool:
+    normalized = normalize_role(role)
+    return normalized in {ROLE_STUDENT, ROLE_TEACHER}
+
+
+def _has_min_real_chars(value: str, minimum: int = 3) -> bool:
+    normalized = re.sub(r"\s+", "", value or "")
+    return len(normalized) >= minimum
+
+
 def _subject_allowed_for_teacher(subject: Subject, teacher: User) -> bool:
     return bool(subject and subject.is_active)
 
@@ -348,7 +359,7 @@ def remove_teaching_load(load_id: int):
 def request_profile_update():
     legacy_phone = (request.form.get("requested_phone") or "").strip()
     if legacy_phone:
-        flash("Endpoint legacy detectado: redirigiendo al flujo principal de cambio de teléfono.", "info")
+        flash("Redirigiendo al flujo principal de cambio de teléfono.", "info")
         return request_phone_change()
 
     if is_admin_role(current_user.role):
@@ -369,7 +380,7 @@ def request_profile_update():
     req = ProfileChangeRequest(
         user_id=current_user.id,
         request_type="PROFILE_CHANGE",
-        reason="DEPRECATED endpoint /profile/request-update",
+        reason="Solicitud recibida desde el formulario de actualización de perfil",
         status="PENDING",
     )
     db.session.add(req)
@@ -387,13 +398,13 @@ def request_profile_update():
     db.session.commit()
     log_event(
         module="PROFILE",
-        action="LEGACY_ENDPOINT_USED",
+        action="PROFILE_UPDATE_REQUEST_USED",
         user_id=current_user.id,
         entity_label="/profile/request-update",
-        description="Uso de endpoint legacy de actualización de perfil (redirigir a flujos principales)",
-        metadata={"deprecated": True, "preferred_flows": ["/profile/phone-change/request", "/profile/complete"]},
+        description="Uso de formulario de actualización de perfil",
+        metadata={"preferred_flows": ["/profile/phone-change/request", "/profile/complete"]},
     )
-    flash("Solicitud registrada. Nota: este endpoint es legacy/deprecated; usa los flujos nuevos de perfil.", "warning")
+    flash("Solicitud registrada correctamente.", "success")
     return redirect(url_for("profile.my_profile"))
 
 
@@ -537,8 +548,8 @@ def update_basic_profile():
     full_name = (request.form.get("full_name")or"").strip()
     phone, phone_error = normalize_and_validate_phone(request.form.get("phone"))
 
-    if not full_name:
-        flash("El nombre completo es obligatorio.", "error")
+    if not full_name or not _has_min_real_chars(full_name, minimum=3):
+        flash("El nombre completo es obligatorio y debe tener al menos 3 caracteres reales.", "error")
         return redirect(url_for("profile.my_profile"))
 
     if phone_error:
@@ -594,6 +605,9 @@ def update_basic_profile():
 @profile_bp.route("/complete", methods=["GET", "POST"])
 @login_required
 def complete_profile():
+    if not _requires_profile_completion(current_user.role):
+        return redirect(url_for(resolve_landing_endpoint(current_user.role)))
+
     if current_user.profile_completed:
         flash("Tu perfil ya está completo.")
         return redirect(url_for(resolve_landing_endpoint(current_user.role)))
@@ -609,16 +623,12 @@ def complete_profile():
         phone = (request.form.get("phone") or "").strip()
         confirm_data = request.form.get("confirm_data") == "1"
 
-        if not is_professor and not is_student:
-            flash("Tu rol no está habilitado para completar este perfil.", "error")
-            return redirect(url_for(resolve_landing_endpoint(current_user.role)))
-
-        if not full_name:
-            flash("El nombre completo es obligatorio.")
+        if not full_name or not _has_min_real_chars(full_name, minimum=3):
+            flash("El nombre completo es obligatorio y debe tener al menos 3 caracteres reales.")
             return redirect(url_for("profile.complete_profile"))
 
-        if is_student and not matricula:
-            flash("La matrícula es obligatoria para estudiantes.")
+        if is_student and (not matricula or len(matricula) < 5):
+            flash("La matrícula es obligatoria para estudiantes y debe tener al menos 5 caracteres.")
             return redirect(url_for("profile.complete_profile"))
 
         if not career_id:
