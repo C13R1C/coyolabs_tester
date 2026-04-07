@@ -13,7 +13,7 @@
 </header>
 
 <section class="table-card">
-  <form method="post" class="toolbar" style="grid-template-columns:repeat(2, minmax(260px, 1fr));">
+  <form method="post" class="toolbar" style="grid-template-columns:repeat(2, minmax(260px, 1fr));" data-single-submit>
     {% set data = form_data if form_data else {} %}
     <div class="toolbar-group">
       <label for="name">Nombre</label>
@@ -68,9 +68,23 @@
     <div class="toolbar-group" style="grid-column:1 / -1;"><label for="notes">Observaciones</label><textarea id="notes" name="notes" rows="4" class="form-control">{{ data.get('notes', material.notes if material else '') }}</textarea></div>
 
     <div class="toolbar-actions" style="grid-column:1 / -1;">
-      <button type="submit" class="btn btn-gold">Guardar</button>
+      <button type="submit" class="btn btn-gold" data-submit-label="{{ 'Actualizando...' if is_edit else 'Guardando...' }}">{{ "Actualizar" if is_edit else "Guardar" }}</button>
       <a href="{{ url_for('inventory.material_detail', material_id=material.id) if is_edit else url_for('inventory.inventory_list') }}" class="btn btn-ghost">Cancelar</a>
     </div>
   </form>
 </section>
+
+<script>
+  (() => {
+    const form = document.querySelector("form[data-single-submit]");
+    if (!form) return;
+    form.addEventListener("submit", () => {
+      const submitBtn = form.querySelector('button[type="submit"]');
+      if (!submitBtn || submitBtn.disabled) return;
+      submitBtn.disabled = true;
+      submitBtn.dataset.originalText = submitBtn.textContent;
+      submitBtn.textContent = submitBtn.dataset.submitLabel || "Guardando...";
+    });
+  })();
+</script>
 {% endblock %}
