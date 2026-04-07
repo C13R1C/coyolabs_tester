@@ -45,4 +45,17 @@
     </table>
   </div>
 </section>
+<script>
+  (() => {
+    const form = document.querySelector("form[data-single-submit]");
+    if (!form) return;
+    form.addEventListener("submit", () => {
+      const submitBtn = form.querySelector('button[type="submit"]');
+      if (!submitBtn || submitBtn.disabled) return;
+      submitBtn.disabled = true;
+      submitBtn.dataset.originalText = submitBtn.textContent;
+      submitBtn.textContent = submitBtn.dataset.submitLabel || "Guardando...";
+    });
+  })();
+</script>
 {% endblock %}
