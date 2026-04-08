@@ -43,6 +43,7 @@
 {% for s in items %}
 <tr class="software-row"><td>{{ s.id }}</td><td>{{ lab_room_codes.get(s.lab_id, '—') }}</td><td>{{ s.name }}</td><td>{{ s.version or '-' }}</td><td>{{ s.license_type or '-' }}</td><td>{{ s.notes or '-' }}</td><td>{% if s.update_requested %}<span class="status-badge status-warn">PENDIENTE</span><br>{{ s.update_note }}{% else %}<span class="status-badge status-neutral">-</span>{% endif %}</td><td>
   {% if is_admin_role(current_user.role) %}
+  <a class="btn btn-ghost" href="{{ url_for('software.admin_edit', software_id=s.id) }}" style="margin-bottom:8px;">Editar</a>
   <form method="post" action="{{ url_for('software.request_update', software_id=s.id) }}" class="software-update-form"><input class="form-control" type="text" name="update_note" placeholder="Nota técnica: actualización, licencia o corrección"><button type="submit" class="btn btn-ghost">Registrar seguimiento</button></form>
   <form method="post" action="{{ url_for('software.admin_clear_update', software_id=s.id) }}"><button type="submit" class="btn btn-ghost">Marcar atendido</button></form>
   {% else %}
