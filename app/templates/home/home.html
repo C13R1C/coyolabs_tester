@@ -143,15 +143,11 @@
     </article>
 
     <article class="card section">
-      <div class="card-title">Disponibilidad de laboratorios</div>
-      <div class="card-subtitle">Integrado desde la vista anterior de <code>/home/labs</code>.</div>
+      <div class="card-title">Disponibilidad de laboratorios de hoy</div>
+      <div class="card-subtitle">La fecha se toma automáticamente (día actual). Filtra solo por hora.</div>
 
       <form method="GET" action="{{ url_for('home.home_dashboard') }}#labs" class="labs-toolbar" id="labs">
         <div class="labs-filter-controls">
-          <label class="labs-filter-input">
-            <i class="ph ph-calendar-blank"></i>
-            <input type="date" name="date" value="{{ selected_date }}">
-          </label>
           <label class="labs-filter-input">
             <i class="ph ph-clock"></i>
             <input type="time" name="time" value="{{ selected_time }}">
