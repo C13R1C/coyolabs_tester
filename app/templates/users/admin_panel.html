@@ -121,7 +121,7 @@
             <form method="post" action="{{ url_for('users.admin_update_user', user_id=user.id) }}" class="users-admin-edit-form">
               <div class="search-box">
                 <i class="ph ph-envelope search-icon"></i>
-                <input type="email" name="email" value="{{ user.email }}" required>
+                <input type="email" name="email" value="{{ user.email }}" placeholder="usuario@utpn.edu.mx" required>
               </div>
 
               <div class="search-box">
