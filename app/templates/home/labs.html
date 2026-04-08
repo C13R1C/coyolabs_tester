@@ -48,6 +48,57 @@
   flex-wrap: wrap;
 }
 
+.labs-filter-controls{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+
+.labs-filter-input{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-height:44px;
+  padding:0 12px;
+  border-radius:12px;
+  border:1px solid var(--stroke);
+  background: rgba(255,255,255,0.82);
+  box-shadow: var(--shadow-sm);
+  transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+
+.labs-filter-input:hover{
+  border-color: var(--stroke-strong);
+  transform: translateY(-1px);
+}
+
+.labs-filter-input:focus-within{
+  border-color: color-mix(in srgb, var(--brand, #b8872f) 48%, #ffffff);
+  box-shadow: 0 0 0 3px rgba(184, 135, 47, 0.14);
+}
+
+.labs-filter-input i{
+  color: var(--text-dim, #728078);
+  font-size: 1rem;
+}
+
+.labs-filter-input input{
+  border: 0;
+  outline: none;
+  background: transparent;
+  min-height: 42px;
+  font: inherit;
+  color: var(--text);
+  min-width: 155px;
+}
+
+.labs-filter-btn{
+  min-height:44px;
+  padding:0 18px;
+  border-radius:12px;
+}
+
 .legend{
   display:flex;
   gap:12px;
@@ -113,9 +164,17 @@
   </div>
 
   <form method="GET" class="filters">
-    <input type="date" name="date" value="{{ selected_date }}">
-    <input type="time" name="time" value="{{ selected_time }}">
-    <button class="btn btn-gold" type="submit">Filtrar</button>
+    <div class="labs-filter-controls">
+      <label class="labs-filter-input">
+        <i class="ph ph-calendar-blank"></i>
+        <input type="date" name="date" value="{{ selected_date }}">
+      </label>
+      <label class="labs-filter-input">
+        <i class="ph ph-clock"></i>
+        <input type="time" name="time" value="{{ selected_time }}">
+      </label>
+      <button class="btn btn-gold labs-filter-btn" type="submit">Filtrar</button>
+    </div>
   </form>
 </header>
 
