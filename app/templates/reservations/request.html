@@ -395,8 +395,8 @@
 }
 
 .time-slot.occupied {
-  background: rgba(244, 67, 54, 0.15);
-  color: #F44336;
+  background: rgba(214, 140, 75, 0.18);
+  color: #8b5a2e;
 }
 
 .time-slot.pending {
@@ -434,7 +434,7 @@
 }
 </style>
 
-<section class="toolbar-card">
+<section class="toolbar-card" id="reservationFormSection">
   <form method="post" class="toolbar reservation-request-form" style="grid-template-columns: repeat(2, minmax(280px, 1fr));">
     <div class="toolbar-group">
       <label>Salón/Laboratorio</label>
@@ -605,7 +605,8 @@
   </form>
 </section>
 
-<section class="table-card res-occupancy-card">
+{% set nombres_dia = {0:'Lunes',1:'Martes',2:'Miércoles',3:'Jueves',4:'Viernes',5:'Sábado',6:'Domingo'} %}
+<section class="table-card res-occupancy-card" id="occupancySection">
   <div class="res-occupancy-head">
     <div class="res-occupancy-title">
       <p class="page-kicker">Calendario semanal</p>
@@ -657,10 +658,12 @@
         <tr>
           <th style="min-width:110px;">Salón</th>
           {% for day in week_days %}
+          {% if day.weekday() != 6 %}
           <th style="min-width:160px;">
-            {{ day.strftime('%A')|capitalize }}<br>
+            {{ nombres_dia[day.weekday()] }}<br>
             <span style="font-weight:400; opacity:.8;">{{ day.strftime('%d/%m') }}</span>
           </th>
+          {% endif %}
           {% endfor %}
         </tr>
       </thead>
@@ -670,6 +673,7 @@
           <td class="res-room-label">{{ room }}</td>
 
           {% for day in week_days %}
+          {% if day.weekday() != 6 %}
           <td class="res-cell">
             {% set cell = week_schedule[room][day] %}
             {% set cell_state = 'available' %}
@@ -686,12 +690,22 @@
 
             <div class="res-cell-shell is-{{ cell_state }}">
               {% for slot in cell.slots %}
-                <div class="time-slot {{ slot.state }}" title="{{ slot.start }} - {{ slot.end }}">
+                {% set slot_info = namespace(texto='Sin reservación activa') %}
+                {% for item in cell.items %}
+                  {% set item_inicio = item.start_time.strftime('%H:%M') %}
+                  {% set item_fin = item.end_time.strftime('%H:%M') %}
+                  {% if item_inicio < slot.end and item_fin > slot.start %}
+                    {% set persona = (item.user.full_name if item.user and item.user.full_name else (item.user.email if item.user else (item.teacher_name or 'Usuario institucional'))) %}
+                    {% set slot_info.texto = 'Reservado por: ' ~ persona %}
+                  {% endif %}
+                {% endfor %}
+                <div class="time-slot {{ slot.state }}" title="{{ slot.start }} - {{ slot.end }} · {{ slot_info.texto }}" tabindex="0" aria-label="{{ slot.start }} a {{ slot.end }}. {{ slot_info.texto }}">
                   <span class="time">{{ slot.start }} - {{ slot.end }}</span>
                 </div>
               {% endfor %}
             </div>
           </td>
+          {% endif %}
           {% endfor %}
         </tr>
         {% endfor %}
@@ -701,6 +715,16 @@
 </section>
 
 <div id="toast" class="toast">Material agregado</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const occupancySection = document.getElementById("occupancySection");
+  const reservationFormSection = document.getElementById("reservationFormSection");
+  if (occupancySection && reservationFormSection) {
+    reservationFormSection.parentNode.insertBefore(occupancySection, reservationFormSection);
+  }
+});
+</script>
 
 <div id="clockPickerModal" class="clock-picker-modal" aria-hidden="true">
   <div class="clock-picker-backdrop" data-clock-close="1"></div>

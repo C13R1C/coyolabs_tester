@@ -120,6 +120,10 @@ def _status_change_reason_requirement(old_status: str | None, new_status: str | 
 @inventory_bp.route("/", methods=["GET"])
 @min_role_required("STUDENT")
 def inventory_list():
+    if normalize_role(current_user.role) == ROLE_STUDENT:
+        flash("El módulo de inventario no está disponible para tu rol.", "warning")
+        return redirect(url_for("root_home"))
+
     lab_id = request.args.get("lab_id", type=int)
     career_id = request.args.get("career_id", type=int)
     category = normalize_spaces(request.args.get("category") or "").upper()
@@ -187,6 +191,10 @@ def inventory_list():
 @inventory_bp.route("/materials/<int:material_id>", methods=["GET"])
 @min_role_required("STUDENT")
 def material_detail(material_id: int):
+    if normalize_role(current_user.role) == ROLE_STUDENT:
+        flash("El módulo de inventario no está disponible para tu rol.", "warning")
+        return redirect(url_for("root_home"))
+
     m = Material.query.get(material_id)
     if not m:
         abort(404)
