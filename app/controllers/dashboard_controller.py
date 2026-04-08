@@ -2,7 +2,7 @@
 
 from datetime import datetime, timedelta
 
-from flask import Blueprint, jsonify, render_template
+from flask import Blueprint, jsonify, render_template, request, url_for
 from flask_login import current_user
 from sqlalchemy import func
 from sqlalchemy.orm import joinedload
@@ -15,12 +15,54 @@ from app.models.ticket_item import TicketItem
 from app.models.debt import Debt
 from app.models.notification import Notification
 from app.models.print3d_job import Print3DJob
+from app.models.software import Software
 from app.models.user import User
 from app.utils.authz import min_role_required
 from app.constants import ROLE_PENDING
 from app.utils.statuses import DebtStatus, LabTicketStatus, Print3DJobStatus, ReservationStatus, TicketItemStatus
 
 dashboard_bp = Blueprint("dashboard", __name__, url_prefix="/dashboard")
+
+
+def _search_reports_base() -> list[dict]:
+    return [
+        {
+            "title": "Inventario general",
+            "description": "Materiales por laboratorio, estado, código y ubicación.",
+            "tags": "inventario materiales laboratorio estado código ubicación",
+            "link": url_for("reports.report_inventory_view"),
+        },
+        {
+            "title": "Adeudos",
+            "description": "Seguimiento de adeudos activos y cerrados.",
+            "tags": "adeudos deudas pagos",
+            "link": url_for("reports.report_debts_view"),
+        },
+        {
+            "title": "Bitácora",
+            "description": "Eventos administrativos y de operación.",
+            "tags": "bitácora auditoría eventos logs",
+            "link": url_for("reports.report_logbook_view"),
+        },
+        {
+            "title": "Reservaciones",
+            "description": "Reservas por salón, docente, grupo y estado.",
+            "tags": "reservaciones calendario salones",
+            "link": url_for("reports.report_reservations_view"),
+        },
+        {
+            "title": "Objetos perdidos",
+            "description": "Incidencias y estado de objetos reportados.",
+            "tags": "objetos perdidos encontrados",
+            "link": url_for("reports.report_lostfound_view"),
+        },
+        {
+            "title": "Software",
+            "description": "Inventario de software y seguimiento técnico.",
+            "tags": "software licencias versiones seguimiento",
+            "link": url_for("reports.report_software_view"),
+        },
+    ]
 
 
 def _build_operational_snapshot(activity_limit: int = 8) -> dict:
@@ -383,3 +425,36 @@ def dashboard_home():
 @min_role_required("ADMIN")
 def dashboard_ops_feed():
     return jsonify(_build_operational_snapshot())
+
+
+@dashboard_bp.route("/search", methods=["GET"])
+@min_role_required("ADMIN")
+def dashboard_quick_search():
+    search_text = (request.args.get("q") or "").strip()
+
+    inventory_items = (
+        Material.query
+        .options(joinedload(Material.career), joinedload(Material.lab))
+        .order_by(Material.created_at.desc())
+        .limit(30)
+        .all()
+    )
+
+    software_items = (
+        Software.query
+        .options(joinedload(Software.lab))
+        .order_by(Software.created_at.desc())
+        .limit(30)
+        .all()
+    )
+
+    report_items = _search_reports_base()
+
+    return render_template(
+        "dashboard/search.html",
+        inventory_items=inventory_items,
+        software_items=software_items,
+        report_items=report_items,
+        search_text=search_text,
+        active_page="dashboard",
+    )

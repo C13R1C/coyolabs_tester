@@ -176,10 +176,15 @@
       {% set is_found = it.status in ['IN_STORAGE', 'RETURNED'] %}
       <article class="lostfound-card">
         <a href="{{ url_for('lostfound.detail', item_id=it.id) }}">
-          {% if it.evidence_ref and it.evidence_ref.startswith('uploads/lostfound/') %}
-            <img class="lostfound-card-image" src="{{ url_for('static', filename=it.evidence_ref) }}" alt="Foto de {{ it.title }}">
+          {% if it.evidence_ref and ('lostfound/' in it.evidence_ref or 'lostfound\\' in it.evidence_ref) %}
+            <img
+              class="lostfound-card-image"
+              src="{{ url_for('upload_file', filename=it.evidence_ref|replace('uploads\\\\', '')|replace('uploads/', '')|replace('\\', '/')) }}"
+              alt="Foto de {{ it.title }}"
+              loading="lazy"
+            >
           {% else %}
-            <div class="lostfound-card-image--empty"><i class="ph ph-image" style="font-size:1.3rem;"></i></div>
+            <div class="lostfound-card-image--empty">Sin imagen</div>
           {% endif %}
         </a>
         <div class="lostfound-card-body">
