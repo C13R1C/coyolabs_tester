@@ -1,0 +1,17 @@
+{% extends "layouts/student_base.html" %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Software", url_for('software.list_software')), ("Editar", url_for('software.admin_edit', software_id=software.id))] %}
+{% block title %}Editar software{% endblock %}
+{% block content %}
+<header class="topbar"><div class="topbar-left"><p class="page-kicker">Software instalado</p><h1>Editar software</h1><p class="page-subtitle">Actualiza el registro y su salón/laboratorio asociado.</p></div><div class="topbar-actions"><a href="{{ url_for('software.list_software') }}" class="btn btn-ghost">Catálogo de software</a></div></header>
+
+<section class="toolbar-card">
+  <form method="post" class="toolbar" style="grid-template-columns: repeat(2, minmax(280px, 1fr));">
+    <div class="toolbar-group"><label for="lab_id">Salón/Laboratorio (ej. B003) (opcional)</label><div class="select-wrap"><select id="lab_id" name="lab_id"><option value="">-- Sin asignar espacio --</option>{% for lab in labs %}<option value="{{ lab.id }}" {% if software.lab_id == lab.id %}selected{% endif %}>{{ lab_room_codes.get(lab.id, '—') }}</option>{% endfor %}</select><i class="ph ph-caret-down select-arrow"></i></div></div>
+    <div class="toolbar-group"><label for="name">Nombre (obligatorio)</label><div class="search-box"><i class="ph ph-app-window search-icon"></i><input id="name" type="text" name="name" value="{{ software.name }}" placeholder="Ejemplo: AutoCAD" required></div></div>
+    <div class="toolbar-group"><label for="version">Versión (opcional)</label><div class="search-box"><i class="ph ph-git-branch search-icon"></i><input id="version" type="text" name="version" value="{{ software.version or '' }}" placeholder="Ejemplo: 2026.1"></div></div>
+    <div class="toolbar-group"><label for="license_type">Tipo de licencia (opcional)</label><div class="search-box"><i class="ph ph-seal-check search-icon"></i><input id="license_type" type="text" name="license_type" value="{{ software.license_type or '' }}" placeholder="Ejemplo: Institucional"></div></div>
+    <div class="toolbar-group" style="grid-column: 1 / -1;"><label for="notes">Notas (opcional)</label><textarea class="form-control" id="notes" name="notes" rows="4" placeholder="Detalles adicionales, requisitos o comentarios">{{ software.notes or '' }}</textarea></div>
+    <div class="toolbar-actions" style="grid-column: 1 / -1;"><button type="submit" class="btn btn-gold">Guardar cambios</button><a href="{{ url_for('software.list_software') }}" class="btn btn-ghost">Cancelar</a></div>
+  </form>
+</section>
+{% endblock %}
