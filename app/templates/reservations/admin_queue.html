@@ -21,6 +21,18 @@
   min-height: 54px;
   border-radius: 16px;
 }
+
+.res-legend{display:flex;gap:8px;flex-wrap:wrap}
+.res-legend-item{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;border:1px solid rgba(0,0,0,.08);background:#fff;font-size:.82rem}
+.res-legend-dot{width:10px;height:10px;border-radius:50%}
+.res-dot-available{background:#5aa56f}.res-dot-occupied{background:#cf4d4d}.res-dot-pending{background:#d4a63d}.res-dot-progress{background:#4c8fd9}
+.res-cell-shell{border:1px solid var(--stroke);border-radius:12px;padding:8px;min-height:88px;background:rgba(255,255,255,.8)}
+.res-cell-shell.is-available{border-style:dashed;border-color:rgba(90,165,111,.35);background:rgba(90,165,111,.08)}
+.res-cell-shell.is-occupied{border-color:rgba(207,77,77,.35);background:rgba(207,77,77,.08)}
+.res-cell-shell.is-pending{border-color:rgba(212,166,61,.35);background:rgba(212,166,61,.1)}
+.res-cell-shell.is-progress{border-color:rgba(76,143,217,.38);background:rgba(76,143,217,.1)}
+.time-slot{display:block;padding:6px 8px;border-radius:8px;margin-bottom:6px;font-size:.8rem;border:1px solid rgba(0,0,0,.08);background:#fff}
+.time-slot.occupied{background:rgba(207,77,77,.12)} .time-slot.pending{background:rgba(212,166,61,.16)} .time-slot.in_progress{background:rgba(76,143,217,.16)}
 </style>
 
 <header class="topbar">
@@ -30,6 +42,122 @@
     <p class="page-subtitle">Aprueba o rechaza solicitudes pendientes.</p>
   </div>
 </header>
+
+{% set nombres_dia = {0:'Lunes',1:'Martes',2:'Miércoles',3:'Jueves',4:'Viernes',5:'Sábado',6:'Domingo'} %}
+<section class="table-card">
+  <p class="page-kicker">Operación semanal</p>
+  <h2 style="margin:0;">Ocupación semanal de salones</h2>
+  <p class="page-subtitle" style="margin-top:6px;">Semana del {{ week_start.strftime('%d/%m/%Y') }} al {{ week_end.strftime('%d/%m/%Y') }}</p>
+
+  <form method="get" class="reservation-calendar-filter" style="display:flex; gap:10px; align-items:end; flex-wrap:wrap; margin-top:10px; margin-bottom:12px;">
+    <div class="toolbar-group" style="min-width:180px; margin:0;">
+      <label>Filtrar por edificio</label>
+      <div class="select-wrap">
+        <select name="calendar_building">
+          <option value="">Todos</option>
+          {% for building in calendar_buildings %}
+          <option value="{{ building }}" {% if selected_calendar_building == building %}selected{% endif %}>Edificio {{ building }}</option>
+          {% endfor %}
+        </select>
+        <i class="ph ph-caret-down select-arrow"></i>
+      </div>
+    </div>
+    <div class="toolbar-group" style="min-width:220px; margin:0;">
+      <label>Filtrar por salón</label>
+      <div class="select-wrap">
+        <select name="calendar_room">
+          <option value="">Todos</option>
+          {% for r in calendar_filter_rooms %}
+          <option value="{{ r }}" {% if selected_calendar_room == r %}selected{% endif %}>{{ r }}</option>
+          {% endfor %}
+        </select>
+        <i class="ph ph-caret-down select-arrow"></i>
+      </div>
+    </div>
+    <input type="hidden" name="week_start" value="{{ week_start.isoformat() }}">
+    <button type="submit" class="btn btn-ghost">Aplicar</button>
+    <a class="btn btn-ghost" href="{{ url_for('reservations.admin_queue') }}">Limpiar</a>
+  </form>
+
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+    <a class="btn btn-ghost" href="{{ url_for('reservations.admin_queue', week_start=prev_week.isoformat(), calendar_building=selected_calendar_building, calendar_room=selected_calendar_room) }}">← Semana anterior</a>
+    <div class="res-legend" aria-label="Leyenda de estados">
+      <span class="res-legend-item"><span class="res-legend-dot res-dot-available"></span>Disponible</span>
+      <span class="res-legend-item"><span class="res-legend-dot res-dot-occupied"></span>Ocupado</span>
+      <span class="res-legend-item"><span class="res-legend-dot res-dot-pending"></span>Pendiente</span>
+      <span class="res-legend-item"><span class="res-legend-dot res-dot-progress"></span>En progreso</span>
+    </div>
+    <a class="btn btn-ghost" href="{{ url_for('reservations.admin_queue', week_start=next_week.isoformat(), calendar_building=selected_calendar_building, calendar_room=selected_calendar_room) }}">Semana siguiente →</a>
+  </div>
+
+  <div class="table-wrap">
+    <table class="inventory-table" style="min-width: 1450px;">
+      <thead>
+        <tr>
+          <th style="min-width:110px;">Salón</th>
+          {% for day in week_days %}
+          {% if day.weekday() != 6 %}
+          <th style="min-width:160px;">{{ nombres_dia[day.weekday()] }}<br><span style="font-weight:400; opacity:.8;">{{ day.strftime('%d/%m') }}</span></th>
+          {% endif %}
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for room in calendar_rooms %}
+        <tr>
+          <td><strong>{{ room }}</strong></td>
+          {% for day in week_days %}
+          {% if day.weekday() != 6 %}
+          <td>
+            {% set cell = week_schedule[room][day] %}
+            {% set cell_slots = cell.get('slots', []) if cell is mapping else [] %}
+            {% set cell_items = cell.get('items', []) if cell is mapping else [] %}
+            {% set cell_state = 'available' %}
+            {% if cell_slots %}
+              {% set slot_states = cell_slots | map(attribute='state') | list %}
+              {% if 'pending' in slot_states %}
+                {% set cell_state = 'pending' %}
+              {% elif 'in_progress' in slot_states %}
+                {% set cell_state = 'progress' %}
+              {% elif 'occupied' in slot_states %}
+                {% set cell_state = 'occupied' %}
+              {% endif %}
+            {% endif %}
+            <div class="res-cell-shell is-{{ cell_state }}">
+              {% for slot in cell_slots %}
+                {% set slot_info = namespace(has_reservation=False, tooltip='') %}
+                {% for item in cell_items %}
+                  {% set item_inicio = item.start_time.strftime('%H:%M') %}
+                  {% set item_fin = item.end_time.strftime('%H:%M') %}
+                  {% if item_inicio < slot.end and item_fin > slot.start %}
+                    {% set persona = (item.user.full_name if item.user and item.user.full_name else (item.user.email if item.user else (item.teacher_name or 'Usuario institucional'))) %}
+                    {% set slot_info.has_reservation = True %}
+                    {% set slot_status = 'Ocupado' if slot.state == 'occupied' else ('Pendiente' if slot.state == 'pending' else 'En progreso') %}
+                    {% set tooltip_lines = ['Solicitante: ' ~ persona] %}
+                    {% if item.group_name %}
+                      {% set tooltip_lines = tooltip_lines + ['Grupo: ' ~ item.group_name] %}
+                    {% endif %}
+                    {% if item.subject %}
+                      {% set tooltip_lines = tooltip_lines + ['Materia: ' ~ item.subject] %}
+                    {% endif %}
+                    {% set tooltip_lines = tooltip_lines + ['Estado: ' ~ slot_status] %}
+                    {% set slot_info.tooltip = tooltip_lines | join('\n') %}
+                  {% endif %}
+                {% endfor %}
+                <div class="time-slot {{ slot.state }} {% if slot_info.has_reservation %}has-tooltip{% endif %}" {% if slot_info.has_reservation %}title="{{ slot_info.tooltip }}"{% endif %}>
+                  <span class="time">{{ slot.start_label or slot.start }} - {{ slot.end_label or slot.end }}</span>
+                </div>
+              {% endfor %}
+            </div>
+          </td>
+          {% endif %}
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
 
 <section class="toolbar-card">
   <div class="toolbar-actions">

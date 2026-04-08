@@ -443,6 +443,8 @@ def request_reservation():
     if user_has_open_debts(current_user.id):
         flash("Tienes un adeudo activo. No puedes solicitar reservas.", "error")
         return redirect(url_for("reservations.my_reservations"))
+    if is_admin_role(current_user.role):
+        return redirect(url_for("reservations.admin_queue"))
 
     week_start_s = (request.args.get("week_start") or "").strip()
     calendar_room = (request.args.get("calendar_room") or "").strip()
@@ -727,6 +729,31 @@ def request_reservation():
 @reservations_bp.route("/admin", methods=["GET"])
 @min_role_required("ADMIN")
 def admin_queue():
+    week_start_s = (request.args.get("week_start") or "").strip()
+    calendar_room = (request.args.get("calendar_room") or "").strip()
+    calendar_building = (request.args.get("calendar_building") or "").strip().upper()
+
+    try:
+        base_date = parse_date(week_start_s) if week_start_s else datetime.today().date()
+    except ValueError:
+        base_date = datetime.today().date()
+
+    week_start = get_week_start(base_date)
+    week_days = build_week_days(week_start)
+    week_end = week_days[-1]
+    prev_week = week_start - timedelta(days=7)
+    next_week = week_start + timedelta(days=7)
+
+    calendar_buildings = sorted({room[:1] for room in ROOMS})
+    selected_calendar_building = calendar_building if calendar_building in calendar_buildings else ""
+    available_calendar_rooms = _rooms_by_building(selected_calendar_building)
+    selected_calendar_room = calendar_room if calendar_room in available_calendar_rooms else ""
+    week_schedule, calendar_rooms = build_week_schedule(
+        week_days=week_days,
+        selected_room=selected_calendar_room or None,
+        rooms_scope=available_calendar_rooms,
+    )
+
     pending = (
         Reservation.query
         .options(
@@ -740,6 +767,17 @@ def admin_queue():
     return render_template(
         "reservations/admin_queue.html",
         reservations=pending,
+        week_days=week_days,
+        week_start=week_start,
+        week_end=week_end,
+        prev_week=prev_week,
+        next_week=next_week,
+        week_schedule=week_schedule,
+        calendar_rooms=calendar_rooms,
+        calendar_buildings=calendar_buildings,
+        calendar_filter_rooms=available_calendar_rooms,
+        selected_calendar_building=selected_calendar_building,
+        selected_calendar_room=selected_calendar_room,
         active_page="reservations"
     )
 
