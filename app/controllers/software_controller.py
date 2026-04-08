@@ -6,9 +6,27 @@ from app.models.software import Software
 from app.models.lab import Lab
 from app.utils.authz import min_role_required
 from app.utils.roles import is_admin_role
+from app.constants import ROOMS
 
 
 software_bp = Blueprint("software", __name__, url_prefix="/software")
+
+
+ROOM_CODES = {room.upper() for room in ROOMS}
+
+
+def _lab_room_code(lab: Lab | None) -> str | None:
+    if not lab or not lab.name:
+        return None
+    candidate = lab.name.strip().upper()
+    return candidate if candidate in ROOM_CODES else None
+
+
+def _room_labs_context() -> tuple[list[Lab], dict[int, str | None]]:
+    labs = Lab.query.order_by(Lab.name).all()
+    lab_room_codes = {lab.id: _lab_room_code(lab) for lab in labs}
+    room_labs = [lab for lab in labs if lab_room_codes.get(lab.id)]
+    return room_labs, lab_room_codes
 
 
 @software_bp.route("/", methods=["GET"])
@@ -22,7 +40,7 @@ def software_home():
 def list_software():
     lab_id = request.args.get("lab_id", type=int)
 
-    labs = Lab.query.order_by(Lab.name).all()
+    filter_labs, lab_room_codes = _room_labs_context()
     q = Software.query
 
     if lab_id:
@@ -32,7 +50,8 @@ def list_software():
     return render_template(
         "software/list.html",
         items=items,
-        labs=labs,
+        labs=filter_labs,
+        lab_room_codes=lab_room_codes,
         selected_lab=lab_id,
         active_page="software"
     )
@@ -41,7 +60,7 @@ def list_software():
 @software_bp.route("/admin/new", methods=["GET", "POST"])
 @min_role_required("ADMIN")
 def admin_new():
-    labs = Lab.query.order_by(Lab.name).all()
+    labs, lab_room_codes = _room_labs_context()
 
     if request.method == "POST":
         lab_id = request.form.get("lab_id", type=int)
@@ -60,6 +79,9 @@ def admin_new():
             if not lab:
                 flash("lab_id inválido.", "error")
                 return redirect(url_for("software.admin_new"))
+            if not lab_room_codes.get(lab.id):
+                flash("Selecciona un salón/laboratorio válido.", "error")
+                return redirect(url_for("software.admin_new"))
 
         s = Software(
             lab_id=lab.id if lab else None,
@@ -76,7 +98,12 @@ def admin_new():
         flash("Software agregado.", "success")
         return redirect(url_for("software.list_software"))
 
-    return render_template("software/admin_new.html", labs=labs, active_page="software")
+    return render_template(
+        "software/admin_new.html",
+        labs=labs,
+        lab_room_codes=lab_room_codes,
+        active_page="software",
+    )
 
 
 @software_bp.route("/<int:software_id>/request-update", methods=["POST"])
