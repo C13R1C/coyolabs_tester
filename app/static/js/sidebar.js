@@ -5,17 +5,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnToggleSidebar = document.getElementById("btnToggleSidebar");
   const mobileBreakpoint = 768;
 
-  let hoverCloseTimer = null;
-
   function isMobile() {
     return window.innerWidth <= mobileBreakpoint;
-  }
-
-  function clearHoverTimer() {
-    if (hoverCloseTimer) {
-      clearTimeout(hoverCloseTimer);
-      hoverCloseTimer = null;
-    }
   }
 
   function closeMobileSidebar() {
@@ -35,22 +26,11 @@ document.addEventListener("DOMContentLoaded", () => {
     sidebar.classList.toggle("collapsed");
   }
 
-  function closeSidebarDesktop() {
-    if (isMobile()) return;
-    sidebar.classList.add("collapsed");
-  }
-
-  function openSidebarDesktop() {
-    if (isMobile()) return;
-    sidebar.classList.remove("collapsed");
-  }
-
   function resetDesktopStateOnMobile() {
-    clearHoverTimer();
-
     if (isMobile()) {
       sidebar.classList.remove("collapsed");
     } else {
+      sidebar.classList.add("collapsed");
       sidebar.classList.remove("mobile-open");
       overlay.classList.remove("show");
       document.body.style.overflow = "";
@@ -81,30 +61,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  /* Cerrar menú móvil al usar una opción */
+  /* Cerrar menú al usar una opción */
   sidebar.querySelectorAll("a").forEach((link) => {
     link.addEventListener("click", () => {
       if (isMobile()) {
         closeMobileSidebar();
-      } else {
-        closeSidebarDesktop();
       }
     });
-  });
-
-  /* En escritorio: abrir cuando entra el mouse y cerrar cuando sale */
-  sidebar.addEventListener("mouseenter", () => {
-    if (isMobile()) return;
-    clearHoverTimer();
-    openSidebarDesktop();
-  });
-
-  sidebar.addEventListener("mouseleave", () => {
-    if (isMobile()) return;
-    clearHoverTimer();
-    hoverCloseTimer = setTimeout(() => {
-      closeSidebarDesktop();
-    }, 220);
   });
 
   window.addEventListener("resize", resetDesktopStateOnMobile);

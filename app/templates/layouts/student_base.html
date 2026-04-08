@@ -280,10 +280,12 @@
             <span class="nav-label">Panel</span>
           </a>
           {% endif %}
+          {% if current_user.is_authenticated and is_admin_role(current_user.role) %}
           <a href="{{ url_for('inventory.inventory_list') }}" class="nav-item {% if active_page == 'inventory' %}active{% endif %}">
             <i class="ph ph-package nav-icon"></i>
             <span class="nav-label">Inventario</span>
           </a>
+          {% endif %}
 
           <a href="{{ url_for('profile.my_profile') }}" class="nav-item {% if active_page == 'profile' %}active{% endif %}">
             <i class="ph ph-user-circle nav-icon"></i>
