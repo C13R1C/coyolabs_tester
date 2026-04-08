@@ -8,6 +8,7 @@ from app.models.software import Software
 from app.models.lab import Lab
 from app.utils.authz import min_role_required
 from app.utils.roles import is_admin_role
+from app.constants import ROOMS
 
 
 software_bp = Blueprint("software", __name__, url_prefix="/software")
