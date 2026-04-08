@@ -265,6 +265,27 @@
   border-spacing: 0 8px;
 }
 
+.daily-room-grid{
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+}
+
+.daily-room-card{
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 12px;
+  padding: 10px;
+  background: rgba(255,255,255,0.55);
+}
+
+@media (max-width: 1280px){
+  .daily-room-grid{ grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 768px){
+  .daily-room-grid{ grid-template-columns: 1fr; }
+}
+
 .res-room-label {
   font-weight: 700;
   white-space: nowrap;
@@ -810,55 +831,45 @@
       </tbody>
     </table>
     {% else %}
-    <table class="data-table res-occupancy-table" style="min-width:760px;">
-      <thead>
-        <tr>
-          <th style="min-width:130px;">Salón</th>
-          <th>Bloques horarios del día</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for row in daily_schedule %}
-        <tr>
-          <td class="res-room-label">{{ row.room }}</td>
-          <td class="res-cell">
-            <div class="res-cell-shell is-{{ row.state }}">
-              {% set row_slots = row.get('slots', []) if row is mapping else [] %}
-              {% set row_items = row.get('items', []) if row is mapping else [] %}
-              {% for slot in row_slots %}
-                {% set slot_info = namespace(has_reservation=False, tooltip='') %}
-                {% for item in row_items %}
-                  {% set item_inicio = item.start_time.strftime('%H:%M') %}
-                  {% set item_fin = item.end_time.strftime('%H:%M') %}
-                  {% if item_inicio < slot.end and item_fin > slot.start %}
-                    {% set persona = (item.user.full_name if item.user and item.user.full_name else (item.user.email if item.user else (item.teacher_name or 'Usuario institucional'))) %}
-                    {% set slot_info.has_reservation = True %}
-                    {% set slot_status = 'Ocupado' if slot.state == 'occupied' else ('Pendiente' if slot.state == 'pending' else 'En progreso') %}
-                    {% set tooltip_lines = ['Solicitante: ' ~ persona] %}
-                    {% if item.group_name %}
-                      {% set tooltip_lines = tooltip_lines + ['Grupo: ' ~ item.group_name] %}
-                    {% endif %}
-                    {% if item.subject %}
-                      {% set tooltip_lines = tooltip_lines + ['Materia: ' ~ item.subject] %}
-                    {% endif %}
-                    {% set tooltip_lines = tooltip_lines + ['Estado: ' ~ slot_status] %}
-                    {% set slot_info.tooltip = tooltip_lines | join('\n') %}
-                  {% endif %}
-                {% endfor %}
-                <div
-                  class="time-slot {{ slot.state }} {% if slot_info.has_reservation %}has-tooltip{% endif %}"
-                  {% if slot_info.has_reservation %}data-tooltip="{{ slot_info.tooltip }}"{% endif %}
-                  tabindex="0"
-                  aria-label="{% if slot_info.has_reservation %}{{ slot_info.tooltip }}{% else %}Disponible{% endif %}">
-                  <span class="time">{{ slot.start_label or slot.start }} - {{ slot.end_label or slot.end }}</span>
-                </div>
-              {% endfor %}
+    <div class="daily-room-grid">
+      {% for row in daily_schedule %}
+      <article class="daily-room-card">
+        <h4 class="res-room-label" style="margin:0 0 8px;">{{ row.room }}</h4>
+        <div class="res-cell-shell is-{{ row.state }}">
+          {% set row_slots = row.get('slots', []) if row is mapping else [] %}
+          {% set row_items = row.get('items', []) if row is mapping else [] %}
+          {% for slot in row_slots %}
+            {% set slot_info = namespace(has_reservation=False, tooltip='') %}
+            {% for item in row_items %}
+              {% set item_inicio = item.start_time.strftime('%H:%M') %}
+              {% set item_fin = item.end_time.strftime('%H:%M') %}
+              {% if item_inicio < slot.end and item_fin > slot.start %}
+                {% set persona = (item.user.full_name if item.user and item.user.full_name else (item.user.email if item.user else (item.teacher_name or 'Usuario institucional'))) %}
+                {% set slot_info.has_reservation = True %}
+                {% set slot_status = 'Ocupado' if slot.state == 'occupied' else ('Pendiente' if slot.state == 'pending' else 'En progreso') %}
+                {% set tooltip_lines = ['Solicitante: ' ~ persona] %}
+                {% if item.group_name %}
+                  {% set tooltip_lines = tooltip_lines + ['Grupo: ' ~ item.group_name] %}
+                {% endif %}
+                {% if item.subject %}
+                  {% set tooltip_lines = tooltip_lines + ['Materia: ' ~ item.subject] %}
+                {% endif %}
+                {% set tooltip_lines = tooltip_lines + ['Estado: ' ~ slot_status] %}
+                {% set slot_info.tooltip = tooltip_lines | join('\n') %}
+              {% endif %}
+            {% endfor %}
+            <div
+              class="time-slot {{ slot.state }} {% if slot_info.has_reservation %}has-tooltip{% endif %}"
+              {% if slot_info.has_reservation %}data-tooltip="{{ slot_info.tooltip }}"{% endif %}
+              tabindex="0"
+              aria-label="{% if slot_info.has_reservation %}{{ slot_info.tooltip }}{% else %}Disponible{% endif %}">
+              <span class="time">{{ slot.start_label or slot.start }} - {{ slot.end_label or slot.end }}</span>
             </div>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+          {% endfor %}
+        </div>
+      </article>
+      {% endfor %}
+    </div>
     {% endif %}
   </div>
   </div>
