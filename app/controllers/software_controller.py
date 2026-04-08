@@ -108,6 +108,52 @@ def admin_new():
     )
 
 
+@software_bp.route("/admin/<int:software_id>/edit", methods=["GET", "POST"])
+@min_role_required("ADMIN")
+def admin_edit(software_id: int):
+    s = Software.query.get_or_404(software_id)
+    labs, lab_room_codes = _room_labs_context()
+
+    if request.method == "POST":
+        lab_id = request.form.get("lab_id", type=int)
+        name = (request.form.get("name") or "").strip()
+        version = (request.form.get("version") or "").strip()
+        license_type = (request.form.get("license_type") or "").strip()
+        notes = (request.form.get("notes") or "").strip()
+
+        if not name:
+            flash("El nombre del software es obligatorio.", "error")
+            return redirect(url_for("software.admin_edit", software_id=s.id))
+
+        lab = None
+        if lab_id:
+            lab = Lab.query.get(lab_id)
+            if not lab:
+                flash("lab_id inválido.", "error")
+                return redirect(url_for("software.admin_edit", software_id=s.id))
+            if not lab_room_codes.get(lab.id):
+                flash("Selecciona un salón/laboratorio válido.", "error")
+                return redirect(url_for("software.admin_edit", software_id=s.id))
+
+        s.lab_id = lab.id if lab else None
+        s.name = name
+        s.version = version or None
+        s.license_type = license_type or None
+        s.notes = notes or None
+        db.session.commit()
+
+        flash("Software actualizado.", "success")
+        return redirect(url_for("software.list_software"))
+
+    return render_template(
+        "software/admin_edit.html",
+        software=s,
+        labs=labs,
+        lab_room_codes=lab_room_codes,
+        active_page="software",
+    )
+
+
 @software_bp.route("/<int:software_id>/request-update", methods=["POST"])
 @min_role_required("STUDENT")
 def request_update(software_id: int):
