@@ -92,6 +92,16 @@
   color: var(--text);
   min-width: 155px;
 }
+.labs-filter-input select{
+  border: 0;
+  outline: none;
+  background: transparent;
+  min-height: 42px;
+  font: inherit;
+  color: var(--text);
+  min-width: 120px;
+  padding-right: 8px;
+}
 
 .labs-filter-btn{
   min-height:44px;
@@ -165,9 +175,19 @@
 
   <form method="GET" class="filters">
     <div class="labs-filter-controls">
+      <div class="form-readonly-visual">
+        <i class="ph ph-calendar-blank"></i>
+        <span>Hoy: {{ selected_date.strftime('%d/%m/%Y') }}</span>
+      </div>
+      <input type="hidden" name="date" value="{{ selected_date.isoformat() }}">
       <label class="labs-filter-input">
         <i class="ph ph-clock"></i>
-        <input type="time" name="time" value="{{ selected_time }}">
+        <select name="time" aria-label="Hora a evaluar">
+          {% set hour_options = ['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00'] %}
+          {% for hour in hour_options %}
+          <option value="{{ hour }}" {% if selected_time == hour %}selected{% endif %}>{{ hour }}</option>
+          {% endfor %}
+        </select>
       </label>
       <button class="btn btn-gold labs-filter-btn" type="submit">Filtrar</button>
     </div>

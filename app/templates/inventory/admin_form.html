@@ -13,7 +13,7 @@
 </header>
 
 <section class="table-card">
-  <form method="post" class="toolbar" style="grid-template-columns:repeat(2, minmax(260px, 1fr));" data-single-submit>
+  <form method="post" class="toolbar" style="grid-template-columns:repeat(2, minmax(260px, 1fr));" data-single-submit {% if not is_edit %}data-form-mode="create"{% endif %}>
     {% set data = form_data if form_data else {} %}
     <input type="hidden" name="lab_id" value="{{ data.get('lab_id', default_lab_id) }}">
     <div class="toolbar-group">
