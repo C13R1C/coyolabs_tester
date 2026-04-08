@@ -32,7 +32,7 @@
       <label for="q">Búsqueda</label>
       <div class="search-box">
         <i class="ph ph-magnifying-glass search-icon"></i>
-        <input type="text" id="q" name="q" value="{{ q }}" placeholder="Buscar por nombre, ubicación, código, serie o notas">
+        <input type="text" id="q" name="q" value="{{ q }}" placeholder="Buscar por nombre, ubicación, código, serie o notas" autocomplete="off">
       </div>
     </div>
 
@@ -100,7 +100,7 @@
           {% set status_parts = status_value.split(' - ') %}
           {% set active_state = status_parts[0] if status_parts|length > 1 else ('Baja' if ('baja' in status_value|lower or 'inactivo' in status_value|lower) else 'Alta') %}
           {% set condition = status_parts[1] if status_parts|length > 1 else ('Regular' if 'frágil' in status_value|lower else 'Bueno') %}
-          <tr>
+          <tr class="inventory-row">
             <td>
               <a href="{{ url_for('inventory.material_detail', material_id=m.id) }}" class="item-link material-name">{{ m.name | smart_title }}</a>
             </td>
@@ -141,4 +141,22 @@
   </div>
 </section>
 {% endif %}
+<script>
+(() => {
+  const input = document.getElementById("q");
+  const rows = Array.from(document.querySelectorAll(".inventory-row"));
+  if (!input || !rows.length) return;
+
+  const filterRows = () => {
+    const query = (input.value || "").trim().toLowerCase();
+    rows.forEach((row) => {
+      const text = (row.textContent || "").toLowerCase();
+      row.style.display = !query || text.includes(query) ? "" : "none";
+    });
+  };
+
+  input.addEventListener("input", filterRows);
+  filterRows();
+})();
+</script>
 {% endblock %}
