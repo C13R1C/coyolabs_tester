@@ -156,7 +156,7 @@
           {% set res = item.reservation %}
           <div class="lab-card lab-{{ item.status }}">
             <div class="lab-head">
-              <strong>{{ item.lab }}</strong>
+              <strong>{{ item.lab }} - Laboratorio {{ item.lab }}</strong>
               <span class="chip chip-{% if item.status == 'free' %}APPROVED{% elif item.status == 'busy' %}REJECTED{% else %}PENDING{% endif %}">
                 {% if item.status == 'free' %}Disponible{% elif item.status == 'busy' %}Ocupado{% else %}Pendiente{% endif %}
               </span>
@@ -218,7 +218,7 @@
 
     <article class="card section">
       <div class="card-title">Solicitudes / tickets</div>
-      <div class="card-subtitle">Pedidos diarios recientes del usuario.</div>
+      <div class="card-subtitle">Solicitudes de material recientes del usuario.</div>
       {% if recent_tickets %}
       <div class="list">
         {% for ticket in recent_tickets %}

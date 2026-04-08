@@ -62,4 +62,37 @@
   </div>
 </section>
 {% endif %}
+<script>
+(function () {
+  const hasJobs = {{ 'true' if jobs|length > 0 else 'false' }};
+  if (!hasJobs) return;
+
+  const POLL_MS = 30000;
+  let timer = null;
+
+  function startPolling() {
+    if (timer) return;
+    timer = setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      window.location.reload();
+    }, POLL_MS);
+  }
+
+  function stopPolling() {
+    if (!timer) return;
+    clearInterval(timer);
+    timer = null;
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      startPolling();
+    } else {
+      stopPolling();
+    }
+  });
+
+  startPolling();
+})();
+</script>
 {% endblock %}
