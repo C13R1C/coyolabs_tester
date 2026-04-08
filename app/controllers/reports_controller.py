@@ -20,7 +20,7 @@ from app.models.software import Software
 from app.utils.authz import min_role_required
 from app.extensions import db
 
-from reportlab.lib.pagesizes import letter
+from reportlab.lib.pagesizes import letter, landscape
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch
@@ -36,6 +36,44 @@ DEFAULT_DEMO_HIDDEN_COLUMNS = {
     "metadata_json",
     "image_ref",
     "signature_ref",
+    "evidence_ref",
+    "update_note",
+    "tutorial_url",
+}
+
+REPORT_COLUMN_LABELS = {
+    "id": "ID",
+    "lab_id": "Laboratorio",
+    "user_id": "Usuario",
+    "material_id": "Material",
+    "name": "Nombre",
+    "location": "Ubicación",
+    "status": "Estado",
+    "created_at": "Creado",
+    "updated_at": "Actualizado",
+    "closed_at": "Cerrado",
+    "amount": "Monto",
+    "reason": "Motivo",
+    "description": "Descripción",
+    "module": "Módulo",
+    "entity_label": "Entidad",
+    "action": "Acción",
+    "date": "Fecha",
+    "room": "Salón/Lab",
+    "start_time": "Inicio",
+    "end_time": "Fin",
+    "group_name": "Grupo",
+    "teacher_name": "Docente",
+    "subject": "Materia",
+    "notes": "Notas",
+    "version": "Versión",
+    "license_type": "Licencia",
+    "update_requested": "Actualización solicitada",
+    "update_note": "Nota de actualización",
+    "title": "Título",
+    "admin_note": "Nota administrativa",
+    "reported_by_user_id": "Reportado por",
+    "request_date": "Fecha de solicitud",
 }
 
 
@@ -50,7 +88,11 @@ def csv_response(filename: str, headers: list[str], rows: list[list]):
     return Response(
         data,
         mimetype="text/csv",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "X-Content-Type-Options": "nosniff",
+            "Cache-Control": "no-store",
+        },
     )
 
 
@@ -92,7 +134,11 @@ def excel_response(filename: str, headers: list[str], rows: list[list]):
     return Response(
         bio.getvalue(),
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "X-Content-Type-Options": "nosniff",
+            "Cache-Control": "no-store",
+        },
     )
 
 
@@ -322,9 +368,9 @@ def pdf_response(
     buffer = BytesIO()
     doc = SimpleDocTemplate(
         buffer,
-        pagesize=letter,
-        leftMargin=36,
-        rightMargin=36,
+        pagesize=landscape(letter),
+        leftMargin=24,
+        rightMargin=24,
         topMargin=36,
         bottomMargin=36,
     )
@@ -343,7 +389,8 @@ def pdf_response(
     story.append(Paragraph(f"Generado: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", styles["Normal"]))
     story.append(Spacer(1, 8))
 
-    table_data = [headers] + [[_sanitize_pdf_cell(v) for v in row] for row in rows]
+    translated_headers = [REPORT_COLUMN_LABELS.get(h, h.replace("_", " ").title()) for h in headers]
+    table_data = [translated_headers] + [[_sanitize_pdf_cell(v) for v in row] for row in rows]
     available_width = doc.width
     col_count = max(1, len(headers))
     col_width = available_width / col_count
@@ -355,7 +402,7 @@ def pdf_response(
                 ("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor("#5B4410")),
                 ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
                 ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
-                ("FONTSIZE", (0, 0), (-1, -1), 8),
+                ("FONTSIZE", (0, 0), (-1, -1), 7),
                 ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#D3C5A6")),
                 ("VALIGN", (0, 0), (-1, -1), "TOP"),
                 ("LEFTPADDING", (0, 0), (-1, -1), 4),
@@ -371,7 +418,11 @@ def pdf_response(
     return Response(
         buffer.getvalue(),
         mimetype="application/pdf",
-        headers={"Content-Disposition": f'{disposition}; filename="{filename}"'},
+        headers={
+            "Content-Disposition": f'{disposition}; filename="{filename}"',
+            "X-Content-Type-Options": "nosniff",
+            "Cache-Control": "no-store",
+        },
     )
 
 
@@ -494,7 +545,7 @@ def report_inventory_view():
     if lab_id:
         lab = Lab.query.get(lab_id)
         report_title = f"Inventario - {lab.name if lab else f'Lab {lab_id}'}"
-        extra_meta = f"Lab ID: {lab_id}"
+        extra_meta = f"ID de laboratorio: {lab_id}"
 
     return render_report_view(
         report_title=report_title,
@@ -504,7 +555,7 @@ def report_inventory_view():
         report_description="Vista completa del inventario.",
         extra_meta=extra_meta,
         filter_fields=[
-            {"name": "lab_id", "label": "Lab ID", "type": "number", "value": lab_id or "", "placeholder": "Ejemplo: 1"},
+            {"name": "lab_id", "label": "ID de laboratorio", "type": "number", "value": lab_id or "", "placeholder": "Ejemplo: 1"},
             {"name": "status", "label": "Estado", "type": "text", "value": status, "placeholder": "Ejemplo: DISPONIBLE"},
             {"name": "search", "label": "Buscar", "type": "text", "value": search, "placeholder": "Nombre, código o ubicación"},
         ],
@@ -554,7 +605,7 @@ def report_debts_view():
         report_description="Vista completa de los adeudos registrados.",
         filter_fields=[
             {"name": "status", "label": "Estado", "type": "text", "value": status, "placeholder": "Ejemplo: OPEN"},
-            {"name": "user_id", "label": "User ID", "type": "number", "value": user_id or "", "placeholder": "Ejemplo: 42"},
+            {"name": "user_id", "label": "ID de usuario", "type": "number", "value": user_id or "", "placeholder": "Ejemplo: 42"},
         ],
         selected_columns=selected_columns,
         all_columns=all_headers,
@@ -645,7 +696,7 @@ def report_logbook_view():
         filter_fields=[
             {"name": "action", "label": "Acción contiene", "type": "text", "value": action, "placeholder": "Ejemplo: LOGIN"},
             {"name": "module", "label": "Módulo", "type": "text", "value": module, "placeholder": "Ejemplo: USERS"},
-            {"name": "user_id", "label": "User ID", "type": "number", "value": user_id or "", "placeholder": "Ejemplo: 42"},
+            {"name": "user_id", "label": "ID de usuario", "type": "number", "value": user_id or "", "placeholder": "Ejemplo: 42"},
             {"name": "material_id", "label": "Material ID", "type": "number", "value": material_id or "", "placeholder": "Ejemplo: 128"},
             {"name": "description", "label": "Descripción contiene", "type": "text", "value": description, "placeholder": "Texto libre"},
             {"name": "date_from", "label": "Desde", "type": "date", "value": date_from},
@@ -728,7 +779,7 @@ def report_reservations_view():
         filter_fields=[
             {"name": "status", "label": "Estado", "type": "text", "value": status, "placeholder": "Ejemplo: APPROVED"},
             {"name": "room", "label": "Salón/Lab", "type": "text", "value": room, "placeholder": "Ejemplo: LAB A"},
-            {"name": "user_id", "label": "User ID", "type": "number", "value": user_id or "", "placeholder": "Ejemplo: 42"},
+            {"name": "user_id", "label": "ID de usuario", "type": "number", "value": user_id or "", "placeholder": "Ejemplo: 42"},
             {"name": "date_from", "label": "Desde", "type": "date", "value": date_from},
             {"name": "date_to", "label": "Hasta", "type": "date", "value": date_to},
         ],
