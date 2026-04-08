@@ -29,8 +29,60 @@ MATERIAL_CATEGORIES = (
 )
 
 
+NEW_LOCATION_SENTINEL = "__new__"
+
+
+def _normalize_location(value: str | None) -> str:
+    normalized = normalize_spaces(value or "")
+    if not normalized:
+        return ""
+    return " ".join(part[:1].upper() + part[1:].lower() for part in normalized.split(" "))
+
+
+def _existing_location_options(extra_values: list[str] | None = None) -> list[str]:
+    rows = (
+        db.session.query(Material.location)
+        .filter(Material.location.isnot(None))
+        .filter(func.trim(Material.location) != "")
+        .all()
+    )
+    unique_locations: dict[str, str] = {}
+    for (location_value,) in rows:
+        normalized = _normalize_location(location_value)
+        if normalized:
+            unique_locations[normalized.lower()] = normalized
+
+    for value in extra_values or []:
+        normalized = _normalize_location(value)
+        if normalized:
+            unique_locations.setdefault(normalized.lower(), normalized)
+
+    return sorted(unique_locations.values(), key=str.lower)
+
+
 def _is_inactive_status(status: str | None) -> bool:
-    return normalize_spaces(status or "").lower() in {"baja", "de baja", "inactivo"}
+    normalized = normalize_spaces(status or "").lower()
+    return normalized in {"baja", "de baja", "inactivo"} or normalized.startswith("baja -")
+
+
+def _split_tool_status(status: str | None) -> tuple[str, str]:
+    normalized = normalize_spaces(status or "")
+    lower_value = normalized.lower()
+    if " - " in normalized:
+        active_state, condition = [part.strip() for part in normalized.split(" - ", 1)]
+        active_state = "Alta" if active_state.lower().startswith("alta") else "Baja"
+        condition = condition.capitalize()
+        if condition not in {"Bueno", "Regular", "Malo"}:
+            condition = "Bueno"
+        return active_state, condition
+
+    if lower_value in {"disponible", "en mantenimiento"}:
+        return "Alta", "Bueno"
+    if lower_value == "frágil":
+        return "Alta", "Regular"
+    if _is_inactive_status(normalized):
+        return "Baja", "Regular"
+    return "Alta", "Bueno"
 
 
 def _base_inventory_query(*, include_inactive: bool):
@@ -57,6 +109,11 @@ def _material_payload_from_form(material: Material | None = None) -> tuple[dict,
         return {}, "El nombre del material es obligatorio."
 
     lab_id = request.form.get("lab_id", type=int)
+    if not lab_id and material is not None:
+        lab_id = material.lab_id
+    if not lab_id:
+        default_lab = Lab.query.order_by(Lab.id.asc()).first()
+        lab_id = default_lab.id if default_lab else None
     lab = Lab.query.get(lab_id) if lab_id else None
     if not lab:
         return {}, "Selecciona un laboratorio válido."
@@ -75,10 +132,24 @@ def _material_payload_from_form(material: Material | None = None) -> tuple[dict,
             return {}, "La cantidad de piezas debe ser un número entero."
         if pieces_qty < 0:
             return {}, "La cantidad de piezas no puede ser negativa."
+    elif material is None:
+        return {}, "La cantidad de piezas es obligatoria y debe ser mayor a 0."
+
+    if material is None and (pieces_qty is None or pieces_qty <= 0):
+        return {}, "La cantidad de piezas es obligatoria y debe ser mayor a 0."
+
+    tool_condition = normalize_spaces(request.form.get("tool_condition") or "")
+    active_state = normalize_spaces(request.form.get("active_state") or "")
+    if tool_condition and tool_condition not in {"Bueno", "Regular", "Malo"}:
+        return {}, "Selecciona una condición válida (Bueno, Regular o Malo)."
+    if active_state and active_state not in {"Alta", "Baja"}:
+        return {}, "Selecciona un estado válido (Alta o Baja)."
 
     status = normalize_spaces(request.form.get("status") or "")
+    if tool_condition or active_state:
+        status = f"{active_state or 'Alta'} - {tool_condition or 'Bueno'}"
     if not status:
-        status = material.status if material else "Disponible"
+        status = material.status if material else "Alta - Bueno"
 
     category = normalize_spaces(request.form.get("category") or "").upper()
     if category and category not in MATERIAL_CATEGORIES:
@@ -88,12 +159,21 @@ def _material_payload_from_form(material: Material | None = None) -> tuple[dict,
     if tutorial_url and not (tutorial_url.startswith("http://") or tutorial_url.startswith("https://")):
         return {}, "La URL del tutorial debe iniciar con http:// o https://."
 
+    selected_location = normalize_spaces(request.form.get("location_choice") or "")
+    if selected_location == NEW_LOCATION_SENTINEL:
+        selected_location = request.form.get("location_new") or ""
+    elif not selected_location:
+        selected_location = request.form.get("location") or ""
+    normalized_location = _normalize_location(selected_location)
+    if not normalized_location:
+        return {}, "Selecciona una ubicación existente o agrega una nueva."
+
     payload = {
         "lab_id": lab.id,
         "career_id": career.id,
         "name": name,
         "category": category or None,
-        "location": normalize_spaces(request.form.get("location") or "") or None,
+        "location": normalized_location,
         "status": status,
         "pieces_text": normalize_spaces(request.form.get("pieces_text") or "") or (str(pieces_qty) if pieces_qty is not None else None),
         "pieces_qty": pieces_qty,
@@ -115,6 +195,15 @@ def _status_change_reason_requirement(old_status: str | None, new_status: str | 
     if not old_is_inactive and new_is_inactive:
         return "deactivation", "Motivo de baja"
     return "reactivation", "Motivo de reactivación"
+
+
+def _status_form_defaults(material: Material | None, form_data: dict) -> tuple[str, str]:
+    active_state = normalize_spaces(form_data.get("active_state") or "")
+    tool_condition = normalize_spaces(form_data.get("tool_condition") or "")
+    if active_state in {"Alta", "Baja"} and tool_condition in {"Bueno", "Regular", "Malo"}:
+        return active_state, tool_condition
+    source_status = form_data.get("status") or (material.status if material else None)
+    return _split_tool_status(source_status)
 
 
 @inventory_bp.route("/", methods=["GET"])
@@ -210,22 +299,31 @@ def material_detail(material_id: int):
 @inventory_bp.route("/admin/new", methods=["GET", "POST"])
 @min_role_required("ADMIN")
 def admin_new_material():
-    labs = Lab.query.order_by(Lab.name).all()
+    default_lab = Lab.query.order_by(Lab.id.asc()).first()
     careers = Career.query.order_by(Career.name.asc()).all()
     form_data = {}
 
     if request.method == "POST":
         payload, error = _material_payload_from_form()
         form_data = dict(request.form)
+        active_state_default, tool_condition_default = _status_form_defaults(None, form_data)
         if error:
             flash(error, "error")
             return render_template(
                 "inventory/admin_form.html",
                 material=None,
-                labs=labs,
+                default_lab_id=default_lab.id if default_lab else "",
                 careers=careers,
                 categories=MATERIAL_CATEGORIES,
+                location_options=_existing_location_options([
+                    form_data.get("location_choice"),
+                    form_data.get("location_new"),
+                    form_data.get("location"),
+                ]),
+                new_location_sentinel=NEW_LOCATION_SENTINEL,
                 form_data=form_data,
+                active_state_default=active_state_default,
+                tool_condition_default=tool_condition_default,
                 active_page="inventory",
             )
 
@@ -251,13 +349,18 @@ def admin_new_material():
         flash("Material creado correctamente.", "success")
         return redirect(url_for("inventory.material_detail", material_id=material.id))
 
+    active_state_default, tool_condition_default = _status_form_defaults(None, form_data)
     return render_template(
         "inventory/admin_form.html",
         material=None,
-        labs=labs,
+        default_lab_id=default_lab.id if default_lab else "",
         careers=careers,
         categories=MATERIAL_CATEGORIES,
+        location_options=_existing_location_options(),
+        new_location_sentinel=NEW_LOCATION_SENTINEL,
         form_data=form_data,
+        active_state_default=active_state_default,
+        tool_condition_default=tool_condition_default,
         active_page="inventory",
     )
 
@@ -266,13 +369,13 @@ def admin_new_material():
 @min_role_required("ADMIN")
 def admin_edit_material(material_id: int):
     material = Material.query.get_or_404(material_id)
-    labs = Lab.query.order_by(Lab.name).all()
     careers = Career.query.order_by(Career.name.asc()).all()
     form_data = {}
 
     if request.method == "POST":
         payload, error = _material_payload_from_form(material)
         form_data = dict(request.form)
+        active_state_default, tool_condition_default = _status_form_defaults(material, form_data)
         reason_value = normalize_spaces(request.form.get("status_change_reason") or "")
 
         reason_type, reason_label = _status_change_reason_requirement(material.status, payload.get("status") if payload else None)
@@ -284,10 +387,19 @@ def admin_edit_material(material_id: int):
             return render_template(
                 "inventory/admin_form.html",
                 material=material,
-                labs=labs,
+                default_lab_id=material.lab_id,
                 careers=careers,
                 categories=MATERIAL_CATEGORIES,
+                location_options=_existing_location_options([
+                    material.location,
+                    form_data.get("location_choice"),
+                    form_data.get("location_new"),
+                    form_data.get("location"),
+                ]),
+                new_location_sentinel=NEW_LOCATION_SENTINEL,
                 form_data=form_data,
+                active_state_default=active_state_default,
+                tool_condition_default=tool_condition_default,
                 active_page="inventory",
             )
 
@@ -316,13 +428,18 @@ def admin_edit_material(material_id: int):
         flash("Material actualizado correctamente.", "success")
         return redirect(url_for("inventory.material_detail", material_id=material.id))
 
+    active_state_default, tool_condition_default = _status_form_defaults(material, form_data)
     return render_template(
         "inventory/admin_form.html",
         material=material,
-        labs=labs,
+        default_lab_id=material.lab_id,
         careers=careers,
         categories=MATERIAL_CATEGORIES,
+        location_options=_existing_location_options([material.location]),
+        new_location_sentinel=NEW_LOCATION_SENTINEL,
         form_data=form_data,
+        active_state_default=active_state_default,
+        tool_condition_default=tool_condition_default,
         active_page="inventory",
     )
 
