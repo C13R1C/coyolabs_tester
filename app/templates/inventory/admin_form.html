@@ -45,7 +45,26 @@
       </div>
     </div>
 
-    <div class="toolbar-group"><label for="location">Ubicación</label><div class="search-box"><input id="location" name="location" value="{{ data.get('location', material.location if material else '') }}"></div></div>
+    {% set current_location = data.get('location_new') or data.get('location_choice') or data.get('location') or (material.location if material else '') %}
+    {% set normalized_current_location = current_location | trim | title %}
+    {% set location_exists = normalized_current_location in location_options %}
+    {% set location_choice_value = normalized_current_location if location_exists else (new_location_sentinel if normalized_current_location else '') %}
+    <div class="toolbar-group">
+      <label for="location_choice">Ubicación</label>
+      <div class="select-wrap">
+        <select id="location_choice" name="location_choice" required>
+          <option value="">Selecciona una ubicación</option>
+          {% for location in location_options %}
+          <option value="{{ location }}" {% if location_choice_value == location %}selected{% endif %}>{{ location }}</option>
+          {% endfor %}
+          <option value="{{ new_location_sentinel }}" {% if location_choice_value == new_location_sentinel %}selected{% endif %}>Agregar nueva ubicación</option>
+        </select>
+      </div>
+      <div id="locationNewWrap" class="search-box" style="margin-top:8px; {% if location_choice_value != new_location_sentinel %}display:none;{% endif %}">
+        <input id="location_new" name="location_new" placeholder="Ej. Estante A" value="{{ '' if location_exists else normalized_current_location }}">
+      </div>
+      <small class="datetime-helper">Selecciona una ubicación existente o agrega una nueva.</small>
+    </div>
     <div class="toolbar-group">
       <label for="tool_condition">Condición</label>
       <div class="select-wrap">
@@ -138,6 +157,24 @@
     if (statusSelect && reasonGroup) {
       statusSelect.addEventListener("change", refreshStatusReason);
       refreshStatusReason();
+    }
+
+    const locationChoice = form.querySelector("#location_choice");
+    const locationNewWrap = form.querySelector("#locationNewWrap");
+    const locationNewInput = form.querySelector("#location_new");
+    const newLocationSentinel = "{{ new_location_sentinel }}";
+
+    const refreshLocationInput = () => {
+      if (!locationChoice || !locationNewWrap || !locationNewInput) return;
+      const needsNewLocation = locationChoice.value === newLocationSentinel;
+      locationNewWrap.style.display = needsNewLocation ? "flex" : "none";
+      locationNewInput.required = needsNewLocation;
+      if (!needsNewLocation) locationNewInput.value = "";
+    };
+
+    if (locationChoice) {
+      locationChoice.addEventListener("change", refreshLocationInput);
+      refreshLocationInput();
     }
 
     form.addEventListener("submit", () => {

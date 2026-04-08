@@ -29,6 +29,37 @@ MATERIAL_CATEGORIES = (
 )
 
 
+NEW_LOCATION_SENTINEL = "__new__"
+
+
+def _normalize_location(value: str | None) -> str:
+    normalized = normalize_spaces(value or "")
+    if not normalized:
+        return ""
+    return " ".join(part[:1].upper() + part[1:].lower() for part in normalized.split(" "))
+
+
+def _existing_location_options(extra_values: list[str] | None = None) -> list[str]:
+    rows = (
+        db.session.query(Material.location)
+        .filter(Material.location.isnot(None))
+        .filter(func.trim(Material.location) != "")
+        .all()
+    )
+    unique_locations: dict[str, str] = {}
+    for (location_value,) in rows:
+        normalized = _normalize_location(location_value)
+        if normalized:
+            unique_locations[normalized.lower()] = normalized
+
+    for value in extra_values or []:
+        normalized = _normalize_location(value)
+        if normalized:
+            unique_locations.setdefault(normalized.lower(), normalized)
+
+    return sorted(unique_locations.values(), key=str.lower)
+
+
 def _is_inactive_status(status: str | None) -> bool:
     normalized = normalize_spaces(status or "").lower()
     return normalized in {"baja", "de baja", "inactivo"} or normalized.startswith("baja -")
@@ -128,12 +159,21 @@ def _material_payload_from_form(material: Material | None = None) -> tuple[dict,
     if tutorial_url and not (tutorial_url.startswith("http://") or tutorial_url.startswith("https://")):
         return {}, "La URL del tutorial debe iniciar con http:// o https://."
 
+    selected_location = normalize_spaces(request.form.get("location_choice") or "")
+    if selected_location == NEW_LOCATION_SENTINEL:
+        selected_location = request.form.get("location_new") or ""
+    elif not selected_location:
+        selected_location = request.form.get("location") or ""
+    normalized_location = _normalize_location(selected_location)
+    if not normalized_location:
+        return {}, "Selecciona una ubicación existente o agrega una nueva."
+
     payload = {
         "lab_id": lab.id,
         "career_id": career.id,
         "name": name,
         "category": category or None,
-        "location": normalize_spaces(request.form.get("location") or "") or None,
+        "location": normalized_location,
         "status": status,
         "pieces_text": normalize_spaces(request.form.get("pieces_text") or "") or (str(pieces_qty) if pieces_qty is not None else None),
         "pieces_qty": pieces_qty,
@@ -275,6 +315,12 @@ def admin_new_material():
                 default_lab_id=default_lab.id if default_lab else "",
                 careers=careers,
                 categories=MATERIAL_CATEGORIES,
+                location_options=_existing_location_options([
+                    form_data.get("location_choice"),
+                    form_data.get("location_new"),
+                    form_data.get("location"),
+                ]),
+                new_location_sentinel=NEW_LOCATION_SENTINEL,
                 form_data=form_data,
                 active_state_default=active_state_default,
                 tool_condition_default=tool_condition_default,
@@ -310,6 +356,8 @@ def admin_new_material():
         default_lab_id=default_lab.id if default_lab else "",
         careers=careers,
         categories=MATERIAL_CATEGORIES,
+        location_options=_existing_location_options(),
+        new_location_sentinel=NEW_LOCATION_SENTINEL,
         form_data=form_data,
         active_state_default=active_state_default,
         tool_condition_default=tool_condition_default,
@@ -342,6 +390,13 @@ def admin_edit_material(material_id: int):
                 default_lab_id=material.lab_id,
                 careers=careers,
                 categories=MATERIAL_CATEGORIES,
+                location_options=_existing_location_options([
+                    material.location,
+                    form_data.get("location_choice"),
+                    form_data.get("location_new"),
+                    form_data.get("location"),
+                ]),
+                new_location_sentinel=NEW_LOCATION_SENTINEL,
                 form_data=form_data,
                 active_state_default=active_state_default,
                 tool_condition_default=tool_condition_default,
@@ -380,6 +435,8 @@ def admin_edit_material(material_id: int):
         default_lab_id=material.lab_id,
         careers=careers,
         categories=MATERIAL_CATEGORIES,
+        location_options=_existing_location_options([material.location]),
+        new_location_sentinel=NEW_LOCATION_SENTINEL,
         form_data=form_data,
         active_state_default=active_state_default,
         tool_condition_default=tool_condition_default,
