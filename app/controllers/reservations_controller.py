@@ -460,6 +460,7 @@ def request_reservation():
     week_end = week_days[-1]
 
     calendar_buildings = sorted({room[:1] for room in ROOMS})
+    calendar_rooms_by_building = {building: _rooms_by_building(building) for building in calendar_buildings}
     selected_calendar_building = calendar_building if calendar_building in calendar_buildings else ""
     available_calendar_rooms = _rooms_by_building(selected_calendar_building)
     is_operational_calendar = is_admin_role(current_user.role)
@@ -705,6 +706,7 @@ def request_reservation():
         "reservations/request.html",
     rooms=ROOMS,
     calendar_buildings=calendar_buildings,
+    calendar_rooms_by_building=calendar_rooms_by_building,
     calendar_filter_rooms=available_calendar_rooms,
     materials=materials,
     materials_json=materials_json,
@@ -717,7 +719,6 @@ def request_reservation():
     selected_calendar_room=selected_calendar_room,
     selected_calendar_day=selected_calendar_day,
     daily_schedule=daily_schedule,
-    is_operational_calendar=is_operational_calendar,
     prev_week=prev_week,
     next_week=next_week,
     is_professor=is_professor,
