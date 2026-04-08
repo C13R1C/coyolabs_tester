@@ -41,12 +41,42 @@ DEFAULT_DEMO_HIDDEN_COLUMNS = {
     "tutorial_url",
 }
 
+PDF_TECHNICAL_EXCLUDED_COLUMNS = {
+    "image_ref",
+    "tutorial_url",
+    "source_file",
+    "source_sheet",
+    "source_row",
+    "metadata_json",
+    "serial",
+    "updated_at",
+    "signature_ref",
+    "evidence_ref",
+}
+
+DEFAULT_PDF_CURATED_COLUMNS = [
+    "id",
+    "name",
+    "location",
+    "status",
+    "pieces_qty",
+    "brand",
+    "model",
+    "code",
+    "notes",
+    "created_at",
+]
+
 REPORT_COLUMN_LABELS = {
     "id": "ID",
     "lab_id": "Laboratorio",
     "user_id": "Usuario",
     "material_id": "Material",
     "name": "Nombre",
+    "pieces_qty": "Cantidad",
+    "brand": "Marca",
+    "model": "Modelo",
+    "code": "Código",
     "location": "Ubicación",
     "status": "Estado",
     "created_at": "Creado",
@@ -154,6 +184,27 @@ def parse_selected_columns(headers: list[str]) -> list[str]:
     allowed = set(headers)
     normalized = [col for col in selected if col in allowed]
     return normalized or headers
+
+
+def parse_pdf_selected_columns(headers: list[str]) -> list[str]:
+    selected = request.args.getlist("cols")
+    if not selected:
+        raw = (request.args.get("cols") or "").strip()
+        if raw:
+            selected = [part.strip() for part in raw.split(",") if part.strip()]
+
+    allowed = set(headers)
+    if selected:
+        normalized = [col for col in selected if col in allowed and col not in PDF_TECHNICAL_EXCLUDED_COLUMNS]
+        if normalized:
+            return normalized[:10]
+
+    curated = [col for col in DEFAULT_PDF_CURATED_COLUMNS if col in allowed]
+    if curated:
+        return curated
+
+    fallback = [col for col in headers if col not in PDF_TECHNICAL_EXCLUDED_COLUMNS]
+    return (fallback or headers)[:10]
 
 
 def project_rows(headers: list[str], rows: list[list], selected_columns: list[str]) -> tuple[list[str], list[list]]:
@@ -356,6 +407,22 @@ def _sanitize_pdf_cell(value) -> str:
     return text or "-"
 
 
+def _pdf_col_weight(header: str) -> float:
+    weights = {
+        "id": 0.7,
+        "name": 1.5,
+        "location": 1.1,
+        "status": 1.0,
+        "pieces_qty": 0.8,
+        "brand": 1.0,
+        "model": 1.0,
+        "code": 0.9,
+        "notes": 1.6,
+        "created_at": 1.1,
+    }
+    return weights.get(header, 1.0)
+
+
 def pdf_response(
     *,
     filename: str,
@@ -393,8 +460,10 @@ def pdf_response(
     table_data = [translated_headers] + [[_sanitize_pdf_cell(v) for v in row] for row in rows]
     available_width = doc.width
     col_count = max(1, len(headers))
-    col_width = available_width / col_count
-    table = Table(table_data, repeatRows=1, colWidths=[col_width] * col_count)
+    weights = [_pdf_col_weight(header) for header in headers]
+    total_weight = sum(weights) if weights else float(col_count)
+    col_widths = [available_width * (weight / total_weight) for weight in weights] if weights else [available_width / col_count] * col_count
+    table = Table(table_data, repeatRows=1, colWidths=col_widths)
     table.setStyle(
         TableStyle(
             [
@@ -884,7 +953,7 @@ def report_inventory_pdf():
     search = (request.args.get("search") or "").strip()
     download = request.args.get("download", default=0, type=int) == 1
     headers, rows = build_inventory_rows(lab_id=lab_id, status=status or None, search=search or None)
-    selected_columns = parse_selected_columns(headers)
+    selected_columns = parse_pdf_selected_columns(headers)
     headers, rows = project_rows(headers, rows, selected_columns)
     filename = "inventory.pdf" if not lab_id else f"inventory_lab_{lab_id}.pdf"
     title = "Reporte de Inventario" if not lab_id else f"Reporte de Inventario - Lab {lab_id}"
@@ -905,7 +974,7 @@ def report_debts_pdf():
     user_id = request.args.get("user_id", type=int)
     download = request.args.get("download", default=0, type=int) == 1
     headers, rows = build_debts_rows(status=status or None, user_id=user_id)
-    selected_columns = parse_selected_columns(headers)
+    selected_columns = parse_pdf_selected_columns(headers)
     headers, rows = project_rows(headers, rows, selected_columns)
     return pdf_response(
         filename="debts.pdf",
@@ -938,7 +1007,7 @@ def report_logbook_pdf():
         date_from=date_from or None,
         date_to=date_to or None,
     )
-    selected_columns = parse_selected_columns(headers)
+    selected_columns = parse_pdf_selected_columns(headers)
     headers, rows = project_rows(headers, rows, selected_columns)
     return pdf_response(
         filename="logbook.pdf",
@@ -967,7 +1036,7 @@ def report_reservations_pdf():
         date_from=date_from or None,
         date_to=date_to or None,
     )
-    selected_columns = parse_selected_columns(headers)
+    selected_columns = parse_pdf_selected_columns(headers)
     headers, rows = project_rows(headers, rows, selected_columns)
     return pdf_response(
         filename="reservations.pdf",
