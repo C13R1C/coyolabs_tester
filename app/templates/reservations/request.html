@@ -693,19 +693,6 @@
     </div>
 
     <div class="toolbar-group" style="min-width:220px; margin:0;">
-      <label>Salón</label>
-      <div class="select-wrap">
-        <select name="calendar_room" id="calendarRoomFilter">
-          <option value="">Todos</option>
-          {% for r in calendar_filter_rooms %}
-          <option value="{{ r }}" {% if selected_calendar_room == r %}selected{% endif %}>{{ r }}</option>
-          {% endfor %}
-        </select>
-        <i class="ph ph-caret-down select-arrow"></i>
-      </div>
-    </div>
-
-    <div class="toolbar-group" style="min-width:220px; margin:0;">
       <label>Día</label>
       <div class="search-box">
         <i class="ph ph-calendar search-icon"></i>
@@ -713,7 +700,6 @@
       </div>
     </div>
 
-    <input type="hidden" name="week_start" value="{{ week_start.isoformat() }}">
     <button type="submit" class="btn btn-ghost">Aplicar</button>
     <a class="btn btn-ghost" href="{{ url_for('reservations.request_reservation') }}">Limpiar</a>
   </form>
