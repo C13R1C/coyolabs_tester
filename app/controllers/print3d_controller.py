@@ -5,6 +5,7 @@ from uuid import uuid4
 
 from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, send_from_directory, url_for
 from flask_login import current_user
+from sqlalchemy.exc import SQLAlchemyError
 from werkzeug.utils import secure_filename
 
 from app.extensions import db
@@ -212,48 +213,58 @@ def new_job():
 
         created_job_ids: list[int] = []
         saved_paths: list[str] = []
-        for file_storage in files:
-            file_ref, original_filename, abs_path, file_error = _save_print3d_file(file_storage)
-            if file_error:
-                for path in saved_paths:
-                    try:
-                        if path and os.path.exists(path):
-                            os.remove(path)
-                    except OSError:
-                        logger.warning("No se pudo limpiar archivo 3D tras error de validación", exc_info=True)
-                db.session.rollback()
-                flash(file_error, "error")
-                return redirect(url_for("print3d.new_job"))
+        try:
+            for file_storage in files:
+                file_ref, original_filename, abs_path, file_error = _save_print3d_file(file_storage)
+                if file_error:
+                    flash(file_error, "error")
+                    raise ValueError("print3d_file_validation_error")
 
-            file_size_bytes = int(file_storage.content_length or 0)
-            if file_size_bytes <= 0:
-                file_storage.stream.seek(0, os.SEEK_END)
-                file_size_bytes = int(file_storage.stream.tell())
-                file_storage.stream.seek(0)
+                file_size_bytes = int(file_storage.content_length or 0)
+                if file_size_bytes <= 0:
+                    file_storage.stream.seek(0, os.SEEK_END)
+                    file_size_bytes = int(file_storage.stream.tell())
+                    file_storage.stream.seek(0)
 
-            job = Print3DJob(
-                requester_user_id=current_user.id,
-                title=title if len(files) == 1 else f"{title} ({original_filename})",
-                description=description or None,
-                file_ref=file_ref,
-                original_filename=original_filename,
-                file_size_bytes=file_size_bytes,
-                status=STATUS_REQUESTED,
-            )
-            db.session.add(job)
-            db.session.flush()
-            created_job_ids.append(job.id)
-            saved_paths.append(abs_path)
+                job = Print3DJob(
+                    requester_user_id=current_user.id,
+                    title=title if len(files) == 1 else f"{title} ({original_filename})",
+                    description=description or None,
+                    file_ref=file_ref,
+                    original_filename=original_filename,
+                    file_size_bytes=file_size_bytes,
+                    status=STATUS_REQUESTED,
+                    updated_at=datetime.utcnow(),
+                )
+                db.session.add(job)
+                db.session.flush()
+                created_job_ids.append(job.id)
+                saved_paths.append(abs_path)
 
-            log_event(
-                module="PRINT3D",
-                action="PRINT3D_REQUEST_CREATED",
-                user_id=current_user.id,
-                entity_label=f"Print3DJob #{job.id}",
-                description=f"Solicitud 3D creada: {job.title}",
-                metadata={"job_id": job.id, "status": job.status},
-            )
-        db.session.commit()
+                log_event(
+                    module="PRINT3D",
+                    action="PRINT3D_REQUEST_CREATED",
+                    user_id=current_user.id,
+                    entity_label=f"Print3DJob #{job.id}",
+                    description=f"Solicitud 3D creada: {job.title}",
+                    metadata={"job_id": job.id, "status": job.status},
+                )
+
+            db.session.commit()
+        except (ValueError, SQLAlchemyError) as err:
+            db.session.rollback()
+            had_validation_flash = False
+            for path in saved_paths:
+                try:
+                    if path and os.path.exists(path):
+                        os.remove(path)
+                except OSError:
+                    logger.warning("No se pudo limpiar archivo 3D tras error de validación", exc_info=True)
+            if isinstance(err, ValueError):
+                had_validation_flash = True
+            if not had_validation_flash:
+                flash("No se pudo crear la solicitud de impresión 3D. Intenta nuevamente.", "error")
+            return redirect(url_for("print3d.new_job"))
 
         flash(f"Solicitud enviada correctamente. Archivos registrados: {len(created_job_ids)}.", "success")
         return redirect(url_for("print3d.my_jobs"))

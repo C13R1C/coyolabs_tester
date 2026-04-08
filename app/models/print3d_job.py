@@ -1,3 +1,4 @@
+from datetime import datetime
 from app.extensions import db
 
 class Print3DJob(db.Model):
@@ -60,7 +61,10 @@ class Print3DJob(db.Model):
 
     updated_at = db.Column(
         db.DateTime,
-        onupdate=db.func.now()
+        nullable=False,
+        default=datetime.utcnow,
+        server_default=db.func.now(),
+        onupdate=datetime.utcnow,
     )
 
     def __repr__(self):
