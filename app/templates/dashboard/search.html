@@ -1,0 +1,144 @@
+{% extends "layouts/student_base.html" %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Dashboard", url_for('dashboard.dashboard_home')), ("Búsqueda rápida", url_for('dashboard.dashboard_quick_search'))] %}
+{% block title %}Búsqueda rápida{% endblock %}
+
+{% block content %}
+<header class="topbar">
+  <div class="topbar-left">
+    <p class="page-kicker">Dashboard · Admin</p>
+    <h1>Búsqueda rápida</h1>
+    <p class="page-subtitle">Filtra en vivo Inventario, Reportes y Software desde un solo lugar.</p>
+  </div>
+</header>
+
+<section class="toolbar-card">
+  <div class="toolbar" style="grid-template-columns:1fr;">
+    <div class="toolbar-group" style="margin:0;">
+      <label for="quickSearchInput">Buscar</label>
+      <div class="search-box">
+        <i class="ph ph-magnifying-glass search-icon"></i>
+        <input
+          id="quickSearchInput"
+          type="text"
+          placeholder="Escribe nombre, código, ubicación, estado, carrera, reporte o software..."
+          value="{{ search_text }}"
+          autocomplete="off"
+        >
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="table-card" style="margin-top:14px;">
+  <h2 style="margin-bottom:10px;">Inventario</h2>
+  <div class="mini-list" data-search-block>
+    {% for item in inventory_items %}
+      {% set search_blob = [
+        item.name or '',
+        item.code or '',
+        item.location or '',
+        item.brand or '',
+        item.model or '',
+        item.status or '',
+        (item.career.name if item.career else ''),
+      ] | join(' ') %}
+      <article class="mini-item" data-search-item data-search-text="{{ search_blob|lower }}">
+        <div class="mini-top">
+          <strong>{{ item.name }}</strong>
+          <span class="status-chip">{{ item.status or "Sin estado" }}</span>
+        </div>
+        <div class="mini-meta">
+          <span>Código: {{ item.code or "—" }}</span>
+          <span>Ubicación: {{ item.location or "—" }}</span>
+          <span>Carrera: {{ item.career.name if item.career else "—" }}</span>
+        </div>
+        <a class="btn btn-ghost" style="margin-top:8px;" href="{{ url_for('inventory.material_detail', material_id=item.id) }}">Ver material</a>
+      </article>
+    {% endfor %}
+  </div>
+  <p class="empty-state" data-empty-state style="display:none; margin-top:10px;">Sin coincidencias en Inventario.</p>
+</section>
+
+<section class="table-card" style="margin-top:14px;">
+  <h2 style="margin-bottom:10px;">Reportes</h2>
+  <div class="mini-list" data-search-block>
+    {% for report in report_items %}
+      {% set search_blob = [report.title, report.description, report.tags] | join(' ') %}
+      <article class="mini-item" data-search-item data-search-text="{{ search_blob|lower }}">
+        <div class="mini-top">
+          <strong>{{ report.title }}</strong>
+        </div>
+        <div class="mini-meta">
+          <span>{{ report.description }}</span>
+        </div>
+        <a class="btn btn-ghost" style="margin-top:8px;" href="{{ report.link }}">Abrir reporte</a>
+      </article>
+    {% endfor %}
+  </div>
+  <p class="empty-state" data-empty-state style="display:none; margin-top:10px;">Sin coincidencias en Reportes.</p>
+</section>
+
+<section class="table-card" style="margin-top:14px;">
+  <h2 style="margin-bottom:10px;">Software</h2>
+  <div class="mini-list" data-search-block>
+    {% for item in software_items %}
+      {% set search_blob = [
+        item.name or '',
+        item.notes or '',
+        item.update_note or '',
+        item.version or '',
+        item.license_type or '',
+        ('actualización solicitada' if item.update_requested else 'sin seguimiento'),
+        (item.lab.name if item.lab else ''),
+      ] | join(' ') %}
+      <article class="mini-item" data-search-item data-search-text="{{ search_blob|lower }}">
+        <div class="mini-top">
+          <strong>{{ item.name }}</strong>
+          <span class="status-chip {% if item.update_requested %}status-warn{% endif %}">
+            {% if item.update_requested %}Seguimiento solicitado{% else %}Sin seguimiento{% endif %}
+          </span>
+        </div>
+        <div class="mini-meta">
+          <span>Lab: {{ item.lab.name if item.lab else "—" }}</span>
+          <span>Versión: {{ item.version or "—" }}</span>
+          <span>Licencia: {{ item.license_type or "—" }}</span>
+        </div>
+        <a class="btn btn-ghost" style="margin-top:8px;" href="{{ url_for('software.list_software', lab_id=item.lab_id) if item.lab_id else url_for('software.list_software') }}">Ver software</a>
+      </article>
+    {% endfor %}
+  </div>
+  <p class="empty-state" data-empty-state style="display:none; margin-top:10px;">Sin coincidencias en Software.</p>
+</section>
+
+<script>
+(() => {
+  const input = document.getElementById("quickSearchInput");
+  if (!input) return;
+
+  const filterBlock = (block) => {
+    const term = (input.value || "").trim().toLowerCase();
+    const items = block.querySelectorAll("[data-search-item]");
+    const emptyState = block.parentElement.querySelector("[data-empty-state]");
+    let visible = 0;
+
+    items.forEach((item) => {
+      const haystack = (item.dataset.searchText || "").toLowerCase();
+      const match = !term || haystack.includes(term);
+      item.style.display = match ? "" : "none";
+      if (match) visible += 1;
+    });
+
+    if (emptyState) {
+      emptyState.style.display = visible === 0 ? "" : "none";
+    }
+  };
+
+  const refresh = () => {
+    document.querySelectorAll("[data-search-block]").forEach(filterBlock);
+  };
+
+  input.addEventListener("input", refresh);
+  refresh();
+})();
+</script>
+{% endblock %}

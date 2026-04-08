@@ -11,7 +11,8 @@
   </div>
   {% if is_admin_role(current_user.role) %}
   <div class="topbar-actions">
-    <a href="{{ url_for('inventory_requests.admin_daily_requests') }}" class="btn btn-ghost">Ver solicitudes admin</a>
+    <a href="{{ url_for('inventory_requests.admin_daily_requests') }}" class="btn btn-gold">Administrar solicitudes de material</a>
+    <a href="{{ url_for('inventory_requests.admin_daily_requests') }}" class="btn btn-ghost">Abrir cola operativa</a>
   </div>
   {% endif %}
 </header>
@@ -177,7 +178,7 @@
 
 <section class="table-card">
   <h3 style="margin:0 0 12px 0;">Agregar materiales a la solicitud de hoy</h3>
-  <form method="post" action="{{ url_for('inventory_requests.add_to_daily_request') }}">
+  <form method="post" action="{{ url_for('inventory_requests.add_to_daily_request') }}" data-form-mode="create">
     <div class="material-search">
       <div class="search-box">
         <i class="ph ph-magnifying-glass search-icon"></i>

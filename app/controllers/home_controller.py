@@ -20,17 +20,10 @@ LAB_FLOORS = {
 
 
 def _parse_home_filters() -> tuple:
-    date_str = request.args.get("date")
     time_str = request.args.get("time")
 
     selected_date = datetime.now().date()
     selected_time = time(11, 0)
-
-    if date_str:
-        try:
-            selected_date = datetime.strptime(date_str, "%Y-%m-%d").date()
-        except ValueError:
-            pass
 
     if time_str:
         try:
@@ -86,9 +79,8 @@ def _build_labs_status(selected_time, reservations):
 @min_role_required("STUDENT")
 def labs_view():
     # Compatibilidad con enlaces anteriores. La disponibilidad vive dentro del home.
-    date_str = request.args.get("date")
     time_str = request.args.get("time")
-    return redirect(url_for("home.home_dashboard", date=date_str, time=time_str, _anchor="labs"))
+    return redirect(url_for("home.home_dashboard", time=time_str, _anchor="labs"))
 
 
 @home_bp.route("/", methods=["GET"])

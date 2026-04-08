@@ -13,14 +13,15 @@
 <header class="topbar">
   <div class="topbar-left">
     <p class="page-kicker">Inventario</p>
-    <h1>Solicitudes de material pendientes</h1>
-    <p class="page-subtitle">Solicitudes consolidadas por usuario y fecha.</p>
+    <h1>Cola operativa · Solicitudes de material</h1>
+    <p class="page-subtitle">Aquí administras la entrega de material. Puedes abrir una solicitud para revisar detalle o entregar directamente desde esta cola.</p>
   </div>
 </header>
 
 <section class="toolbar-card">
   <div class="toolbar-actions inventory-admin-list-actions">
     <a href="{{ url_for('inventory_requests.my_daily_request') }}" class="btn btn-ghost">Volver</a>
+    <a href="{{ url_for('inventory_requests.admin_daily_requests') }}" class="btn btn-ghost">Limpiar</a>
   </div>
 </section>
 
@@ -56,7 +57,16 @@
           </td>
           <td>{{ t.notes or '-' }}</td>
           <td>{{ t.items|length }}</td>
-          <td><a href="{{ url_for('inventory_requests.admin_ticket_detail', ticket_id=t.id) }}" class="btn btn-ghost">Revisar</a></td>
+          <td>
+            <div style="display:flex; flex-wrap:wrap; gap:6px;">
+              <a href="{{ url_for('inventory_requests.admin_ticket_detail', ticket_id=t.id) }}" class="btn btn-ghost">Ver solicitud</a>
+              {% if t.status == 'OPEN' %}
+              <form method="post" action="{{ url_for('inventory_requests.admin_mark_ready', ticket_id=t.id) }}">
+                <button type="submit" class="btn btn-gold">Entregar material</button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
         </tr>
       {% endfor %}
       </tbody>

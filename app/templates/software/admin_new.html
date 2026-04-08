@@ -2,11 +2,11 @@
 {% set crumbs = [("Inicio", url_for('root_home')), ("Software", url_for('software.list_software')), ("Nuevo", url_for('software.admin_new'))] %}
 {% block title %}Nuevo software{% endblock %}
 {% block content %}
-<header class="topbar"><div class="topbar-left"><p class="page-kicker">Software</p><h1>Agregar software (Administración)</h1><p class="page-subtitle">Registra un nuevo software para catálogo institucional.</p></div></header>
+<header class="topbar"><div class="topbar-left"><p class="page-kicker">Software instalado</p><h1>Registrar software por salón/laboratorio</h1><p class="page-subtitle">Registra software instalado en espacios como B003, B004 y otros laboratorios.</p></div><div class="topbar-actions"><a href="{{ url_for('software.list_software') }}" class="btn btn-ghost">Catálogo de software</a></div></header>
 
 <section class="toolbar-card">
-  <form method="post" class="toolbar" style="grid-template-columns: repeat(2, minmax(280px, 1fr));">
-    <div class="toolbar-group"><label for="lab_id">Laboratorio (opcional)</label><div class="select-wrap"><select id="lab_id" name="lab_id"><option value="">-- Sin laboratorio --</option>{% for lab in labs %}<option value="{{ lab.id }}">{{ lab.name }}</option>{% endfor %}</select><i class="ph ph-caret-down select-arrow"></i></div></div>
+  <form method="post" class="toolbar" style="grid-template-columns: repeat(2, minmax(280px, 1fr));" data-form-mode="create">
+    <div class="toolbar-group"><label for="lab_id">Salón/Laboratorio (ej. B003) (opcional)</label><div class="select-wrap"><select id="lab_id" name="lab_id"><option value="">-- Sin asignar espacio --</option>{% for lab in labs %}<option value="{{ lab.id }}">{{ lab.name }}</option>{% endfor %}</select><i class="ph ph-caret-down select-arrow"></i></div></div>
     <div class="toolbar-group"><label for="name">Nombre (obligatorio)</label><div class="search-box"><i class="ph ph-app-window search-icon"></i><input id="name" type="text" name="name" placeholder="Ejemplo: AutoCAD" required></div></div>
     <div class="toolbar-group"><label for="version">Versión (opcional)</label><div class="search-box"><i class="ph ph-git-branch search-icon"></i><input id="version" type="text" name="version" placeholder="Ejemplo: 2026.1"></div></div>
     <div class="toolbar-group"><label for="license_type">Tipo de licencia (opcional)</label><div class="search-box"><i class="ph ph-seal-check search-icon"></i><input id="license_type" type="text" name="license_type" placeholder="Ejemplo: Institucional"></div></div>

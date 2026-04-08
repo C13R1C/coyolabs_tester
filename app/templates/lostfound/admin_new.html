@@ -3,6 +3,33 @@
 {% block title %}Nuevo objeto perdido{% endblock %}
 
 {% block content %}
+<style>
+.lostfound-file-box{
+  border:1px dashed rgba(0,0,0,.18);
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(255,255,255,.6);
+}
+
+.lostfound-file-trigger{
+  width: 100%;
+  justify-content: center;
+}
+
+.lostfound-file-summary{
+  margin-top: 10px;
+  font-size: .9rem;
+  color: var(--text-dim);
+}
+
+.lostfound-file-preview{
+  margin-top: 10px;
+  max-width: 260px;
+  border-radius: 10px;
+  border: 1px solid var(--stroke);
+  display: none;
+}
+</style>
 <header class="topbar">
   <div class="topbar-left">
     <p class="page-kicker">Objetos perdidos</p>
@@ -12,11 +39,16 @@
 </header>
 
 <section class="toolbar-card">
-  <form method="post" enctype="multipart/form-data" class="toolbar" style="grid-template-columns: repeat(2, minmax(280px, 1fr));">
+  <form method="post" enctype="multipart/form-data" class="toolbar" style="grid-template-columns: repeat(2, minmax(280px, 1fr));" id="lostfoundNewForm" data-form-mode="create">
     <div class="toolbar-group"><label for="title">Título (obligatorio)</label><div class="search-box"><i class="ph ph-tag search-icon"></i><input id="title" type="text" name="title" placeholder="Ejemplo: Mochila negra con llavero" required></div></div>
     <div class="toolbar-group" style="grid-column: 1 / -1;">
       <label for="evidence_file">Foto de evidencia (opcional)</label>
-      <input class="form-control" id="evidence_file" type="file" name="evidence_file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+      <div class="lostfound-file-box">
+        <input class="form-control" id="evidence_file" type="file" name="evidence_file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" style="display:none;">
+        <button type="button" class="btn btn-ghost lostfound-file-trigger" id="lostfoundFileTrigger">Seleccionar imagen</button>
+        <div class="lostfound-file-summary" id="lostfoundFileSummary">Sin imagen seleccionada.</div>
+        <img id="lostfoundFilePreview" class="lostfound-file-preview" alt="Vista previa de evidencia">
+      </div>
       <small style="display:block; margin-top:6px; color:var(--text-dim);">Formatos permitidos: JPG, PNG, WEBP. Máximo 5 MB.</small>
     </div>
 
@@ -31,4 +63,33 @@
     </div>
   </form>
 </section>
+<script>
+(function () {
+  const input = document.getElementById("evidence_file");
+  const trigger = document.getElementById("lostfoundFileTrigger");
+  const summary = document.getElementById("lostfoundFileSummary");
+  const preview = document.getElementById("lostfoundFilePreview");
+  if (!input || !trigger || !summary || !preview) return;
+
+  trigger.addEventListener("click", () => input.click());
+
+  input.addEventListener("change", () => {
+    const file = (input.files || [])[0];
+    if (!file) {
+      summary.textContent = "Sin imagen seleccionada.";
+      preview.style.display = "none";
+      preview.removeAttribute("src");
+      return;
+    }
+
+    summary.textContent = file.name;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      preview.src = event.target?.result || "";
+      preview.style.display = preview.src ? "block" : "none";
+    };
+    reader.readAsDataURL(file);
+  });
+})();
+</script>
 {% endblock %}
