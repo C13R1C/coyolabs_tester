@@ -2,6 +2,7 @@ from datetime import datetime
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user
+from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 
 from app.extensions import db
@@ -46,9 +47,21 @@ def forum_home():
         query = query.filter(ForumPost.category == selected_category)
 
     posts = query.limit(200).all()
+    post_ids = [post.id for post in posts]
+    comment_counts: dict[int, int] = {}
+    if post_ids:
+        comments_query = (
+            db.session.query(ForumComment.post_id, func.count(ForumComment.id))
+            .filter(ForumComment.post_id.in_(post_ids))
+        )
+        if not _is_admin():
+            comments_query = comments_query.filter(ForumComment.is_hidden.is_(False))
+        comment_counts = {post_id: total for post_id, total in comments_query.group_by(ForumComment.post_id).all()}
+
     return render_template(
         "forum/list.html",
         posts=posts,
+        comment_counts=comment_counts,
         categories=FORUM_CATEGORIES,
         selected_category=selected_category,
         is_admin=_is_admin(),

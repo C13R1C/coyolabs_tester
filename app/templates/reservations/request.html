@@ -9,6 +9,11 @@
     <h1>Solicitar reserva</h1>
     <p class="page-subtitle">Completa todos los datos para enviar tu solicitud. Debajo puedes consultar la ocupación semanal de los salones.</p>
   </div>
+  {% if current_user.role in ["ADMIN", "SUPERADMIN"] %}
+  <div class="topbar-actions">
+    <a class="btn btn-gold" href="{{ url_for('reservations.admin_queue') }}">Administrar solicitudes</a>
+  </div>
+  {% endif %}
 </header>
 
 <style>
@@ -647,18 +652,23 @@
   <div class="res-occupancy-head">
     <div class="res-occupancy-title">
       <p class="page-kicker">Calendario semanal</p>
+      {% if is_operational_calendar %}
       <h2>Ocupación de salones</h2>
-      <p class="page-subtitle" style="margin-top:6px;">
-        Semana del {{ week_start.strftime('%d/%m/%Y') }} al {{ week_end.strftime('%d/%m/%Y') }}
-      </p>
+      <p class="page-subtitle" style="margin-top:6px;">Semana del {{ week_start.strftime('%d/%m/%Y') }} al {{ week_end.strftime('%d/%m/%Y') }}</p>
+      {% else %}
+      <h2>Disponibilidad del día</h2>
+      <p class="page-subtitle" style="margin-top:6px;">{{ nombres_dia[selected_calendar_day.weekday()] }} {{ selected_calendar_day.strftime('%d/%m/%Y') }}</p>
+      {% endif %}
     </div>
 
+    {% if is_operational_calendar %}
     <button type="button" id="toggleOccupancyBtn" class="btn btn-ghost" aria-expanded="true" aria-controls="occupancyBody">
       Ocultar ocupación de salones
     </button>
+    {% endif %}
   </div>
 
-  <div id="occupancyBody">
+  <div id="occupancyBody" {% if not is_operational_calendar %}style="display:block;"{% endif %}>
     <form method="get" class="reservation-calendar-filter" style="display:flex; gap:10px; align-items:end; flex-wrap:wrap;">
       <div class="toolbar-group" style="min-width:180px; margin:0;">
         <label>Filtrar por edificio</label>
@@ -673,6 +683,7 @@
         </div>
       </div>
 
+      {% if is_operational_calendar %}
       <div class="toolbar-group" style="min-width:220px; margin:0;">
         <label>Filtrar por salón</label>
         <div class="select-wrap">
@@ -685,12 +696,25 @@
           <i class="ph ph-caret-down select-arrow"></i>
         </div>
       </div>
+      {% endif %}
+
+      {% if not is_operational_calendar %}
+      <div class="toolbar-group" style="min-width:220px; margin:0;">
+        <label>Día</label>
+        <div class="search-box">
+          <i class="ph ph-calendar search-icon"></i>
+          <input type="date" name="calendar_day" value="{{ selected_calendar_day.isoformat() }}">
+        </div>
+      </div>
+      {% endif %}
 
       <input type="hidden" name="week_start" value="{{ week_start.isoformat() }}">
       <button type="submit" class="btn btn-ghost">Aplicar</button>
+      <a class="btn btn-ghost" href="{{ url_for('reservations.request_reservation') }}">Limpiar</a>
     </form>
   </div>
 
+  {% if is_operational_calendar %}
   <div class="res-occupancy-controls">
     <a class="btn btn-ghost" href="{{ url_for('reservations.request_reservation', week_start=prev_week.isoformat(), calendar_building=selected_calendar_building, calendar_room=selected_calendar_room) }}">
       ← Semana anterior
@@ -707,8 +731,10 @@
       Semana siguiente →
     </a>
   </div>
+  {% endif %}
 
   <div style="overflow-x:auto;">
+    {% if is_operational_calendar %}
     <table class="data-table res-occupancy-table">
       <thead>
         <tr>
@@ -783,6 +809,55 @@
         {% endfor %}
       </tbody>
     </table>
+    {% else %}
+    <table class="data-table res-occupancy-table" style="min-width:760px;">
+      <thead>
+        <tr>
+          <th style="min-width:130px;">Salón</th>
+          <th>Bloques horarios del día</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in daily_schedule %}
+        <tr>
+          <td class="res-room-label">{{ row.room }}</td>
+          <td class="res-cell">
+            <div class="res-cell-shell is-{{ row.state }}">
+              {% for slot in row.slots %}
+                {% set slot_info = namespace(has_reservation=False, tooltip='') %}
+                {% for item in row.items %}
+                  {% set item_inicio = item.start_time.strftime('%H:%M') %}
+                  {% set item_fin = item.end_time.strftime('%H:%M') %}
+                  {% if item_inicio < slot.end and item_fin > slot.start %}
+                    {% set persona = (item.user.full_name if item.user and item.user.full_name else (item.user.email if item.user else (item.teacher_name or 'Usuario institucional'))) %}
+                    {% set slot_info.has_reservation = True %}
+                    {% set slot_status = 'Ocupado' if slot.state == 'occupied' else ('Pendiente' if slot.state == 'pending' else 'En progreso') %}
+                    {% set tooltip_lines = ['Solicitante: ' ~ persona] %}
+                    {% if item.group_name %}
+                      {% set tooltip_lines = tooltip_lines + ['Grupo: ' ~ item.group_name] %}
+                    {% endif %}
+                    {% if item.subject %}
+                      {% set tooltip_lines = tooltip_lines + ['Materia: ' ~ item.subject] %}
+                    {% endif %}
+                    {% set tooltip_lines = tooltip_lines + ['Estado: ' ~ slot_status] %}
+                    {% set slot_info.tooltip = tooltip_lines | join('\n') %}
+                  {% endif %}
+                {% endfor %}
+                <div
+                  class="time-slot {{ slot.state }} {% if slot_info.has_reservation %}has-tooltip{% endif %}"
+                  {% if slot_info.has_reservation %}data-tooltip="{{ slot_info.tooltip }}"{% endif %}
+                  tabindex="0"
+                  aria-label="{% if slot_info.has_reservation %}{{ slot_info.tooltip }}{% else %}Disponible{% endif %}">
+                  <span class="time">{{ slot.start_label or slot.start }} - {{ slot.end_label or slot.end }}</span>
+                </div>
+              {% endfor %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
   </div>
   </div>
 </section>

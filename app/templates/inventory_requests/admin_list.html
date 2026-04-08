@@ -14,13 +14,14 @@
   <div class="topbar-left">
     <p class="page-kicker">Inventario</p>
     <h1>Solicitudes de material pendientes</h1>
-    <p class="page-subtitle">Solicitudes consolidadas por usuario y fecha.</p>
+    <p class="page-subtitle">Solicitudes consolidadas por usuario y fecha. Entra a cada ticket para entregar material o resolver la solicitud.</p>
   </div>
 </header>
 
 <section class="toolbar-card">
   <div class="toolbar-actions inventory-admin-list-actions">
     <a href="{{ url_for('inventory_requests.my_daily_request') }}" class="btn btn-ghost">Volver</a>
+    <a href="{{ url_for('inventory_requests.admin_daily_requests') }}" class="btn btn-ghost">Limpiar</a>
   </div>
 </section>
 
@@ -56,7 +57,7 @@
           </td>
           <td>{{ t.notes or '-' }}</td>
           <td>{{ t.items|length }}</td>
-          <td><a href="{{ url_for('inventory_requests.admin_ticket_detail', ticket_id=t.id) }}" class="btn btn-ghost">Revisar</a></td>
+          <td><a href="{{ url_for('inventory_requests.admin_ticket_detail', ticket_id=t.id) }}" class="btn btn-ghost">Resolver solicitud</a></td>
         </tr>
       {% endfor %}
       </tbody>

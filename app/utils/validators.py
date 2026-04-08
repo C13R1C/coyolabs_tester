@@ -2,6 +2,7 @@ import re
 
 PHONE_ALLOWED_RE = re.compile(r"^[0-9+\-\s().]+$")
 GROUP_CODE_RE = re.compile(r"^[A-Z0-9-]{2,20}$")
+UTPN_EMAIL_RE = re.compile(r"^[^@\s]+@utpn\.edu\.mx$")
 
 
 def normalize_and_validate_phone(raw_phone: str | None) -> tuple[str | None, str | None]:
@@ -31,3 +32,7 @@ def normalize_and_validate_group_code(raw_group_code: str | None) -> tuple[str |
         return None, "El grupo debe tener 2-20 caracteres alfanuméricos (A-Z, 0-9, -)."
 
     return group_code, None
+
+
+def is_valid_utpn_email(email: str) -> bool:
+    return bool(UTPN_EMAIL_RE.match((email or "").strip().lower()))
