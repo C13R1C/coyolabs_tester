@@ -1,3 +1,5 @@
+import re
+
 from flask import Blueprint, render_template, request, redirect, url_for, flash, abort
 from flask_login import current_user
 
@@ -12,14 +14,14 @@ from app.constants import ROOMS
 software_bp = Blueprint("software", __name__, url_prefix="/software")
 
 
-ROOM_CODES = {room.upper() for room in ROOMS}
+LAB_CODE_PATTERN = re.compile(r"^[A-Z]\d{3}$")
 
 
 def _lab_room_code(lab: Lab | None) -> str | None:
-    if not lab or not lab.name:
+    if not lab:
         return None
-    candidate = lab.name.strip().upper()
-    return candidate if candidate in ROOM_CODES else None
+    candidate = ((lab.code or "").strip() or (lab.name or "").strip()).upper()
+    return candidate if LAB_CODE_PATTERN.match(candidate) else None
 
 
 def _room_labs_context() -> tuple[list[Lab], dict[int, str | None]]:

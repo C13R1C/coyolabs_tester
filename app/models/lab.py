@@ -5,6 +5,7 @@ class Lab(db.Model):
     __tablename__ = "labs"
 
     id = db.Column(db.Integer, primary_key=True)
+    code = db.Column(db.String(20), nullable=True)
     name = db.Column(db.String(120), nullable=False, unique=True)
 
     created_at = db.Column(db.DateTime, server_default=db.func.now(), nullable=False)
