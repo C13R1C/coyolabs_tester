@@ -443,6 +443,8 @@ def request_reservation():
     if user_has_open_debts(current_user.id):
         flash("Tienes un adeudo activo. No puedes solicitar reservas.", "error")
         return redirect(url_for("reservations.my_reservations"))
+    if is_admin_role(current_user.role):
+        return redirect(url_for("reservations.admin_queue"))
 
     week_start_s = (request.args.get("week_start") or "").strip()
     calendar_room = (request.args.get("calendar_room") or "").strip()
@@ -458,6 +460,7 @@ def request_reservation():
     week_end = week_days[-1]
 
     calendar_buildings = sorted({room[:1] for room in ROOMS})
+    calendar_rooms_by_building = {building: _rooms_by_building(building) for building in calendar_buildings}
     selected_calendar_building = calendar_building if calendar_building in calendar_buildings else ""
     available_calendar_rooms = _rooms_by_building(selected_calendar_building)
     selected_calendar_room = calendar_room if calendar_room in available_calendar_rooms else ""
@@ -466,6 +469,36 @@ def request_reservation():
         selected_room=selected_calendar_room or None,
         rooms_scope=available_calendar_rooms,
     )
+    calendar_day_s = (request.args.get("calendar_day") or "").strip()
+    try:
+        selected_calendar_day = parse_date(calendar_day_s) if calendar_day_s else base_date
+    except ValueError:
+        selected_calendar_day = base_date
+    if selected_calendar_day not in week_days:
+        selected_calendar_day = week_start
+
+    daily_schedule = []
+    for room in calendar_rooms:
+        day_cell = week_schedule.get(room, {}).get(selected_calendar_day, {})
+        slots = day_cell.get("slots", []) if isinstance(day_cell, dict) else []
+        items = day_cell.get("items", []) if isinstance(day_cell, dict) else []
+        cell_state = "available"
+        if slots:
+            slot_states = [slot.get("state") for slot in slots]
+            if "pending" in slot_states:
+                cell_state = "pending"
+            elif "in_progress" in slot_states:
+                cell_state = "progress"
+            elif "occupied" in slot_states:
+                cell_state = "occupied"
+        daily_schedule.append(
+            {
+                "room": room,
+                "slots": slots,
+                "items": items,
+                "state": cell_state,
+            }
+        )
 
     prev_week = week_start - timedelta(days=7)
     next_week = week_start + timedelta(days=7)
@@ -672,6 +705,7 @@ def request_reservation():
         "reservations/request.html",
     rooms=ROOMS,
     calendar_buildings=calendar_buildings,
+    calendar_rooms_by_building=calendar_rooms_by_building,
     calendar_filter_rooms=available_calendar_rooms,
     materials=materials,
     materials_json=materials_json,
@@ -682,6 +716,8 @@ def request_reservation():
     calendar_rooms=calendar_rooms,
     selected_calendar_building=selected_calendar_building,
     selected_calendar_room=selected_calendar_room,
+    selected_calendar_day=selected_calendar_day,
+    daily_schedule=daily_schedule,
     prev_week=prev_week,
     next_week=next_week,
     is_professor=is_professor,
@@ -693,6 +729,31 @@ def request_reservation():
 @reservations_bp.route("/admin", methods=["GET"])
 @min_role_required("ADMIN")
 def admin_queue():
+    week_start_s = (request.args.get("week_start") or "").strip()
+    calendar_room = (request.args.get("calendar_room") or "").strip()
+    calendar_building = (request.args.get("calendar_building") or "").strip().upper()
+
+    try:
+        base_date = parse_date(week_start_s) if week_start_s else datetime.today().date()
+    except ValueError:
+        base_date = datetime.today().date()
+
+    week_start = get_week_start(base_date)
+    week_days = build_week_days(week_start)
+    week_end = week_days[-1]
+    prev_week = week_start - timedelta(days=7)
+    next_week = week_start + timedelta(days=7)
+
+    calendar_buildings = sorted({room[:1] for room in ROOMS})
+    selected_calendar_building = calendar_building if calendar_building in calendar_buildings else ""
+    available_calendar_rooms = _rooms_by_building(selected_calendar_building)
+    selected_calendar_room = calendar_room if calendar_room in available_calendar_rooms else ""
+    week_schedule, calendar_rooms = build_week_schedule(
+        week_days=week_days,
+        selected_room=selected_calendar_room or None,
+        rooms_scope=available_calendar_rooms,
+    )
+
     pending = (
         Reservation.query
         .options(
@@ -706,6 +767,17 @@ def admin_queue():
     return render_template(
         "reservations/admin_queue.html",
         reservations=pending,
+        week_days=week_days,
+        week_start=week_start,
+        week_end=week_end,
+        prev_week=prev_week,
+        next_week=next_week,
+        week_schedule=week_schedule,
+        calendar_rooms=calendar_rooms,
+        calendar_buildings=calendar_buildings,
+        calendar_filter_rooms=available_calendar_rooms,
+        selected_calendar_building=selected_calendar_building,
+        selected_calendar_room=selected_calendar_room,
         active_page="reservations"
     )
 
