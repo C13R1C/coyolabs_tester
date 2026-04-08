@@ -377,13 +377,6 @@
               <span>Mi perfil</span>
             </a>
 
-            {% if current_user.is_authenticated and is_admin_role(current_user.role) %}
-            <a href="{{ url_for('admin_extra_requests.admin_extra_requests_inbox') }}" class="nav-subitem {% if active_page == 'extra_requests' %}active{% endif %}">
-              <i class="ph ph-inbox nav-subicon"></i>
-              <span>Solicitudes extra</span>
-            </a>
-            {% endif %}
-
             <form method="post" action="{{ url_for('auth.logout') }}" style="margin:0;">
               <button type="submit" class="btn btn-ghost sidebar-logout">
                 <i class="ph ph-sign-out"></i>
