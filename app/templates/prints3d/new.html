@@ -3,6 +3,37 @@
 {% block title %}Nueva solicitud 3D{% endblock %}
 
 {% block content %}
+<style>
+.print3d-file-box{
+  border:1px dashed rgba(0,0,0,.18);
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(255,255,255,.6);
+}
+
+.print3d-file-trigger{
+  width: 100%;
+  justify-content: center;
+}
+
+.print3d-file-summary{
+  margin-top: 10px;
+  font-size: .9rem;
+  color: var(--text-dim);
+}
+
+.print3d-file-list{
+  margin-top: 8px;
+  padding-left: 16px;
+  display:flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.print3d-file-list li{
+  line-height: 1.25;
+}
+</style>
 <header class="topbar">
   <div class="topbar-left">
     <p class="page-kicker">Impresiones 3D</p>
@@ -12,7 +43,7 @@
 </header>
 
 <section class="toolbar-card">
-  <form method="post" enctype="multipart/form-data" class="toolbar" style="grid-template-columns: 1fr;">
+  <form method="post" enctype="multipart/form-data" class="toolbar" style="grid-template-columns: 1fr;" id="print3dNewForm">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <div class="toolbar-group">
       <label for="title">Título de la solicitud</label>
@@ -29,8 +60,13 @@
 
     <div class="toolbar-group">
       <label for="model_file">Archivo 3D</label>
-      <input class="form-control" id="model_file" type="file" name="model_file" required accept=".stl,.obj,.3mf,.gcode">
-      <small style="display:block; margin-top:6px; color:var(--text-dim);">Formatos permitidos: STL, OBJ, 3MF, GCODE. Máximo 25 MB.</small>
+      <div class="print3d-file-box">
+        <input class="form-control" id="model_file" type="file" name="model_file" required accept=".stl,.obj,.3mf,.gcode" multiple style="display:none;">
+        <button type="button" class="btn btn-ghost print3d-file-trigger" id="print3dFileTrigger">Seleccionar archivos (.stl, .obj, etc.)</button>
+        <div class="print3d-file-summary" id="print3dFileSummary">Sin archivos seleccionados.</div>
+        <ul class="print3d-file-list" id="print3dFileList"></ul>
+      </div>
+      <small style="display:block; margin-top:6px; color:var(--text-dim);">Formatos permitidos: STL, OBJ, 3MF, GCODE. Máximo 25 MB por archivo. Máximo 15 archivos por solicitud.</small>
     </div>
 
     <div class="toolbar-actions">
@@ -39,4 +75,68 @@
     </div>
   </form>
 </section>
+<script>
+(function () {
+  const input = document.getElementById("model_file");
+  const trigger = document.getElementById("print3dFileTrigger");
+  const summary = document.getElementById("print3dFileSummary");
+  const list = document.getElementById("print3dFileList");
+  const form = document.getElementById("print3dNewForm");
+
+  if (!input || !trigger || !summary || !list || !form) return;
+
+  function showToast(message) {
+    const toast = document.createElement("div");
+    toast.textContent = message;
+    toast.style.position = "fixed";
+    toast.style.right = "16px";
+    toast.style.bottom = "16px";
+    toast.style.padding = "10px 14px";
+    toast.style.background = "#c85b5b";
+    toast.style.color = "#fff";
+    toast.style.borderRadius = "10px";
+    toast.style.zIndex = "9999";
+    toast.style.boxShadow = "0 10px 24px rgba(0,0,0,.2)";
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 1700);
+  }
+
+  function updateFilesUI() {
+    const files = Array.from(input.files || []);
+    if (!files.length) {
+      summary.textContent = "Sin archivos seleccionados.";
+      list.innerHTML = "";
+      return;
+    }
+
+    summary.textContent = `${files.length} archivo(s) seleccionado(s).`;
+    list.innerHTML = files.map((file) => `<li>${file.name}</li>`).join("");
+  }
+
+  trigger.addEventListener("click", () => input.click());
+  input.addEventListener("change", () => {
+    const files = Array.from(input.files || []);
+    if (files.length > 15) {
+      showToast("Máximo 15 archivos por solicitud");
+      input.value = "";
+      updateFilesUI();
+      return;
+    }
+    updateFilesUI();
+  });
+
+  form.addEventListener("submit", (event) => {
+    const files = Array.from(input.files || []);
+    if (files.length > 15) {
+      event.preventDefault();
+      showToast("Máximo 15 archivos por solicitud");
+      return;
+    }
+    if (!files.length) {
+      event.preventDefault();
+      showToast("Debes seleccionar al menos un archivo 3D.");
+    }
+  });
+})();
+</script>
 {% endblock %}
