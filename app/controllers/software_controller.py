@@ -14,9 +14,6 @@ software_bp = Blueprint("software", __name__, url_prefix="/software")
 @software_bp.route("/", methods=["GET"])
 @min_role_required("STUDENT")
 def software_home():
-    if is_admin_role(current_user.role):
-        return redirect(url_for("software.admin_new"))
-
     return redirect(url_for("software.list_software"))
 
 
@@ -91,10 +88,10 @@ def request_update(software_id: int):
 
     note = (request.form.get("update_note") or "").strip()
     s.update_requested = True
-    s.update_note = note or "Solicitud de actualización"
+    s.update_note = note or "Seguimiento técnico solicitado"
     db.session.commit()
 
-    flash("Solicitud registrada.", "success")
+    flash("Seguimiento técnico registrado.", "success")
     return redirect(url_for("software.list_software"))
 
 
@@ -109,5 +106,5 @@ def admin_clear_update(software_id: int):
     s.update_note = None
     db.session.commit()
 
-    flash("Solicitud marcada como resuelta.", "success")
+    flash("Seguimiento marcado como atendido.", "success")
     return redirect(url_for("software.list_software"))

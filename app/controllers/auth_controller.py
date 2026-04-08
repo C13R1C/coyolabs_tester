@@ -1,4 +1,3 @@
-import re
 from datetime import datetime, timedelta
 
 from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, session, url_for
@@ -15,11 +14,11 @@ from app.services.token_service import (
 )
 from app.utils.landing import resolve_landing_endpoint
 from app.utils.roles import ROLE_PENDING, ROLE_STUDENT, ROLE_TEACHER, infer_role_from_email, normalize_role
+from app.utils.validators import is_valid_utpn_email
 
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 EMAIL_CHANGE_LIMIT_PER_HOUR = 3
-INSTITUTIONAL_EMAIL_RE = re.compile(r"^(\d{8}|[a-z]+(?:\.[a-z]+)*)@utpn\.edu\.mx$")
 
 
 def _requires_profile_completion(role: str | None) -> bool:
@@ -147,6 +146,9 @@ def register():
         if password != confirm_password:
             return _bad_register_request("Las contraseñas no coinciden.")
 
+        if not is_valid_utpn_email(email):
+            return _bad_register_request("Solo se permiten correos institucionales (@utpn.edu.mx)")
+
         inferred_role = infer_role_from_email(email)
         if inferred_role is None:
             flash(
@@ -257,10 +259,8 @@ def change_email():
     new_email = (data.get("email") or "").strip().lower()
     if not new_email:
         return jsonify({"error": "El correo es obligatorio."}), 400
-    if not INSTITUTIONAL_EMAIL_RE.match(new_email):
-        return jsonify(
-            {"error": "Formato de correo no válido. Usa matrícula@utpn.edu.mx o nombre.apellido@utpn.edu.mx."}
-        ), 400
+    if not is_valid_utpn_email(new_email):
+        return jsonify({"error": "Solo se permiten correos institucionales (@utpn.edu.mx)"}), 400
 
     inferred_role = infer_role_from_email(new_email)
     if inferred_role is None:
