@@ -250,7 +250,7 @@
 }
 
 .res-dot-available { background: #5aa56f; }
-.res-dot-occupied { background: #d68c4b; }
+.res-dot-occupied { background: #cf4d4d; }
 .res-dot-pending { background: #d4a63d; }
 .res-dot-progress { background: #4c8fd9; }
 
@@ -291,8 +291,8 @@
 }
 
 .res-cell-shell.is-occupied {
-  border-color: rgba(214,140,75,.35);
-  background: rgba(214,140,75,.08);
+  border-color: rgba(207,77,77,.35);
+  background: rgba(207,77,77,.08);
 }
 
 .res-cell-shell.is-pending {
@@ -349,9 +349,9 @@
 }
 
 .res-chip-occupied {
-  color: #8b5a2e;
-  border-color: rgba(214,140,75,.4);
-  background: rgba(214,140,75,.15);
+  color: #8f2f2f;
+  border-color: rgba(207,77,77,.4);
+  background: rgba(207,77,77,.15);
 }
 
 .res-chip-pending {
@@ -395,8 +395,8 @@
 }
 
 .time-slot.occupied {
-  background: rgba(214, 140, 75, 0.18);
-  color: #8b5a2e;
+  background: rgba(207, 77, 77, 0.18);
+  color: #8f2f2f;
 }
 
 .time-slot.pending {
@@ -411,6 +411,43 @@
 
 .time-slot:hover {
   transform: scale(1.03);
+}
+
+.time-slot.has-tooltip {
+  position: relative;
+  cursor: help;
+}
+
+.time-slot.has-tooltip:hover,
+.time-slot.has-tooltip:focus {
+  transform: translateY(-1px) scale(1.03);
+  box-shadow: 0 8px 18px rgba(0,0,0,.18);
+}
+
+.time-slot.has-tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  min-width: 220px;
+  max-width: 280px;
+  background: rgba(18, 23, 34, .96);
+  color: #fff;
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: .74rem;
+  line-height: 1.35;
+  white-space: pre-line;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .16s ease;
+  z-index: 40;
+}
+
+.time-slot.has-tooltip:hover::after,
+.time-slot.has-tooltip:focus::after {
+  opacity: 1;
 }
 
 @media (max-width: 900px) {
@@ -616,13 +653,32 @@
       </p>
     </div>
 
+    <button type="button" id="toggleOccupancyBtn" class="btn btn-ghost" aria-expanded="true" aria-controls="occupancyBody">
+      Ocultar ocupación de salones
+    </button>
+  </div>
+
+  <div id="occupancyBody">
     <form method="get" class="reservation-calendar-filter" style="display:flex; gap:10px; align-items:end; flex-wrap:wrap;">
+      <div class="toolbar-group" style="min-width:180px; margin:0;">
+        <label>Filtrar por edificio</label>
+        <div class="select-wrap">
+          <select name="calendar_building">
+            <option value="">Todos</option>
+            {% for building in calendar_buildings %}
+            <option value="{{ building }}" {% if selected_calendar_building == building %}selected{% endif %}>Edificio {{ building }}</option>
+            {% endfor %}
+          </select>
+          <i class="ph ph-caret-down select-arrow"></i>
+        </div>
+      </div>
+
       <div class="toolbar-group" style="min-width:220px; margin:0;">
         <label>Filtrar por salón</label>
         <div class="select-wrap">
           <select name="calendar_room">
             <option value="">Todos</option>
-            {% for r in rooms %}
+            {% for r in calendar_filter_rooms %}
             <option value="{{ r }}" {% if selected_calendar_room == r %}selected{% endif %}>{{ r }}</option>
             {% endfor %}
           </select>
@@ -636,7 +692,7 @@
   </div>
 
   <div class="res-occupancy-controls">
-    <a class="btn btn-ghost" href="{{ url_for('reservations.request_reservation', week_start=prev_week.isoformat(), calendar_room=selected_calendar_room) }}">
+    <a class="btn btn-ghost" href="{{ url_for('reservations.request_reservation', week_start=prev_week.isoformat(), calendar_building=selected_calendar_building, calendar_room=selected_calendar_room) }}">
       ← Semana anterior
     </a>
 
@@ -647,7 +703,7 @@
       <span class="res-legend-item"><span class="res-legend-dot res-dot-progress"></span>En progreso</span>
     </div>
 
-    <a class="btn btn-ghost" href="{{ url_for('reservations.request_reservation', week_start=next_week.isoformat(), calendar_room=selected_calendar_room) }}">
+    <a class="btn btn-ghost" href="{{ url_for('reservations.request_reservation', week_start=next_week.isoformat(), calendar_building=selected_calendar_building, calendar_room=selected_calendar_room) }}">
       Semana siguiente →
     </a>
   </div>
@@ -692,17 +748,31 @@
 
             <div class="res-cell-shell is-{{ cell_state }}">
               {% for slot in cell_slots %}
-                {% set slot_info = namespace(texto='Sin reservación activa') %}
+                {% set slot_info = namespace(has_reservation=False, tooltip='') %}
                 {% for item in cell_items %}
                   {% set item_inicio = item.start_time.strftime('%H:%M') %}
                   {% set item_fin = item.end_time.strftime('%H:%M') %}
                   {% if item_inicio < slot.end and item_fin > slot.start %}
                     {% set persona = (item.user.full_name if item.user and item.user.full_name else (item.user.email if item.user else (item.teacher_name or 'Usuario institucional'))) %}
-                    {% set slot_info.texto = 'Reservado por: ' ~ persona %}
+                    {% set slot_info.has_reservation = True %}
+                    {% set slot_status = 'Ocupado' if slot.state == 'occupied' else ('Pendiente' if slot.state == 'pending' else 'En progreso') %}
+                    {% set tooltip_lines = ['Solicitante: ' ~ persona] %}
+                    {% if item.group_name %}
+                      {% set tooltip_lines = tooltip_lines + ['Grupo: ' ~ item.group_name] %}
+                    {% endif %}
+                    {% if item.subject %}
+                      {% set tooltip_lines = tooltip_lines + ['Materia: ' ~ item.subject] %}
+                    {% endif %}
+                    {% set tooltip_lines = tooltip_lines + ['Estado: ' ~ slot_status] %}
+                    {% set slot_info.tooltip = tooltip_lines | join('\n') %}
                   {% endif %}
                 {% endfor %}
-                <div class="time-slot {{ slot.state }}" title="{{ slot.start }} - {{ slot.end }} · {{ slot_info.texto }}" tabindex="0" aria-label="{{ slot.start }} a {{ slot.end }}. {{ slot_info.texto }}">
-                  <span class="time">{{ slot.start }} - {{ slot.end }}</span>
+                <div
+                  class="time-slot {{ slot.state }} {% if slot_info.has_reservation %}has-tooltip{% endif %}"
+                  {% if slot_info.has_reservation %}data-tooltip="{{ slot_info.tooltip }}"{% endif %}
+                  tabindex="0"
+                  aria-label="{% if slot_info.has_reservation %}{{ slot_info.tooltip }}{% else %}Disponible{% endif %}">
+                  <span class="time">{{ slot.start_label or slot.start }} - {{ slot.end_label or slot.end }}</span>
                 </div>
               {% endfor %}
             </div>
@@ -714,6 +784,7 @@
       </tbody>
     </table>
   </div>
+  </div>
 </section>
 
 <div id="toast" class="toast">Material agregado</div>
@@ -722,8 +793,19 @@
 document.addEventListener("DOMContentLoaded", () => {
   const occupancySection = document.getElementById("occupancySection");
   const reservationFormSection = document.getElementById("reservationFormSection");
+  const toggleBtn = document.getElementById("toggleOccupancyBtn");
+  const occupancyBody = document.getElementById("occupancyBody");
   if (occupancySection && reservationFormSection) {
     reservationFormSection.parentNode.insertBefore(occupancySection, reservationFormSection);
+  }
+
+  if (toggleBtn && occupancyBody) {
+    toggleBtn.addEventListener("click", () => {
+      const isHidden = occupancyBody.style.display === "none";
+      occupancyBody.style.display = isHidden ? "" : "none";
+      toggleBtn.textContent = isHidden ? "Ocultar ocupación de salones" : "Mostrar ocupación de salones";
+      toggleBtn.setAttribute("aria-expanded", isHidden ? "true" : "false");
+    });
   }
 });
 </script>

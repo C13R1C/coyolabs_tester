@@ -179,20 +179,29 @@ def build_week_days(week_start):
 
 
 
-TIME_SLOT_RANGES = [
-    ("08:00", "10:00"),
-    ("10:00", "12:00"),
-    ("12:00", "14:00"),
-    ("14:00", "16:00"),
-    ("16:00", "18:00"),
-]
+def _format_ampm(time_value) -> str:
+    return datetime.combine(datetime.today(), time_value).strftime("%I:%M%p").lstrip("0")
 
 
 def _build_time_slots() -> list[tuple[str, str, object, object]]:
     slots = []
-    for start_s, end_s in TIME_SLOT_RANGES:
+    for hour in range(8, 21):
+        start_s = f"{hour:02d}:00"
+        end_s = f"{hour + 1:02d}:00"
         slots.append((start_s, end_s, parse_time(start_s), parse_time(end_s)))
     return slots
+
+
+def _room_building(room: str | None) -> str:
+    value = (room or "").strip().upper()
+    return value[:1] if value else ""
+
+
+def _rooms_by_building(building: str | None) -> list[str]:
+    normalized = (building or "").strip().upper()
+    if not normalized:
+        return list(ROOMS)
+    return [room for room in ROOMS if _room_building(room) == normalized]
 
 def apply_stock_delta(material: Material, old_delivered: int, old_returned: int, new_delivered: int, new_returned: int):
     old_outstanding = old_delivered - old_returned
@@ -207,7 +216,7 @@ def apply_stock_delta(material: Material, old_delivered: int, old_returned: int,
 
     material.pieces_qty = new_available
 
-def build_week_schedule(week_days, selected_room=None):
+def build_week_schedule(week_days, selected_room=None, rooms_scope: list[str] | None = None):
     week_start = week_days[0]
     week_end = week_days[-1]
 
@@ -218,11 +227,14 @@ def build_week_schedule(week_days, selected_room=None):
         .filter(Reservation.date <= week_end)
     )
 
+    scoped_rooms = list(rooms_scope or ROOMS)
     if selected_room:
         q = q.filter(Reservation.room == selected_room)
         room_list = [selected_room]
     else:
-        room_list = list(ROOMS)
+        room_list = scoped_rooms
+        if room_list:
+            q = q.filter(Reservation.room.in_(room_list))
 
     reservations = q.order_by(
         Reservation.room.asc(),
@@ -275,6 +287,8 @@ def build_week_schedule(week_days, selected_room=None):
                 slot_rows.append({
                     "start": start_label,
                     "end": end_label,
+                    "start_label": _format_ampm(slot_start),
+                    "end_label": _format_ampm(slot_end),
                     "state": state,
                 })
 
@@ -432,6 +446,7 @@ def request_reservation():
 
     week_start_s = (request.args.get("week_start") or "").strip()
     calendar_room = (request.args.get("calendar_room") or "").strip()
+    calendar_building = (request.args.get("calendar_building") or "").strip().upper()
 
     try:
         base_date = parse_date(week_start_s) if week_start_s else datetime.today().date()
@@ -442,10 +457,14 @@ def request_reservation():
     week_days = build_week_days(week_start)
     week_end = week_days[-1]
 
-    selected_calendar_room = calendar_room if calendar_room in ROOMS else ""
+    calendar_buildings = sorted({room[:1] for room in ROOMS})
+    selected_calendar_building = calendar_building if calendar_building in calendar_buildings else ""
+    available_calendar_rooms = _rooms_by_building(selected_calendar_building)
+    selected_calendar_room = calendar_room if calendar_room in available_calendar_rooms else ""
     week_schedule, calendar_rooms = build_week_schedule(
         week_days=week_days,
-        selected_room=selected_calendar_room or None
+        selected_room=selected_calendar_room or None,
+        rooms_scope=available_calendar_rooms,
     )
 
     prev_week = week_start - timedelta(days=7)
@@ -652,6 +671,8 @@ def request_reservation():
     return render_template(
         "reservations/request.html",
     rooms=ROOMS,
+    calendar_buildings=calendar_buildings,
+    calendar_filter_rooms=available_calendar_rooms,
     materials=materials,
     materials_json=materials_json,
     week_days=week_days,
@@ -659,6 +680,7 @@ def request_reservation():
     week_end=week_end,
     week_schedule=week_schedule,
     calendar_rooms=calendar_rooms,
+    selected_calendar_building=selected_calendar_building,
     selected_calendar_room=selected_calendar_room,
     prev_week=prev_week,
     next_week=next_week,
