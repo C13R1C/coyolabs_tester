@@ -4,7 +4,7 @@
 {% block content %}
 <style>
 .reservation-admin-action-form {
-  display: flex;
+  display: grid;
   gap: 8px;
 }
 
@@ -20,6 +20,7 @@
 .reservation-admin-action-form .btn {
   min-height: 54px;
   border-radius: 16px;
+  width: 100%;
 }
 
 .res-legend{display:flex;gap:8px;flex-wrap:wrap}
@@ -44,6 +45,90 @@
 </header>
 
 {% set nombres_dia = {0:'Lunes',1:'Martes',2:'Miércoles',3:'Jueves',4:'Viernes',5:'Sábado',6:'Domingo'} %}
+<div id="reservations-admin-queue-container">
+  <section class="toolbar-card">
+    <div class="toolbar-actions">
+      <a class="btn btn-ghost" href="{{ url_for('reservations.admin_approved') }}">
+        Ver reservas en curso
+      </a>
+    </div>
+  </section>
+
+  {% if reservations|length == 0 %}
+    <section class="empty-state">
+      <i class="ph ph-calendar-check empty-icon"></i>
+      <h3>Sin pendientes</h3>
+      <p>No hay reservas pendientes.</p>
+    </section>
+  {% else %}
+    <section class="table-card">
+      <div class="table-wrap">
+        <table class="inventory-table" style="min-width: 1450px;">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Usuario</th>
+              <th>Salón/Lab</th>
+              <th>Fecha</th>
+              <th>Inicio</th>
+              <th>Fin</th>
+              <th>Materia</th>
+              <th>Grupo</th>
+              <th>Solicitante</th>
+              <th>Motivo</th>
+              <th>Materiales solicitados</th>
+              <th class="th-actions">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in reservations %}
+            <tr>
+              <td>{{ r.id }}</td>
+              <td>{{ r.user.email }}</td>
+              <td>{{ r.room }}</td>
+              <td>{{ r.date }}</td>
+              <td>{{ r.start_time }}</td>
+              <td>{{ r.end_time }}</td>
+              <td>{{ r.subject }}</td>
+              <td>{{ r.group_name }}</td>
+              <td>{{ (r.user.full_name or '')|trim or r.user.email }}</td>
+              <td>{{ r.purpose or '-' }}</td>
+
+              <td>
+                {% if r.items %}
+                  <ul style="padding-left:16px; margin:0;">
+                    {% for item in r.items %}
+                      <li>
+                        {{ item.material.name if item.material else ('ID ' ~ item.material_id) }}
+                        ({{ item.quantity_requested }})
+                      </li>
+                    {% endfor %}
+                  </ul>
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+
+              <td>
+                <form method="post" action="{{ url_for('reservations.admin_approve', res_id=r.id) }}" class="reservation-admin-action-form">
+                  <input type="text" name="admin_note" placeholder="Nota administrativa (opcional)" class="form-control">
+                  <button type="submit" class="btn btn-gold">Aprobar</button>
+                </form>
+
+                <form method="post" action="{{ url_for('reservations.admin_reject', res_id=r.id) }}" class="reservation-admin-action-form">
+                  <textarea name="admin_note" rows="3" placeholder="Escribe el motivo o comentario..." class="form-control"></textarea>
+                  <button type="submit" class="btn btn-ghost">Rechazar</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  {% endif %}
+</div>
+
 <section class="table-card">
   <p class="page-kicker">Operación semanal</p>
   <h2 style="margin:0;">Ocupación semanal de salones</h2>
@@ -158,88 +243,4 @@
     </table>
   </div>
 </section>
-
-<section class="toolbar-card">
-  <div class="toolbar-actions">
-    <a class="btn btn-ghost" href="{{ url_for('reservations.admin_approved') }}">
-      Ver reservas en curso
-    </a>
-  </div>
-</section>
-
-<div id="reservations-admin-queue-container">
-  {% if reservations|length == 0 %}
-    <section class="empty-state">
-      <i class="ph ph-calendar-check empty-icon"></i>
-      <h3>Sin pendientes</h3>
-      <p>No hay reservas pendientes.</p>
-    </section>
-  {% else %}
-  <section class="table-card">
-    <div class="table-wrap">
-      <table class="inventory-table" style="min-width: 1450px;">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Usuario</th>
-            <th>Salón/Lab</th>
-            <th>Fecha</th>
-            <th>Inicio</th>
-            <th>Fin</th>
-            <th>Materia</th>
-            <th>Grupo</th>
-            <th>Solicitante</th>
-            <th>Motivo</th>
-            <th>Materiales solicitados</th>
-            <th class="th-actions">Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for r in reservations %}
-          <tr>
-            <td>{{ r.id }}</td>
-            <td>{{ r.user.email }}</td>
-            <td>{{ r.room }}</td>
-            <td>{{ r.date }}</td>
-            <td>{{ r.start_time }}</td>
-            <td>{{ r.end_time }}</td>
-            <td>{{ r.subject }}</td>
-            <td>{{ r.group_name }}</td>
-            <td>{{ (r.user.full_name or '')|trim or r.user.email }}</td>
-            <td>{{ r.purpose or '-' }}</td>
-
-            <td>
-              {% if r.items %}
-                <ul style="padding-left:16px; margin:0;">
-                  {% for item in r.items %}
-                    <li>
-                      {{ item.material.name if item.material else ('ID ' ~ item.material_id) }}
-                      ({{ item.quantity_requested }})
-                    </li>
-                  {% endfor %}
-                </ul>
-              {% else %}
-                -
-              {% endif %}
-            </td>
-
-            <td>
-              <form method="post" action="{{ url_for('reservations.admin_approve', res_id=r.id) }}" class="reservation-admin-action-form">
-                <input type="text" name="admin_note" placeholder="Nota administrativa (opcional)" class="form-control">
-                <button type="submit" class="btn btn-gold">Aprobar</button>
-              </form>
-
-              <form method="post" action="{{ url_for('reservations.admin_reject', res_id=r.id) }}" class="reservation-admin-action-form">
-                <textarea name="admin_note" rows="3" placeholder="Escribe el motivo o comentario..." class="form-control"></textarea>
-                <button type="submit" class="btn btn-ghost">Rechazar</button>
-              </form>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </section>
-  {% endif %}
-</div>
 {% endblock %}
