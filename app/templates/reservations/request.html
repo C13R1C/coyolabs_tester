@@ -676,9 +676,11 @@
           {% if day.weekday() != 6 %}
           <td class="res-cell">
             {% set cell = week_schedule[room][day] %}
+            {% set cell_slots = cell.get('slots', []) if cell is mapping else [] %}
+            {% set cell_items = cell.get('items', []) if cell is mapping else [] %}
             {% set cell_state = 'available' %}
-            {% if cell.slots %}
-              {% set slot_states = cell.slots | map(attribute='state') | list %}
+            {% if cell_slots %}
+              {% set slot_states = cell_slots | map(attribute='state') | list %}
               {% if 'pending' in slot_states %}
                 {% set cell_state = 'pending' %}
               {% elif 'in_progress' in slot_states %}
@@ -689,9 +691,9 @@
             {% endif %}
 
             <div class="res-cell-shell is-{{ cell_state }}">
-              {% for slot in cell.slots %}
+              {% for slot in cell_slots %}
                 {% set slot_info = namespace(texto='Sin reservación activa') %}
-                {% for item in cell.items %}
+                {% for item in cell_items %}
                   {% set item_inicio = item.start_time.strftime('%H:%M') %}
                   {% set item_fin = item.end_time.strftime('%H:%M') %}
                   {% if item_inicio < slot.end and item_fin > slot.start %}
