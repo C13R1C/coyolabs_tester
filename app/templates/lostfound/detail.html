@@ -10,10 +10,6 @@
   display: block;
 }
 
-.lostfound-evidence-link{
-  word-break: break-all;
-}
-
 @media (max-width: 768px){
   .lostfound-detail-back .btn{
     width: 100%;
@@ -54,24 +50,20 @@
         <tr><td><strong>Título</strong></td><td>{{ item.title }}</td></tr>
         <tr><td><strong>Estado</strong></td><td>{{ item.status|status_label }}</td></tr>
         <tr><td><strong>Descripción</strong></td><td>{{ item.description or '-' }}</td></tr>
-      <tr>
-  <td><strong>Evidencia</strong></td>
-  <td>
-    {% if item.evidence_ref and ('lostfound/' in item.evidence_ref or 'lostfound\\' in item.evidence_ref) %}
-      <img
-        class="lostfound-evidence-img"
-        src="{{ url_for('upload_file', filename=item.evidence_ref|replace('uploads\\\\', '')|replace('uploads/', '')|replace('\\', '/')) }}"
-        alt="Evidencia del objeto {{ item.title }}"
-      >
-    {% elif item.evidence_ref and (item.evidence_ref.startswith('http://') or item.evidence_ref.startswith('https://')) %}
-      <a class="item-link lostfound-evidence-link" href="{{ item.evidence_ref }}" target="_blank" rel="noopener noreferrer">
-        {{ item.evidence_ref }}
-      </a>
-    {% else %}
-      {{ item.evidence_ref or '-' }}
-    {% endif %}
-  </td>
-</tr>
+        <tr>
+          <td><strong>Foto de evidencia</strong></td>
+          <td>
+            {% if item.evidence_ref and ('lostfound/' in item.evidence_ref or 'lostfound\\' in item.evidence_ref) %}
+              <img
+                class="lostfound-evidence-img"
+                src="{{ url_for('upload_file', filename=item.evidence_ref|replace('uploads\\\\', '')|replace('uploads/', '')|replace('\\', '/')) }}"
+                alt="Evidencia del objeto {{ item.title }}"
+              >
+            {% else %}
+              -
+            {% endif %}
+          </td>
+        </tr>
         <tr><td><strong>Nota admin</strong></td><td>{{ item.admin_note or '-' }}</td></tr>
         <tr><td><strong>Creado</strong></td><td>{{ item.created_at }}</td></tr>
       </tbody>

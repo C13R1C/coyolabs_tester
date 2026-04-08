@@ -18,7 +18,7 @@ class LostFound(db.Model):
     description = db.Column(db.Text, nullable=True)        # detalles
     location = db.Column(db.String(160), nullable=True)    # dónde se encontró o perdió
 
-    # Evidencia simple por ahora (sin uploads): URL o texto
+    # Ruta de foto de evidencia (uploads/lostfound/*)
     evidence_ref = db.Column(db.String(255), nullable=True)
 
     # Workflow

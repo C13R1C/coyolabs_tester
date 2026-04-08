@@ -96,7 +96,6 @@ def admin_new():
         title = (request.form.get("title") or "").strip()
         description = (request.form.get("description") or "").strip()
         location = (request.form.get("location") or "").strip()
-        evidence_ref = (request.form.get("evidence_ref") or "").strip()
         evidence_file = request.files.get("evidence_file")
         material_id = request.form.get("material_id")
 
@@ -121,15 +120,13 @@ def admin_new():
             flash(image_error, "error")
             return redirect(url_for("lostfound.admin_new"))
 
-        final_evidence_ref = saved_image_ref or (evidence_ref or None)
-
         item = LostFound(
             reported_by_user_id=getattr(current_user, "id", None),
             material_id=mat.id if mat else None,
             title=title,
             description=description or None,
             location=location or None,
-            evidence_ref=final_evidence_ref,
+            evidence_ref=saved_image_ref,
             status="REPORTED",
         )
 
