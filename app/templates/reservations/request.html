@@ -823,9 +823,11 @@
           <td class="res-room-label">{{ row.room }}</td>
           <td class="res-cell">
             <div class="res-cell-shell is-{{ row.state }}">
-              {% for slot in row.slots %}
+              {% set row_slots = row.get('slots', []) if row is mapping else [] %}
+              {% set row_items = row.get('items', []) if row is mapping else [] %}
+              {% for slot in row_slots %}
                 {% set slot_info = namespace(has_reservation=False, tooltip='') %}
-                {% for item in row.items %}
+                {% for item in row_items %}
                   {% set item_inicio = item.start_time.strftime('%H:%M') %}
                   {% set item_fin = item.end_time.strftime('%H:%M') %}
                   {% if item_inicio < slot.end and item_fin > slot.start %}
