@@ -14,10 +14,11 @@ from app.models.lab_ticket import LabTicket
 from app.models.ticket_item import TicketItem
 from app.models.debt import Debt
 from app.models.notification import Notification
+from app.models.print3d_job import Print3DJob
 from app.models.user import User
 from app.utils.authz import min_role_required
 from app.constants import ROLE_PENDING
-from app.utils.statuses import DebtStatus, LabTicketStatus, ReservationStatus, TicketItemStatus
+from app.utils.statuses import DebtStatus, LabTicketStatus, Print3DJobStatus, ReservationStatus, TicketItemStatus
 
 dashboard_bp = Blueprint("dashboard", __name__, url_prefix="/dashboard")
 
@@ -48,6 +49,10 @@ def _build_operational_snapshot(activity_limit: int = 8) -> dict:
         .where(Debt.status == DebtStatus.PENDING)
         .scalar_subquery()
         .label("open_debts"),
+        db.select(func.count(Print3DJob.id))
+        .where(Print3DJob.status == Print3DJobStatus.REQUESTED)
+        .scalar_subquery()
+        .label("pending_print3d_jobs"),
     ).first()
 
     reservation_counts = db.session.query(
@@ -130,6 +135,14 @@ def _build_operational_snapshot(activity_limit: int = 8) -> dict:
         .all()
     )
 
+    pending_print3d_recent = (
+        Print3DJob.query
+        .filter(Print3DJob.status == Print3DJobStatus.REQUESTED)
+        .order_by(Print3DJob.created_at.desc())
+        .limit(activity_limit)
+        .all()
+    )
+
     recent_activity = (
         Notification.query
         .filter(Notification.user_id == current_user.id)
@@ -145,6 +158,7 @@ def _build_operational_snapshot(activity_limit: int = 8) -> dict:
             "ready_items": int(counts_row.ready_items or 0),
             "closure_requested_tickets": int(counts_row.closure_requested_tickets or 0),
             "open_debts": int(counts_row.open_debts or 0),
+            "pending_print3d_jobs": int(counts_row.pending_print3d_jobs or 0),
         },
         "pending_reservations": [
             {
@@ -199,6 +213,16 @@ def _build_operational_snapshot(activity_limit: int = 8) -> dict:
             }
             for d in open_debts_recent
         ],
+        "pending_print3d_recent": [
+            {
+                "id": job.id,
+                "title": job.title,
+                "status": job.status,
+                "created_at": str(job.created_at),
+                "link": "/prints3d/admin",
+            }
+            for job in pending_print3d_recent
+        ],
         "recent_activity": [
             {
                 "title": n.title,
@@ -219,6 +243,7 @@ def _build_operational_snapshot(activity_limit: int = 8) -> dict:
             "low_stock_count": int(low_stock_count or 0),
             "pending_users_count": int(pending_users_count or 0),
             "weekly_reservations": int(weekly_reservations or 0),
+            "pending_print3d_jobs": int(counts_row.pending_print3d_jobs or 0),
         },
     }
 

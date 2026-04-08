@@ -322,6 +322,14 @@
 
     <article class="ops-card">
       <div class="ops-head">
+        <strong>Impresiones 3D pendientes</strong>
+        <span class="ops-count" id="opsPrint3DCount">{{ ops_snapshot.counts.pending_print3d_jobs }}</span>
+      </div>
+      <div class="ops-list" id="opsPrint3DList"></div>
+    </article>
+
+    <article class="ops-card">
+      <div class="ops-head">
         <strong>Actividad reciente</strong>
         <span class="status-badge status-warn">LIVE</span>
       </div>
@@ -331,6 +339,21 @@
 </section>
 
 <section class="dashboard-notice-grid">
+  <a
+    id="noticePendingPrint3D"
+    href="{{ url_for('print3d.admin_list') }}"
+    class="dashboard-notice notice-warn"
+    style="{% if not (is_admin_role(current_user.role) and ops_snapshot.summary.pending_print3d_jobs > 0) %}display:none;{% endif %}"
+  >
+    <div class="notice-icon">
+      <i class="ph ph-cube"></i>
+    </div>
+    <div>
+      <strong id="noticePendingPrint3DText">{{ ops_snapshot.summary.pending_print3d_jobs }} impresiones 3D pendientes</strong>
+      <span>Solicitudes nuevas por revisar</span>
+    </div>
+  </a>
+
   <a
     id="noticePendingUsers"
     href="{{ url_for('users.pending_users') }}"
@@ -732,6 +755,8 @@ function renderOpsSnapshot(snapshot) {
   const kpiTicketsSub = document.getElementById("kpiTicketsSub");
   const kpiOpenDebts = document.getElementById("kpiOpenDebts");
   const kpiDebtsSub = document.getElementById("kpiDebtsSub");
+  const noticePendingPrint3D = document.getElementById("noticePendingPrint3D");
+  const noticePendingPrint3DText = document.getElementById("noticePendingPrint3DText");
   const noticePendingUsers = document.getElementById("noticePendingUsers");
   const noticePendingUsersText = document.getElementById("noticePendingUsersText");
   const noticePendingToday = document.getElementById("noticePendingToday");
@@ -751,6 +776,11 @@ function renderOpsSnapshot(snapshot) {
   if (kpiOpenDebts) kpiOpenDebts.textContent = summary.open_debts ?? 0;
   if (kpiDebtsSub) kpiDebtsSub.textContent = `${summary.low_stock_count ?? 0} materiales con stock bajo`;
 
+  if (noticePendingPrint3D && noticePendingPrint3DText) {
+    const count = summary.pending_print3d_jobs ?? 0;
+    noticePendingPrint3D.style.display = count > 0 ? "" : "none";
+    noticePendingPrint3DText.textContent = `${count} impresiones 3D pendientes`;
+  }
   if (noticePendingUsers && noticePendingUsersText) {
     const count = summary.pending_users_count ?? 0;
     noticePendingUsers.style.display = count > 0 ? "" : "none";
@@ -777,6 +807,7 @@ function renderOpsSnapshot(snapshot) {
   document.getElementById("opsReadyItemsCount").textContent = snapshot.counts.ready_items;
   document.getElementById("opsClosureCount").textContent = snapshot.counts.closure_requested_tickets;
   document.getElementById("opsDebtsCount").textContent = snapshot.counts.open_debts;
+  document.getElementById("opsPrint3DCount").textContent = snapshot.counts.pending_print3d_jobs;
 
   renderOpsList("opsPendingList", snapshot.pending_reservations, (item) => `
     <div class="ops-item"><a href="${item.link}"><strong>#${item.id}</strong> · ${item.user}<br><span>${item.room} · ${item.date} ${item.time}</span></a></div>
@@ -792,6 +823,9 @@ function renderOpsSnapshot(snapshot) {
   `);
   renderOpsList("opsDebtsList", snapshot.open_debts_recent, (item) => `
     <div class="ops-item"><a href="${item.link}"><strong>Adeudo #${item.id}</strong> · ${item.user}<br><span>${item.material}</span></a></div>
+  `);
+  renderOpsList("opsPrint3DList", snapshot.pending_print3d_recent, (item) => `
+    <div class="ops-item"><a href="${item.link}"><strong>3D #${item.id}</strong> · ${item.title}<br><span>${item.status}</span></a></div>
   `);
   renderOpsList("opsActivityList", snapshot.recent_activity, (item) => `
     <div class="ops-item"><a href="${item.link}"><strong>${item.title}</strong><br><span>${item.message}</span></a></div>

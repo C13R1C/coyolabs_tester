@@ -11,6 +11,7 @@ from werkzeug.utils import secure_filename
 from app.extensions import db
 from app.models.notification import Notification
 from app.models.print3d_job import Print3DJob
+from app.models.user import User
 from app.services.audit_service import log_event
 from app.services.email_service import send_print3d_ready_email
 from app.services.notification_realtime_service import publish_notification_created
@@ -26,7 +27,7 @@ ALLOWED_PRINT3D_EXTENSIONS = {"stl", "obj", "3mf", "gcode"}
 MAX_PRINT3D_FILE_SIZE_BYTES = 25 * 1024 * 1024
 STATUS_REQUESTED = Print3DJobStatus.REQUESTED
 MAX_PRINT3D_FILES_PER_SUBMISSION = 15
-MAX_ACTIVE_PRINT3D_JOBS_PER_USER = 5
+MAX_ACTIVE_PRINT3D_JOBS_PER_USER = 2
 ACTIVE_PRINT3D_STATUSES = {
     Print3DJobStatus.REQUESTED,
     Print3DJobStatus.QUOTED,
@@ -158,6 +159,22 @@ def _notify_ready_once(job: Print3DJob) -> bool:
     return True
 
 
+def _notify_admins_for_new_job(job: Print3DJob) -> list[Notification]:
+    admins = User.query.filter(User.role.in_(["ADMIN", "SUPERADMIN"])).all()
+    notifications_created: list[Notification] = []
+    requester_email = getattr(current_user, "email", "Usuario")
+    for admin in admins:
+        notif = Notification(
+            user_id=admin.id,
+            title="Nueva solicitud de impresión 3D",
+            message=f"{requester_email} creó la solicitud 3D #{job.id} ({job.original_filename or job.title}).",
+            link=url_for("print3d.admin_list"),
+        )
+        db.session.add(notif)
+        notifications_created.append(notif)
+    return notifications_created
+
+
 @print3d_bp.route("/my", methods=["GET"])
 @min_role_required("STUDENT")
 def my_jobs():
@@ -213,6 +230,7 @@ def new_job():
 
         created_job_ids: list[int] = []
         saved_paths: list[str] = []
+        admin_notifications: list[Notification] = []
         try:
             for file_storage in files:
                 file_ref, original_filename, abs_path, file_error = _save_print3d_file(file_storage)
@@ -240,6 +258,7 @@ def new_job():
                 db.session.flush()
                 created_job_ids.append(job.id)
                 saved_paths.append(abs_path)
+                admin_notifications.extend(_notify_admins_for_new_job(job))
 
                 log_event(
                     module="PRINT3D",
@@ -265,6 +284,9 @@ def new_job():
             if not had_validation_flash:
                 flash("No se pudo crear la solicitud de impresión 3D. Intenta nuevamente.", "error")
             return redirect(url_for("print3d.new_job"))
+
+        for notif in admin_notifications:
+            publish_notification_created(notif)
 
         flash(f"Solicitud enviada correctamente. Archivos registrados: {len(created_job_ids)}.", "success")
         return redirect(url_for("print3d.my_jobs"))
