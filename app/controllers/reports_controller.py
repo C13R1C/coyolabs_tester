@@ -20,7 +20,7 @@ from app.models.software import Software
 from app.utils.authz import min_role_required
 from app.extensions import db
 
-from reportlab.lib.pagesizes import letter
+from reportlab.lib.pagesizes import letter, landscape
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch
@@ -36,6 +36,74 @@ DEFAULT_DEMO_HIDDEN_COLUMNS = {
     "metadata_json",
     "image_ref",
     "signature_ref",
+    "evidence_ref",
+    "update_note",
+    "tutorial_url",
+}
+
+PDF_TECHNICAL_EXCLUDED_COLUMNS = {
+    "image_ref",
+    "tutorial_url",
+    "source_file",
+    "source_sheet",
+    "source_row",
+    "metadata_json",
+    "serial",
+    "updated_at",
+    "signature_ref",
+    "evidence_ref",
+}
+
+DEFAULT_PDF_CURATED_COLUMNS = [
+    "id",
+    "name",
+    "location",
+    "status",
+    "pieces_qty",
+    "brand",
+    "model",
+    "code",
+    "notes",
+    "created_at",
+]
+
+REPORT_COLUMN_LABELS = {
+    "id": "ID",
+    "lab_id": "Laboratorio",
+    "user_id": "Usuario",
+    "material_id": "Material",
+    "name": "Nombre",
+    "pieces_qty": "Cantidad",
+    "brand": "Marca",
+    "model": "Modelo",
+    "code": "Código",
+    "location": "Ubicación",
+    "status": "Estado",
+    "created_at": "Creado",
+    "updated_at": "Actualizado",
+    "closed_at": "Cerrado",
+    "amount": "Monto",
+    "reason": "Motivo",
+    "description": "Descripción",
+    "module": "Módulo",
+    "entity_label": "Entidad",
+    "action": "Acción",
+    "date": "Fecha",
+    "room": "Salón/Lab",
+    "start_time": "Inicio",
+    "end_time": "Fin",
+    "group_name": "Grupo",
+    "teacher_name": "Docente",
+    "subject": "Materia",
+    "notes": "Notas",
+    "version": "Versión",
+    "license_type": "Licencia",
+    "update_requested": "Actualización solicitada",
+    "update_note": "Nota de actualización",
+    "title": "Título",
+    "admin_note": "Nota administrativa",
+    "reported_by_user_id": "Reportado por",
+    "request_date": "Fecha de solicitud",
 }
 
 
@@ -50,7 +118,11 @@ def csv_response(filename: str, headers: list[str], rows: list[list]):
     return Response(
         data,
         mimetype="text/csv",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "X-Content-Type-Options": "nosniff",
+            "Cache-Control": "no-store",
+        },
     )
 
 
@@ -92,7 +164,11 @@ def excel_response(filename: str, headers: list[str], rows: list[list]):
     return Response(
         bio.getvalue(),
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "X-Content-Type-Options": "nosniff",
+            "Cache-Control": "no-store",
+        },
     )
 
 
@@ -108,6 +184,27 @@ def parse_selected_columns(headers: list[str]) -> list[str]:
     allowed = set(headers)
     normalized = [col for col in selected if col in allowed]
     return normalized or headers
+
+
+def parse_pdf_selected_columns(headers: list[str]) -> list[str]:
+    selected = request.args.getlist("cols")
+    if not selected:
+        raw = (request.args.get("cols") or "").strip()
+        if raw:
+            selected = [part.strip() for part in raw.split(",") if part.strip()]
+
+    allowed = set(headers)
+    if selected:
+        normalized = [col for col in selected if col in allowed and col not in PDF_TECHNICAL_EXCLUDED_COLUMNS]
+        if normalized:
+            return normalized[:10]
+
+    curated = [col for col in DEFAULT_PDF_CURATED_COLUMNS if col in allowed]
+    if curated:
+        return curated
+
+    fallback = [col for col in headers if col not in PDF_TECHNICAL_EXCLUDED_COLUMNS]
+    return (fallback or headers)[:10]
 
 
 def project_rows(headers: list[str], rows: list[list], selected_columns: list[str]) -> tuple[list[str], list[list]]:
@@ -310,6 +407,22 @@ def _sanitize_pdf_cell(value) -> str:
     return text or "-"
 
 
+def _pdf_col_weight(header: str) -> float:
+    weights = {
+        "id": 0.7,
+        "name": 1.5,
+        "location": 1.1,
+        "status": 1.0,
+        "pieces_qty": 0.8,
+        "brand": 1.0,
+        "model": 1.0,
+        "code": 0.9,
+        "notes": 1.6,
+        "created_at": 1.1,
+    }
+    return weights.get(header, 1.0)
+
+
 def pdf_response(
     *,
     filename: str,
@@ -322,9 +435,9 @@ def pdf_response(
     buffer = BytesIO()
     doc = SimpleDocTemplate(
         buffer,
-        pagesize=letter,
-        leftMargin=36,
-        rightMargin=36,
+        pagesize=landscape(letter),
+        leftMargin=24,
+        rightMargin=24,
         topMargin=36,
         bottomMargin=36,
     )
@@ -343,11 +456,14 @@ def pdf_response(
     story.append(Paragraph(f"Generado: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", styles["Normal"]))
     story.append(Spacer(1, 8))
 
-    table_data = [headers] + [[_sanitize_pdf_cell(v) for v in row] for row in rows]
+    translated_headers = [REPORT_COLUMN_LABELS.get(h, h.replace("_", " ").title()) for h in headers]
+    table_data = [translated_headers] + [[_sanitize_pdf_cell(v) for v in row] for row in rows]
     available_width = doc.width
     col_count = max(1, len(headers))
-    col_width = available_width / col_count
-    table = Table(table_data, repeatRows=1, colWidths=[col_width] * col_count)
+    weights = [_pdf_col_weight(header) for header in headers]
+    total_weight = sum(weights) if weights else float(col_count)
+    col_widths = [available_width * (weight / total_weight) for weight in weights] if weights else [available_width / col_count] * col_count
+    table = Table(table_data, repeatRows=1, colWidths=col_widths)
     table.setStyle(
         TableStyle(
             [
@@ -355,7 +471,7 @@ def pdf_response(
                 ("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor("#5B4410")),
                 ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
                 ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
-                ("FONTSIZE", (0, 0), (-1, -1), 8),
+                ("FONTSIZE", (0, 0), (-1, -1), 7),
                 ("GRID", (0, 0), (-1, -1), 0.25, colors.HexColor("#D3C5A6")),
                 ("VALIGN", (0, 0), (-1, -1), "TOP"),
                 ("LEFTPADDING", (0, 0), (-1, -1), 4),
@@ -371,7 +487,11 @@ def pdf_response(
     return Response(
         buffer.getvalue(),
         mimetype="application/pdf",
-        headers={"Content-Disposition": f'{disposition}; filename="{filename}"'},
+        headers={
+            "Content-Disposition": f'{disposition}; filename="{filename}"',
+            "X-Content-Type-Options": "nosniff",
+            "Cache-Control": "no-store",
+        },
     )
 
 
@@ -494,7 +614,7 @@ def report_inventory_view():
     if lab_id:
         lab = Lab.query.get(lab_id)
         report_title = f"Inventario - {lab.name if lab else f'Lab {lab_id}'}"
-        extra_meta = f"Lab ID: {lab_id}"
+        extra_meta = f"ID de laboratorio: {lab_id}"
 
     return render_report_view(
         report_title=report_title,
@@ -504,7 +624,7 @@ def report_inventory_view():
         report_description="Vista completa del inventario.",
         extra_meta=extra_meta,
         filter_fields=[
-            {"name": "lab_id", "label": "Lab ID", "type": "number", "value": lab_id or "", "placeholder": "Ejemplo: 1"},
+            {"name": "lab_id", "label": "ID de laboratorio", "type": "number", "value": lab_id or "", "placeholder": "Ejemplo: 1"},
             {"name": "status", "label": "Estado", "type": "text", "value": status, "placeholder": "Ejemplo: DISPONIBLE"},
             {"name": "search", "label": "Buscar", "type": "text", "value": search, "placeholder": "Nombre, código o ubicación"},
         ],
@@ -554,7 +674,7 @@ def report_debts_view():
         report_description="Vista completa de los adeudos registrados.",
         filter_fields=[
             {"name": "status", "label": "Estado", "type": "text", "value": status, "placeholder": "Ejemplo: OPEN"},
-            {"name": "user_id", "label": "User ID", "type": "number", "value": user_id or "", "placeholder": "Ejemplo: 42"},
+            {"name": "user_id", "label": "ID de usuario", "type": "number", "value": user_id or "", "placeholder": "Ejemplo: 42"},
         ],
         selected_columns=selected_columns,
         all_columns=all_headers,
@@ -645,7 +765,7 @@ def report_logbook_view():
         filter_fields=[
             {"name": "action", "label": "Acción contiene", "type": "text", "value": action, "placeholder": "Ejemplo: LOGIN"},
             {"name": "module", "label": "Módulo", "type": "text", "value": module, "placeholder": "Ejemplo: USERS"},
-            {"name": "user_id", "label": "User ID", "type": "number", "value": user_id or "", "placeholder": "Ejemplo: 42"},
+            {"name": "user_id", "label": "ID de usuario", "type": "number", "value": user_id or "", "placeholder": "Ejemplo: 42"},
             {"name": "material_id", "label": "Material ID", "type": "number", "value": material_id or "", "placeholder": "Ejemplo: 128"},
             {"name": "description", "label": "Descripción contiene", "type": "text", "value": description, "placeholder": "Texto libre"},
             {"name": "date_from", "label": "Desde", "type": "date", "value": date_from},
@@ -728,7 +848,7 @@ def report_reservations_view():
         filter_fields=[
             {"name": "status", "label": "Estado", "type": "text", "value": status, "placeholder": "Ejemplo: APPROVED"},
             {"name": "room", "label": "Salón/Lab", "type": "text", "value": room, "placeholder": "Ejemplo: LAB A"},
-            {"name": "user_id", "label": "User ID", "type": "number", "value": user_id or "", "placeholder": "Ejemplo: 42"},
+            {"name": "user_id", "label": "ID de usuario", "type": "number", "value": user_id or "", "placeholder": "Ejemplo: 42"},
             {"name": "date_from", "label": "Desde", "type": "date", "value": date_from},
             {"name": "date_to", "label": "Hasta", "type": "date", "value": date_to},
         ],
@@ -833,7 +953,7 @@ def report_inventory_pdf():
     search = (request.args.get("search") or "").strip()
     download = request.args.get("download", default=0, type=int) == 1
     headers, rows = build_inventory_rows(lab_id=lab_id, status=status or None, search=search or None)
-    selected_columns = parse_selected_columns(headers)
+    selected_columns = parse_pdf_selected_columns(headers)
     headers, rows = project_rows(headers, rows, selected_columns)
     filename = "inventory.pdf" if not lab_id else f"inventory_lab_{lab_id}.pdf"
     title = "Reporte de Inventario" if not lab_id else f"Reporte de Inventario - Lab {lab_id}"
@@ -854,7 +974,7 @@ def report_debts_pdf():
     user_id = request.args.get("user_id", type=int)
     download = request.args.get("download", default=0, type=int) == 1
     headers, rows = build_debts_rows(status=status or None, user_id=user_id)
-    selected_columns = parse_selected_columns(headers)
+    selected_columns = parse_pdf_selected_columns(headers)
     headers, rows = project_rows(headers, rows, selected_columns)
     return pdf_response(
         filename="debts.pdf",
@@ -887,7 +1007,7 @@ def report_logbook_pdf():
         date_from=date_from or None,
         date_to=date_to or None,
     )
-    selected_columns = parse_selected_columns(headers)
+    selected_columns = parse_pdf_selected_columns(headers)
     headers, rows = project_rows(headers, rows, selected_columns)
     return pdf_response(
         filename="logbook.pdf",
@@ -916,7 +1036,7 @@ def report_reservations_pdf():
         date_from=date_from or None,
         date_to=date_to or None,
     )
-    selected_columns = parse_selected_columns(headers)
+    selected_columns = parse_pdf_selected_columns(headers)
     headers, rows = project_rows(headers, rows, selected_columns)
     return pdf_response(
         filename="reservations.pdf",

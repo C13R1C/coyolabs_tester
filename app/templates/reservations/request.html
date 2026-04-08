@@ -9,6 +9,11 @@
     <h1>Solicitar reserva</h1>
     <p class="page-subtitle">Completa todos los datos para enviar tu solicitud. Debajo puedes consultar la ocupación semanal de los salones.</p>
   </div>
+  {% if current_user.role in ["ADMIN", "SUPERADMIN"] %}
+  <div class="topbar-actions">
+    <a class="btn btn-gold" href="{{ url_for('reservations.admin_queue') }}">Administrar solicitudes</a>
+  </div>
+  {% endif %}
 </header>
 
 <style>
@@ -688,6 +693,7 @@
 
       <input type="hidden" name="week_start" value="{{ week_start.isoformat() }}">
       <button type="submit" class="btn btn-ghost">Aplicar</button>
+      <a class="btn btn-ghost" href="{{ url_for('reservations.request_reservation') }}">Limpiar</a>
     </form>
   </div>
 
