@@ -6,6 +6,22 @@
   'user_id': 'Usuario',
   'material_id': 'Material',
   'name': 'Nombre',
+  'pieces_text': 'Piezas (texto)',
+  'pieces_qty': 'Cantidad',
+  'brand': 'Marca',
+  'model': 'Modelo',
+  'code': 'Código',
+  'serial': 'Serie',
+  'tutorial_url': 'URL tutorial',
+  'image_ref': 'Imagen',
+  'source_file': 'Archivo origen',
+  'source_sheet': 'Hoja origen',
+  'source_row': 'Fila origen',
+  'metadata_json': 'Metadatos',
+  'signature_ref': 'Firma',
+  'exit_time': 'Hora de salida',
+  'teacher_comments': 'Comentarios del docente',
+  'evidence_ref': 'Evidencia',
   'status': 'Estado',
   'created_at': 'Creado',
   'updated_at': 'Actualizado',
@@ -230,6 +246,13 @@
   </header>
 
   <section class="toolbar-card">
+    <div class="toolbar-group" style="margin-bottom:12px;">
+      <label for="reportLiveSearch">Búsqueda rápida en resultados cargados</label>
+      <div class="search-box">
+        <i class="ph ph-magnifying-glass search-icon"></i>
+        <input class="form-control" id="reportLiveSearch" type="text" placeholder="Filtrar por texto en la tabla" autocomplete="off">
+      </div>
+    </div>
     <form method="get" action="{{ request.path }}">
       {% if filter_fields %}
       <div class="report-view-filters">
@@ -310,4 +333,23 @@
     {% endif %}
   </section>
 </section>
+{% endblock %}
+{% block extra_js %}
+<script>
+(() => {
+  const input = document.getElementById("reportLiveSearch");
+  const rows = Array.from(document.querySelectorAll(".report-table tbody tr"));
+  if (!input || !rows.length) return;
+
+  const applyFilter = () => {
+    const query = (input.value || "").trim().toLowerCase();
+    rows.forEach((row) => {
+      const text = (row.textContent || "").toLowerCase();
+      row.style.display = !query || text.includes(query) ? "" : "none";
+    });
+  };
+
+  input.addEventListener("input", applyFilter);
+})();
+</script>
 {% endblock %}

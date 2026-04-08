@@ -31,6 +31,7 @@
           <div style="display:flex; gap:8px; align-items:center; margin-bottom:6px;">
             <strong>{{ post.title }}</strong>
             <span class="status-badge status-neutral">{{ post.category }}</span>
+            <span class="status-badge status-neutral">{{ comment_counts.get(post.id, 0) }} comentario(s)</span>
             {% if post.is_anonymous %}<span class="status-badge status-warn">ANÓNIMO</span>{% endif %}
             {% if post.is_hidden %}<span class="status-badge status-danger">OCULTA</span>{% endif %}
           </div>
