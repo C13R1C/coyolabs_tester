@@ -6,9 +6,20 @@ from app.models.software import Software
 from app.models.lab import Lab
 from app.utils.authz import min_role_required
 from app.utils.roles import is_admin_role
+from app.constants import ROOMS
 
 
 software_bp = Blueprint("software", __name__, url_prefix="/software")
+
+
+ROOM_CODES = {room.upper() for room in ROOMS}
+
+
+def _lab_room_code(lab: Lab | None) -> str | None:
+    if not lab or not lab.name:
+        return None
+    candidate = lab.name.strip().upper()
+    return candidate if candidate in ROOM_CODES else None
 
 
 @software_bp.route("/", methods=["GET"])
@@ -23,6 +34,8 @@ def list_software():
     lab_id = request.args.get("lab_id", type=int)
 
     labs = Lab.query.order_by(Lab.name).all()
+    lab_room_codes = {lab.id: _lab_room_code(lab) for lab in labs}
+    filter_labs = [lab for lab in labs if lab_room_codes.get(lab.id)]
     q = Software.query
 
     if lab_id:
@@ -32,7 +45,8 @@ def list_software():
     return render_template(
         "software/list.html",
         items=items,
-        labs=labs,
+        labs=filter_labs,
+        lab_room_codes=lab_room_codes,
         selected_lab=lab_id,
         active_page="software"
     )
