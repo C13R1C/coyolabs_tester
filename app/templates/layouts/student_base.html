@@ -256,6 +256,41 @@
       from { transform: scaleX(1); }
       to { transform: scaleX(0); }
     }
+
+    form[data-form-mode="create"] input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+    form[data-form-mode="create"] select,
+    form[data-form-mode="create"] textarea {
+      border-radius: 12px;
+      border: 1px solid var(--stroke);
+      background: rgba(255,255,255,.84);
+      transition: border-color .18s ease, box-shadow .18s ease;
+    }
+    form[data-form-mode="create"] input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):focus,
+    form[data-form-mode="create"] select:focus,
+    form[data-form-mode="create"] textarea:focus {
+      border-color: color-mix(in srgb, var(--brand, #b8872f) 48%, #ffffff);
+      box-shadow: 0 0 0 3px rgba(184, 135, 47, 0.14);
+      outline: none;
+    }
+    form[data-form-mode="create"] input:disabled,
+    form[data-form-mode="create"] select:disabled,
+    form[data-form-mode="create"] textarea:disabled {
+      opacity: .72;
+      cursor: not-allowed;
+      background: rgba(245,245,245,.9);
+    }
+    .form-readonly-visual {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 44px;
+      padding: 0 12px;
+      border-radius: 12px;
+      border: 1px solid var(--stroke);
+      background: rgba(255,255,255,.72);
+      color: var(--text-soft);
+      font-weight: 600;
+    }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
   <script src="{{ url_for('static', filename='js/ui-animations.js') }}"></script>
@@ -453,6 +488,22 @@
         hidden.name = 'csrf_token';
         hidden.value = token;
         form.appendChild(hidden);
+      });
+    })();
+  </script>
+  <script>
+    (function () {
+      const createForms = document.querySelectorAll('form[data-form-mode="create"]');
+      if (!createForms.length) return;
+
+      createForms.forEach((form) => {
+        form.reset();
+        form.querySelectorAll('input[type="file"]').forEach((fileInput) => {
+          fileInput.value = "";
+        });
+        form.querySelectorAll("select, input, textarea").forEach((field) => {
+          field.dispatchEvent(new Event("change", { bubbles: true }));
+        });
       });
     })();
   </script>

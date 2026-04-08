@@ -178,7 +178,7 @@
 
 <section class="table-card">
   <h3 style="margin:0 0 12px 0;">Agregar materiales a la solicitud de hoy</h3>
-  <form method="post" action="{{ url_for('inventory_requests.add_to_daily_request') }}">
+  <form method="post" action="{{ url_for('inventory_requests.add_to_daily_request') }}" data-form-mode="create">
     <div class="material-search">
       <div class="search-box">
         <i class="ph ph-magnifying-glass search-icon"></i>

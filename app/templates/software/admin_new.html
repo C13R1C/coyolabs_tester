@@ -5,7 +5,7 @@
 <header class="topbar"><div class="topbar-left"><p class="page-kicker">Software instalado</p><h1>Registrar software por salón/laboratorio</h1><p class="page-subtitle">Registra software instalado en espacios como B003, B004 y otros laboratorios.</p></div><div class="topbar-actions"><a href="{{ url_for('software.list_software') }}" class="btn btn-ghost">Catálogo de software</a></div></header>
 
 <section class="toolbar-card">
-  <form method="post" class="toolbar" style="grid-template-columns: repeat(2, minmax(280px, 1fr));">
+  <form method="post" class="toolbar" style="grid-template-columns: repeat(2, minmax(280px, 1fr));" data-form-mode="create">
     <div class="toolbar-group"><label for="lab_id">Salón/Laboratorio (ej. B003) (opcional)</label><div class="select-wrap"><select id="lab_id" name="lab_id"><option value="">-- Sin asignar espacio --</option>{% for lab in labs %}<option value="{{ lab.id }}">{{ lab.name }}</option>{% endfor %}</select><i class="ph ph-caret-down select-arrow"></i></div></div>
     <div class="toolbar-group"><label for="name">Nombre (obligatorio)</label><div class="search-box"><i class="ph ph-app-window search-icon"></i><input id="name" type="text" name="name" placeholder="Ejemplo: AutoCAD" required></div></div>
     <div class="toolbar-group"><label for="version">Versión (opcional)</label><div class="search-box"><i class="ph ph-git-branch search-icon"></i><input id="version" type="text" name="version" placeholder="Ejemplo: 2026.1"></div></div>
