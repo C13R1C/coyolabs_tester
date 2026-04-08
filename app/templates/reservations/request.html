@@ -9,6 +9,11 @@
     <h1>Solicitar reserva</h1>
     <p class="page-subtitle">Completa todos los datos para enviar tu solicitud. Debajo puedes consultar la ocupación semanal de los salones.</p>
   </div>
+  {% if current_user.role in ["ADMIN", "SUPERADMIN"] %}
+  <div class="topbar-actions">
+    <a class="btn btn-gold" href="{{ url_for('reservations.admin_queue') }}">Administrar solicitudes</a>
+  </div>
+  {% endif %}
 </header>
 
 <style>
@@ -258,6 +263,27 @@
   min-width: 1160px;
   border-collapse: separate;
   border-spacing: 0 8px;
+}
+
+.daily-room-grid{
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+}
+
+.daily-room-card{
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 12px;
+  padding: 10px;
+  background: rgba(255,255,255,0.55);
+}
+
+@media (max-width: 1280px){
+  .daily-room-grid{ grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 768px){
+  .daily-room-grid{ grid-template-columns: 1fr; }
 }
 
 .res-room-label {
@@ -647,142 +673,93 @@
   <div class="res-occupancy-head">
     <div class="res-occupancy-title">
       <p class="page-kicker">Calendario semanal</p>
-      <h2>Ocupación de salones</h2>
-      <p class="page-subtitle" style="margin-top:6px;">
-        Semana del {{ week_start.strftime('%d/%m/%Y') }} al {{ week_end.strftime('%d/%m/%Y') }}
-      </p>
+      <h2>Disponibilidad del día</h2>
+      <p class="page-subtitle" style="margin-top:6px;">{{ nombres_dia[selected_calendar_day.weekday()] }} {{ selected_calendar_day.strftime('%d/%m/%Y') }}</p>
+    </div>
+  </div>
+
+  <form method="get" class="reservation-calendar-filter" style="display:flex; gap:10px; align-items:end; flex-wrap:wrap;">
+    <div class="toolbar-group" style="min-width:180px; margin:0;">
+      <label>Filtrar por edificio</label>
+      <div class="select-wrap">
+        <select name="calendar_building">
+          <option value="">Todos</option>
+          {% for building in calendar_buildings %}
+          <option value="{{ building }}" {% if selected_calendar_building == building %}selected{% endif %}>Edificio {{ building }}</option>
+          {% endfor %}
+        </select>
+        <i class="ph ph-caret-down select-arrow"></i>
+      </div>
     </div>
 
-    <button type="button" id="toggleOccupancyBtn" class="btn btn-ghost" aria-expanded="true" aria-controls="occupancyBody">
-      Ocultar ocupación de salones
-    </button>
-  </div>
-
-  <div id="occupancyBody">
-    <form method="get" class="reservation-calendar-filter" style="display:flex; gap:10px; align-items:end; flex-wrap:wrap;">
-      <div class="toolbar-group" style="min-width:180px; margin:0;">
-        <label>Filtrar por edificio</label>
-        <div class="select-wrap">
-          <select name="calendar_building">
-            <option value="">Todos</option>
-            {% for building in calendar_buildings %}
-            <option value="{{ building }}" {% if selected_calendar_building == building %}selected{% endif %}>Edificio {{ building }}</option>
-            {% endfor %}
-          </select>
-          <i class="ph ph-caret-down select-arrow"></i>
-        </div>
+    <div class="toolbar-group" style="min-width:220px; margin:0;">
+      <label>Salón</label>
+      <div class="select-wrap">
+        <select name="calendar_room" id="calendarRoomFilter">
+          <option value="">Todos</option>
+          {% for r in calendar_filter_rooms %}
+          <option value="{{ r }}" {% if selected_calendar_room == r %}selected{% endif %}>{{ r }}</option>
+          {% endfor %}
+        </select>
+        <i class="ph ph-caret-down select-arrow"></i>
       </div>
-
-      <div class="toolbar-group" style="min-width:220px; margin:0;">
-        <label>Filtrar por salón</label>
-        <div class="select-wrap">
-          <select name="calendar_room">
-            <option value="">Todos</option>
-            {% for r in calendar_filter_rooms %}
-            <option value="{{ r }}" {% if selected_calendar_room == r %}selected{% endif %}>{{ r }}</option>
-            {% endfor %}
-          </select>
-          <i class="ph ph-caret-down select-arrow"></i>
-        </div>
-      </div>
-
-      <input type="hidden" name="week_start" value="{{ week_start.isoformat() }}">
-      <button type="submit" class="btn btn-ghost">Aplicar</button>
-    </form>
-  </div>
-
-  <div class="res-occupancy-controls">
-    <a class="btn btn-ghost" href="{{ url_for('reservations.request_reservation', week_start=prev_week.isoformat(), calendar_building=selected_calendar_building, calendar_room=selected_calendar_room) }}">
-      ← Semana anterior
-    </a>
-
-    <div class="res-legend" aria-label="Leyenda de estados">
-      <span class="res-legend-item"><span class="res-legend-dot res-dot-available"></span>Disponible</span>
-      <span class="res-legend-item"><span class="res-legend-dot res-dot-occupied"></span>Ocupado</span>
-      <span class="res-legend-item"><span class="res-legend-dot res-dot-pending"></span>Pendiente</span>
-      <span class="res-legend-item"><span class="res-legend-dot res-dot-progress"></span>En progreso</span>
     </div>
 
-    <a class="btn btn-ghost" href="{{ url_for('reservations.request_reservation', week_start=next_week.isoformat(), calendar_building=selected_calendar_building, calendar_room=selected_calendar_room) }}">
-      Semana siguiente →
-    </a>
-  </div>
+    <div class="toolbar-group" style="min-width:220px; margin:0;">
+      <label>Día</label>
+      <div class="search-box">
+        <i class="ph ph-calendar search-icon"></i>
+        <input type="date" name="calendar_day" value="{{ selected_calendar_day.isoformat() }}">
+      </div>
+    </div>
+
+    <input type="hidden" name="week_start" value="{{ week_start.isoformat() }}">
+    <button type="submit" class="btn btn-ghost">Aplicar</button>
+    <a class="btn btn-ghost" href="{{ url_for('reservations.request_reservation') }}">Limpiar</a>
+  </form>
+
+  <div id="occupancyBody" style="display:block;">
 
   <div style="overflow-x:auto;">
-    <table class="data-table res-occupancy-table">
-      <thead>
-        <tr>
-          <th style="min-width:110px;">Salón</th>
-          {% for day in week_days %}
-          {% if day.weekday() != 6 %}
-          <th style="min-width:160px;">
-            {{ nombres_dia[day.weekday()] }}<br>
-            <span style="font-weight:400; opacity:.8;">{{ day.strftime('%d/%m') }}</span>
-          </th>
-          {% endif %}
-          {% endfor %}
-        </tr>
-      </thead>
-      <tbody>
-        {% for room in calendar_rooms %}
-        <tr>
-          <td class="res-room-label">{{ room }}</td>
-
-          {% for day in week_days %}
-          {% if day.weekday() != 6 %}
-          <td class="res-cell">
-            {% set cell = week_schedule[room][day] %}
-            {% set cell_slots = cell.get('slots', []) if cell is mapping else [] %}
-            {% set cell_items = cell.get('items', []) if cell is mapping else [] %}
-            {% set cell_state = 'available' %}
-            {% if cell_slots %}
-              {% set slot_states = cell_slots | map(attribute='state') | list %}
-              {% if 'pending' in slot_states %}
-                {% set cell_state = 'pending' %}
-              {% elif 'in_progress' in slot_states %}
-                {% set cell_state = 'progress' %}
-              {% elif 'occupied' in slot_states %}
-                {% set cell_state = 'occupied' %}
+    <div class="daily-room-grid">
+      {% for row in daily_schedule %}
+      <article class="daily-room-card">
+        <h4 class="res-room-label" style="margin:0 0 8px;">{{ row.room }}</h4>
+        <div class="res-cell-shell is-{{ row.state }}">
+          {% set row_slots = row.get('slots', []) if row is mapping else [] %}
+          {% set row_items = row.get('items', []) if row is mapping else [] %}
+          {% for slot in row_slots %}
+            {% set slot_info = namespace(has_reservation=False, tooltip='') %}
+            {% for item in row_items %}
+              {% set item_inicio = item.start_time.strftime('%H:%M') %}
+              {% set item_fin = item.end_time.strftime('%H:%M') %}
+              {% if item_inicio < slot.end and item_fin > slot.start %}
+                {% set persona = (item.user.full_name if item.user and item.user.full_name else (item.user.email if item.user else (item.teacher_name or 'Usuario institucional'))) %}
+                {% set slot_info.has_reservation = True %}
+                {% set slot_status = 'Ocupado' if slot.state == 'occupied' else ('Pendiente' if slot.state == 'pending' else 'En progreso') %}
+                {% set tooltip_lines = ['Solicitante: ' ~ persona] %}
+                {% if item.group_name %}
+                  {% set tooltip_lines = tooltip_lines + ['Grupo: ' ~ item.group_name] %}
+                {% endif %}
+                {% if item.subject %}
+                  {% set tooltip_lines = tooltip_lines + ['Materia: ' ~ item.subject] %}
+                {% endif %}
+                {% set tooltip_lines = tooltip_lines + ['Estado: ' ~ slot_status] %}
+                {% set slot_info.tooltip = tooltip_lines | join('\n') %}
               {% endif %}
-            {% endif %}
-
-            <div class="res-cell-shell is-{{ cell_state }}">
-              {% for slot in cell_slots %}
-                {% set slot_info = namespace(has_reservation=False, tooltip='') %}
-                {% for item in cell_items %}
-                  {% set item_inicio = item.start_time.strftime('%H:%M') %}
-                  {% set item_fin = item.end_time.strftime('%H:%M') %}
-                  {% if item_inicio < slot.end and item_fin > slot.start %}
-                    {% set persona = (item.user.full_name if item.user and item.user.full_name else (item.user.email if item.user else (item.teacher_name or 'Usuario institucional'))) %}
-                    {% set slot_info.has_reservation = True %}
-                    {% set slot_status = 'Ocupado' if slot.state == 'occupied' else ('Pendiente' if slot.state == 'pending' else 'En progreso') %}
-                    {% set tooltip_lines = ['Solicitante: ' ~ persona] %}
-                    {% if item.group_name %}
-                      {% set tooltip_lines = tooltip_lines + ['Grupo: ' ~ item.group_name] %}
-                    {% endif %}
-                    {% if item.subject %}
-                      {% set tooltip_lines = tooltip_lines + ['Materia: ' ~ item.subject] %}
-                    {% endif %}
-                    {% set tooltip_lines = tooltip_lines + ['Estado: ' ~ slot_status] %}
-                    {% set slot_info.tooltip = tooltip_lines | join('\n') %}
-                  {% endif %}
-                {% endfor %}
-                <div
-                  class="time-slot {{ slot.state }} {% if slot_info.has_reservation %}has-tooltip{% endif %}"
-                  {% if slot_info.has_reservation %}data-tooltip="{{ slot_info.tooltip }}"{% endif %}
-                  tabindex="0"
-                  aria-label="{% if slot_info.has_reservation %}{{ slot_info.tooltip }}{% else %}Disponible{% endif %}">
-                  <span class="time">{{ slot.start_label or slot.start }} - {{ slot.end_label or slot.end }}</span>
-                </div>
-              {% endfor %}
+            {% endfor %}
+            <div
+              class="time-slot {{ slot.state }} {% if slot_info.has_reservation %}has-tooltip{% endif %}"
+              {% if slot_info.has_reservation %}data-tooltip="{{ slot_info.tooltip }}"{% endif %}
+              tabindex="0"
+              aria-label="{% if slot_info.has_reservation %}{{ slot_info.tooltip }}{% else %}Disponible{% endif %}">
+              <span class="time">{{ slot.start_label or slot.start }} - {{ slot.end_label or slot.end }}</span>
             </div>
-          </td>
-          {% endif %}
           {% endfor %}
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
   </div>
   </div>
 </section>
@@ -808,6 +785,37 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+</script>
+<script>
+(() => {
+  const buildingSelect = document.querySelector('select[name="calendar_building"]');
+  const roomSelect = document.getElementById("calendarRoomFilter");
+  const roomsByBuilding = {{ calendar_rooms_by_building | tojson }};
+  if (!buildingSelect || !roomSelect) return;
+
+  const fillRooms = () => {
+    const currentRoom = roomSelect.value;
+    const building = buildingSelect.value || "";
+    const rooms = roomsByBuilding[building] || [];
+
+    roomSelect.innerHTML = '<option value="">Todos</option>';
+    rooms.forEach((room) => {
+      const option = document.createElement("option");
+      option.value = room;
+      option.textContent = room;
+      roomSelect.appendChild(option);
+    });
+
+    if (currentRoom && rooms.includes(currentRoom)) {
+      roomSelect.value = currentRoom;
+    } else {
+      roomSelect.value = "";
+    }
+  };
+
+  buildingSelect.addEventListener("change", fillRooms);
+  fillRooms();
+})();
 </script>
 
 <div id="clockPickerModal" class="clock-picker-modal" aria-hidden="true">
