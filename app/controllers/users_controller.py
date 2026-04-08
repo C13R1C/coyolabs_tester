@@ -18,6 +18,7 @@ from app.utils.roles import (
     ROLE_TEACHER,
     normalize_role,
 )
+from app.utils.validators import is_valid_utpn_email
 
 users_bp = Blueprint("users", __name__, url_prefix="/users")
 PENDING_APPROVAL_ROLES = (ROLE_TEACHER, ROLE_STAFF, ROLE_ADMIN)
@@ -408,6 +409,9 @@ def create_admin_account():
         if not email or not password:
             flash("Email y contraseña son obligatorios.", "error")
             return redirect(url_for("users.create_admin_account"))
+        if not is_valid_utpn_email(email):
+            flash("Solo se permiten correos institucionales (@utpn.edu.mx)", "error")
+            return redirect(url_for("users.create_admin_account"))
 
         existing = User.query.filter_by(email=email).first()
         if existing:
@@ -475,6 +479,9 @@ def admin_update_user(user_id: int):
     new_email = (request.form.get("email") or "").strip().lower()
     if not new_email:
         flash("El email es obligatorio.", "error")
+        return redirect(url_for("users.admin_panel"))
+    if not is_valid_utpn_email(new_email):
+        flash("Solo se permiten correos institucionales (@utpn.edu.mx)", "error")
         return redirect(url_for("users.admin_panel"))
 
     existing = User.query.filter(User.email == new_email, User.id != user.id).first()

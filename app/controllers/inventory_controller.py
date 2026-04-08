@@ -75,6 +75,11 @@ def _material_payload_from_form(material: Material | None = None) -> tuple[dict,
             return {}, "La cantidad de piezas debe ser un número entero."
         if pieces_qty < 0:
             return {}, "La cantidad de piezas no puede ser negativa."
+    elif material is None:
+        return {}, "La cantidad de piezas es obligatoria y debe ser mayor a 0."
+
+    if material is None and (pieces_qty is None or pieces_qty <= 0):
+        return {}, "La cantidad de piezas es obligatoria y debe ser mayor a 0."
 
     status = normalize_spaces(request.form.get("status") or "")
     if not status:
