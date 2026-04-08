@@ -13,8 +13,13 @@
 <header class="topbar">
   <div class="topbar-left">
     <p class="page-kicker">Inventario</p>
+<<<<<<< codex/implementar-validacion-de-correo-institucional-44xl1l
+    <h1>Cola operativa · Solicitudes de material</h1>
+    <p class="page-subtitle">Aquí administras la entrega de material. Puedes abrir una solicitud para revisar detalle o entregar directamente desde esta cola.</p>
+=======
     <h1>Solicitudes de material pendientes</h1>
     <p class="page-subtitle">Solicitudes consolidadas por usuario y fecha. Entra a cada ticket para entregar material o resolver la solicitud.</p>
+>>>>>>> main
   </div>
 </header>
 
@@ -57,7 +62,20 @@
           </td>
           <td>{{ t.notes or '-' }}</td>
           <td>{{ t.items|length }}</td>
+<<<<<<< codex/implementar-validacion-de-correo-institucional-44xl1l
+          <td>
+            <div style="display:flex; flex-wrap:wrap; gap:6px;">
+              <a href="{{ url_for('inventory_requests.admin_ticket_detail', ticket_id=t.id) }}" class="btn btn-ghost">Ver solicitud</a>
+              {% if t.status == 'OPEN' %}
+              <form method="post" action="{{ url_for('inventory_requests.admin_mark_ready', ticket_id=t.id) }}">
+                <button type="submit" class="btn btn-gold">Entregar material</button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+=======
           <td><a href="{{ url_for('inventory_requests.admin_ticket_detail', ticket_id=t.id) }}" class="btn btn-ghost">Resolver solicitud</a></td>
+>>>>>>> main
         </tr>
       {% endfor %}
       </tbody>

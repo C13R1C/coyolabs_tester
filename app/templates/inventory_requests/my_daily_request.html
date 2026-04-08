@@ -11,7 +11,8 @@
   </div>
   {% if is_admin_role(current_user.role) %}
   <div class="topbar-actions">
-    <a href="{{ url_for('inventory_requests.admin_daily_requests') }}" class="btn btn-gold">Administrar solicitudes</a>
+    <a href="{{ url_for('inventory_requests.admin_daily_requests') }}" class="btn btn-gold">Administrar solicitudes de material</a>
+    <a href="{{ url_for('inventory_requests.admin_daily_requests') }}" class="btn btn-ghost">Abrir cola operativa</a>
   </div>
   {% endif %}
 </header>
