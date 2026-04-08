@@ -83,6 +83,21 @@ def _has_min_real_chars(value: str, minimum: int = 3) -> bool:
     return len(normalized) >= minimum
 
 
+def _normalize_and_validate_matricula(raw_matricula: str | None, role: str | None, email: str | None) -> tuple[str | None, str | None]:
+    normalized_role = normalize_role(role)
+    if normalized_role != ROLE_STUDENT:
+        return (email or "").strip().lower(), None
+
+    matricula = re.sub(r"\s+", "", raw_matricula or "")
+    if not matricula:
+        return None, "La matrícula es obligatoria."
+    if not matricula.isdigit():
+        return None, "La matrícula debe contener solo números."
+    if len(matricula) != 8:
+        return None, "La matrícula debe tener exactamente 8 dígitos."
+    return matricula, None
+
+
 def _subject_allowed_for_teacher(subject: Subject, teacher: User) -> bool:
     return bool(subject and subject.is_active)
 
@@ -327,7 +342,7 @@ def add_teaching_load():
 @login_required
 def remove_teaching_load(load_id: int):
     if not _is_professor_role(current_user.role):
-        flash("Solo docentes TEACHER pueden gestionar carga académica.", "error")
+        flash("Solo profesores pueden gestionar carga académica.", "error")
         return redirect(url_for("profile.my_profile"))
 
     load = TeacherAcademicLoad.query.get_or_404(load_id)
@@ -606,6 +621,11 @@ def update_basic_profile():
 @login_required
 def complete_profile():
     if not _requires_profile_completion(current_user.role):
+        if not current_user.profile_completed:
+            current_user.profile_completed = True
+            current_user.profile_data_confirmed = True
+            current_user.profile_confirmed_at = db.func.now()
+            db.session.commit()
         return redirect(url_for(resolve_landing_endpoint(current_user.role)))
 
     if current_user.profile_completed:
@@ -617,7 +637,7 @@ def complete_profile():
 
     if request.method == "POST":
         full_name = (request.form.get("full_name") or "").strip()
-        matricula = (request.form.get("matricula") or "").strip()
+        matricula_raw = request.form.get("matricula")
         career_id = request.form.get("career_id", type=int)
         academic_level_id = request.form.get("academic_level_id", type=int)
         phone = (request.form.get("phone") or "").strip()
@@ -627,8 +647,13 @@ def complete_profile():
             flash("El nombre completo es obligatorio y debe tener al menos 3 caracteres reales.")
             return redirect(url_for("profile.complete_profile"))
 
-        if is_student and (not matricula or len(matricula) < 5):
-            flash("La matrícula es obligatoria para estudiantes y debe tener al menos 5 caracteres.")
+        matricula, matricula_error = _normalize_and_validate_matricula(
+            matricula_raw,
+            current_user.role,
+            current_user.email,
+        )
+        if matricula_error:
+            flash(matricula_error)
             return redirect(url_for("profile.complete_profile"))
 
         if not career_id:
@@ -705,6 +730,7 @@ def complete_profile():
                 "career_id": career_obj.id,
                 "academic_level_id": level_obj.id if level_obj else None,
                 "role": current_user.role,
+                "profile_identifier": matricula,
             },
         )
         db.session.commit()

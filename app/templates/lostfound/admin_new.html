@@ -7,18 +7,17 @@
   <div class="topbar-left">
     <p class="page-kicker">Objetos perdidos</p>
     <h1>Nuevo registro (Administración)</h1>
-    <p class="page-subtitle">Registra un objeto reportado y su información de soporte.</p>
+    <p class="page-subtitle">Registra un objeto con foto de evidencia para facilitar su identificación.</p>
   </div>
 </header>
 
 <section class="toolbar-card">
   <form method="post" enctype="multipart/form-data" class="toolbar" style="grid-template-columns: repeat(2, minmax(280px, 1fr));">
     <div class="toolbar-group"><label for="title">Título (obligatorio)</label><div class="search-box"><i class="ph ph-tag search-icon"></i><input id="title" type="text" name="title" placeholder="Ejemplo: Mochila negra con llavero" required></div></div>
-    <div class="toolbar-group"><label for="evidence_ref">Evidencia (URL/texto)</label><div class="search-box"><i class="ph ph-link search-icon"></i><input id="evidence_ref" type="text" name="evidence_ref" placeholder="URL de foto o referencia breve"></div></div>
     <div class="toolbar-group" style="grid-column: 1 / -1;">
       <label for="evidence_file">Foto de evidencia (opcional)</label>
       <input class="form-control" id="evidence_file" type="file" name="evidence_file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
-      <small style="display:block; margin-top:6px; color:var(--text-dim);">Formatos permitidos: JPG, PNG, WEBP. Máximo 5 MB. Si cargas foto, tendrá prioridad sobre la URL/texto.</small>
+      <small style="display:block; margin-top:6px; color:var(--text-dim);">Formatos permitidos: JPG, PNG, WEBP. Máximo 5 MB.</small>
     </div>
 
     <div class="toolbar-group" style="grid-column: 1 / -1;">
