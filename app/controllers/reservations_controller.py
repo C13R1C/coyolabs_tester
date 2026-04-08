@@ -463,7 +463,8 @@ def request_reservation():
     calendar_rooms_by_building = {building: _rooms_by_building(building) for building in calendar_buildings}
     selected_calendar_building = calendar_building if calendar_building in calendar_buildings else ""
     available_calendar_rooms = _rooms_by_building(selected_calendar_building)
-    selected_calendar_room = calendar_room if calendar_room in available_calendar_rooms else ""
+    is_operational_calendar = is_admin_role(current_user.role)
+    selected_calendar_room = calendar_room if (is_operational_calendar and calendar_room in available_calendar_rooms) else ""
     week_schedule, calendar_rooms = build_week_schedule(
         week_days=week_days,
         selected_room=selected_calendar_room or None,

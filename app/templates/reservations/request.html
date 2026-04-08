@@ -693,6 +693,7 @@
         </div>
       </div>
 
+      {% if is_operational_calendar %}
       <div class="toolbar-group" style="min-width:220px; margin:0;">
         <label>Salón</label>
         <div class="select-wrap">
@@ -705,6 +706,17 @@
           <i class="ph ph-caret-down select-arrow"></i>
         </div>
       </div>
+      {% endif %}
+
+      {% if not is_operational_calendar %}
+      <div class="toolbar-group" style="min-width:220px; margin:0;">
+        <label>Día</label>
+        <div class="search-box">
+          <i class="ph ph-calendar search-icon"></i>
+          <input type="date" name="calendar_day" value="{{ selected_calendar_day.isoformat() }}">
+        </div>
+      </div>
+      {% endif %}
 
       <div class="toolbar-group" style="min-width:220px; margin:0;">
         <label>Día</label>
