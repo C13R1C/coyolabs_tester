@@ -678,67 +678,47 @@
     </div>
   </div>
 
+  <form method="get" class="reservation-calendar-filter" style="display:flex; gap:10px; align-items:end; flex-wrap:wrap;">
+    <div class="toolbar-group" style="min-width:180px; margin:0;">
+      <label>Filtrar por edificio</label>
+      <div class="select-wrap">
+        <select name="calendar_building">
+          <option value="">Todos</option>
+          {% for building in calendar_buildings %}
+          <option value="{{ building }}" {% if selected_calendar_building == building %}selected{% endif %}>Edificio {{ building }}</option>
+          {% endfor %}
+        </select>
+        <i class="ph ph-caret-down select-arrow"></i>
+      </div>
+    </div>
+
+    <div class="toolbar-group" style="min-width:220px; margin:0;">
+      <label>Salón</label>
+      <div class="select-wrap">
+        <select name="calendar_room" id="calendarRoomFilter">
+          <option value="">Todos</option>
+          {% for r in calendar_filter_rooms %}
+          <option value="{{ r }}" {% if selected_calendar_room == r %}selected{% endif %}>{{ r }}</option>
+          {% endfor %}
+        </select>
+        <i class="ph ph-caret-down select-arrow"></i>
+      </div>
+    </div>
+
+    <div class="toolbar-group" style="min-width:220px; margin:0;">
+      <label>Día</label>
+      <div class="search-box">
+        <i class="ph ph-calendar search-icon"></i>
+        <input type="date" name="calendar_day" value="{{ selected_calendar_day.isoformat() }}">
+      </div>
+    </div>
+
+    <input type="hidden" name="week_start" value="{{ week_start.isoformat() }}">
+    <button type="submit" class="btn btn-ghost">Aplicar</button>
+    <a class="btn btn-ghost" href="{{ url_for('reservations.request_reservation') }}">Limpiar</a>
+  </form>
+
   <div id="occupancyBody" style="display:block;">
-    <form method="get" class="reservation-calendar-filter" style="display:flex; gap:10px; align-items:end; flex-wrap:wrap;">
-      <div class="toolbar-group" style="min-width:180px; margin:0;">
-        <label>Filtrar por edificio</label>
-        <div class="select-wrap">
-          <select name="calendar_building">
-            <option value="">Todos</option>
-            {% for building in calendar_buildings %}
-            <option value="{{ building }}" {% if selected_calendar_building == building %}selected{% endif %}>Edificio {{ building }}</option>
-            {% endfor %}
-          </select>
-          <i class="ph ph-caret-down select-arrow"></i>
-        </div>
-      </div>
-
-      {% if is_operational_calendar %}
-      <div class="toolbar-group" style="min-width:220px; margin:0;">
-        <label>Salón</label>
-        <div class="select-wrap">
-          <select name="calendar_room" id="calendarRoomFilter">
-            <option value="">Todos</option>
-            {% for r in calendar_filter_rooms %}
-            <option value="{{ r }}" {% if selected_calendar_room == r %}selected{% endif %}>{{ r }}</option>
-            {% endfor %}
-          </select>
-          <i class="ph ph-caret-down select-arrow"></i>
-        </div>
-      </div>
-      {% endif %}
-
-      {% if not is_operational_calendar %}
-      <div class="toolbar-group" style="min-width:220px; margin:0;">
-        <label>Día</label>
-        <div class="search-box">
-          <i class="ph ph-calendar search-icon"></i>
-          <input type="date" name="calendar_day" value="{{ selected_calendar_day.isoformat() }}">
-        </div>
-      </div>
-      {% endif %}
-
-      <div class="toolbar-group" style="min-width:220px; margin:0;">
-        <label>Día</label>
-        <div class="search-box">
-          <i class="ph ph-calendar search-icon"></i>
-          <input type="date" name="calendar_day" value="{{ selected_calendar_day.isoformat() }}">
-        </div>
-      </div>
-
-      <div class="toolbar-group" style="min-width:220px; margin:0;">
-        <label>Día</label>
-        <div class="search-box">
-          <i class="ph ph-calendar search-icon"></i>
-          <input type="date" name="calendar_day" value="{{ selected_calendar_day.isoformat() }}">
-        </div>
-      </div>
-
-      <input type="hidden" name="week_start" value="{{ week_start.isoformat() }}">
-      <button type="submit" class="btn btn-ghost">Aplicar</button>
-      <a class="btn btn-ghost" href="{{ url_for('reservations.request_reservation') }}">Limpiar</a>
-    </form>
-  </div>
 
   <div style="overflow-x:auto;">
     <div class="daily-room-grid">
