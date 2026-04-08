@@ -1,3 +1,5 @@
+import re
+
 from flask import Blueprint, render_template, request, redirect, url_for, flash, abort
 from flask_login import current_user
 
@@ -11,6 +13,23 @@ from app.utils.roles import is_admin_role
 software_bp = Blueprint("software", __name__, url_prefix="/software")
 
 
+LAB_CODE_PATTERN = re.compile(r"^[A-Z]\d{3}$")
+
+
+def _lab_room_code(lab: Lab | None) -> str | None:
+    if not lab:
+        return None
+    candidate = ((lab.code or "").strip() or (lab.name or "").strip()).upper()
+    return candidate if LAB_CODE_PATTERN.match(candidate) else None
+
+
+def _room_labs_context() -> tuple[list[Lab], dict[int, str | None]]:
+    labs = Lab.query.order_by(Lab.name).all()
+    lab_room_codes = {lab.id: _lab_room_code(lab) for lab in labs}
+    room_labs = [lab for lab in labs if lab_room_codes.get(lab.id)]
+    return room_labs, lab_room_codes
+
+
 @software_bp.route("/", methods=["GET"])
 @min_role_required("STUDENT")
 def software_home():
@@ -22,7 +41,7 @@ def software_home():
 def list_software():
     lab_id = request.args.get("lab_id", type=int)
 
-    labs = Lab.query.order_by(Lab.name).all()
+    filter_labs, lab_room_codes = _room_labs_context()
     q = Software.query
 
     if lab_id:
@@ -32,7 +51,8 @@ def list_software():
     return render_template(
         "software/list.html",
         items=items,
-        labs=labs,
+        labs=filter_labs,
+        lab_room_codes=lab_room_codes,
         selected_lab=lab_id,
         active_page="software"
     )
@@ -41,7 +61,7 @@ def list_software():
 @software_bp.route("/admin/new", methods=["GET", "POST"])
 @min_role_required("ADMIN")
 def admin_new():
-    labs = Lab.query.order_by(Lab.name).all()
+    labs, lab_room_codes = _room_labs_context()
 
     if request.method == "POST":
         lab_id = request.form.get("lab_id", type=int)
@@ -60,6 +80,9 @@ def admin_new():
             if not lab:
                 flash("lab_id inválido.", "error")
                 return redirect(url_for("software.admin_new"))
+            if not lab_room_codes.get(lab.id):
+                flash("Selecciona un salón/laboratorio válido.", "error")
+                return redirect(url_for("software.admin_new"))
 
         s = Software(
             lab_id=lab.id if lab else None,
@@ -76,7 +99,58 @@ def admin_new():
         flash("Software agregado.", "success")
         return redirect(url_for("software.list_software"))
 
-    return render_template("software/admin_new.html", labs=labs, active_page="software")
+    return render_template(
+        "software/admin_new.html",
+        labs=labs,
+        lab_room_codes=lab_room_codes,
+        active_page="software",
+    )
+
+
+@software_bp.route("/admin/<int:software_id>/edit", methods=["GET", "POST"])
+@min_role_required("ADMIN")
+def admin_edit(software_id: int):
+    s = Software.query.get_or_404(software_id)
+    labs, lab_room_codes = _room_labs_context()
+
+    if request.method == "POST":
+        lab_id = request.form.get("lab_id", type=int)
+        name = (request.form.get("name") or "").strip()
+        version = (request.form.get("version") or "").strip()
+        license_type = (request.form.get("license_type") or "").strip()
+        notes = (request.form.get("notes") or "").strip()
+
+        if not name:
+            flash("El nombre del software es obligatorio.", "error")
+            return redirect(url_for("software.admin_edit", software_id=s.id))
+
+        lab = None
+        if lab_id:
+            lab = Lab.query.get(lab_id)
+            if not lab:
+                flash("lab_id inválido.", "error")
+                return redirect(url_for("software.admin_edit", software_id=s.id))
+            if not lab_room_codes.get(lab.id):
+                flash("Selecciona un salón/laboratorio válido.", "error")
+                return redirect(url_for("software.admin_edit", software_id=s.id))
+
+        s.lab_id = lab.id if lab else None
+        s.name = name
+        s.version = version or None
+        s.license_type = license_type or None
+        s.notes = notes or None
+        db.session.commit()
+
+        flash("Software actualizado.", "success")
+        return redirect(url_for("software.list_software"))
+
+    return render_template(
+        "software/admin_edit.html",
+        software=s,
+        labs=labs,
+        lab_room_codes=lab_room_codes,
+        active_page="software",
+    )
 
 
 @software_bp.route("/<int:software_id>/request-update", methods=["POST"])

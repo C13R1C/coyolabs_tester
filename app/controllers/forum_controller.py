@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user
 from sqlalchemy import func
@@ -171,9 +169,15 @@ def post_detail(post_id: int):
         flash("Comentario publicado.", "success")
         return redirect(url_for("forum.post_detail", post_id=post.id))
 
-    comments = sorted(post.comments, key=lambda c: c.created_at or datetime.min)
+    comments_query = (
+        ForumComment.query
+        .options(joinedload(ForumComment.author))
+        .filter(ForumComment.post_id == post.id)
+        .order_by(ForumComment.created_at.asc())
+    )
     if not _is_admin():
-        comments = [c for c in comments if not c.is_hidden]
+        comments_query = comments_query.filter(ForumComment.is_hidden.is_(False))
+    comments = comments_query.all()
 
     return render_template(
         "forum/detail.html",
