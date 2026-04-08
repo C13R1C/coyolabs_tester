@@ -29,6 +29,15 @@ from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Tabl
 
 reports_bp = Blueprint("reports", __name__, url_prefix="/reports")
 
+DEFAULT_DEMO_HIDDEN_COLUMNS = {
+    "source_file",
+    "source_sheet",
+    "source_row",
+    "metadata_json",
+    "image_ref",
+    "signature_ref",
+}
+
 
 def csv_response(filename: str, headers: list[str], rows: list[list]):
     buf = StringIO()
@@ -94,7 +103,8 @@ def parse_selected_columns(headers: list[str]) -> list[str]:
         if raw:
             selected = [part.strip() for part in raw.split(",") if part.strip()]
     if not selected:
-        return headers
+        curated = [col for col in headers if col not in DEFAULT_DEMO_HIDDEN_COLUMNS]
+        return curated or headers
     allowed = set(headers)
     normalized = [col for col in selected if col in allowed]
     return normalized or headers

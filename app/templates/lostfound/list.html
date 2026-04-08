@@ -142,10 +142,21 @@
 
 <section class="lostfound-report-box">
   <div>
-    <strong>¿Perdiste algo?</strong>
-    <p style="margin:4px 0 0; color:var(--text-dim);">Genera un reporte para que administración pueda ayudarte a localizarlo.</p>
+    {% if current_user.is_authenticated and is_admin_role(current_user.role) %}
+      <strong>¿Perdiste algo?</strong>
+      <p style="margin:4px 0 0; color:var(--text-dim);">Genera un reporte para que administración pueda ayudarte a localizarlo.</p>
+    {% else %}
+      <strong>¿Perdiste algo?</strong>
+      <p style="margin:4px 0 0; color:var(--text-dim);">Comparte la descripción con administración para que puedan registrar el caso por ti.</p>
+    {% endif %}
   </div>
-  <a class="btn btn-gold" href="{{ url_for('lostfound.admin_new') }}">Reportar objeto perdido</a>
+  {% if current_user.is_authenticated and is_admin_role(current_user.role) %}
+    <a class="btn btn-gold" href="{{ url_for('lostfound.admin_new') }}">Registrar objeto perdido</a>
+  {% else %}
+    <button type="button" class="btn btn-ghost" title="Solo administración puede registrar hallazgos en esta fase de demo." disabled>
+      Registro vía administración
+    </button>
+  {% endif %}
 </section>
 
 <section class="toolbar-card">
