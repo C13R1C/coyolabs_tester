@@ -37,18 +37,6 @@
     </div>
 
     <div class="toolbar-group toolbar-group-select">
-      <label for="lab_id">Laboratorio</label>
-      <div class="select-wrap">
-        <select name="lab_id" id="lab_id">
-          <option value="">Todos los laboratorios</option>
-          {% for lab in labs %}
-            <option value="{{ lab.id }}" {% if selected_lab == lab.id %}selected{% endif %}>{{ lab.name }}</option>
-          {% endfor %}
-        </select>
-        <i class="ph ph-caret-down select-arrow"></i>
-      </div>
-    </div>
-    <div class="toolbar-group toolbar-group-select">
       <label for="career_id">Carrera</label>
       <div class="select-wrap">
         <select name="career_id" id="career_id">
@@ -99,42 +87,31 @@
     <table class="inventory-table">
       <thead>
         <tr>
-          <th>Material</th>
-          <th>Laboratorio</th>
+          <th>Nombre</th>
           <th>Carrera</th>
-          <th>Categoría</th>
+          <th>Estado</th>
+          <th class="td-center">Cantidad</th>
           <th>Ubicación</th>
-          <th class="td-center">Piezas</th>
-          <th class="td-center">Estado</th>
-          <th>Observaciones</th>
-          <th class="th-actions">Acciones</th>
         </tr>
       </thead>
       <tbody>
         {% for m in materials %}
-          {% set normalized_status = (m.status or '') | lower %}
+          {% set status_value = (m.status or '') %}
+          {% set status_parts = status_value.split(' - ') %}
+          {% set active_state = status_parts[0] if status_parts|length > 1 else ('Baja' if ('baja' in status_value|lower or 'inactivo' in status_value|lower) else 'Alta') %}
+          {% set condition = status_parts[1] if status_parts|length > 1 else ('Regular' if 'frágil' in status_value|lower else 'Bueno') %}
           <tr>
             <td>
               <a href="{{ url_for('inventory.material_detail', material_id=m.id) }}" class="item-link material-name">{{ m.name | smart_title }}</a>
-              <div class="material-subtext">{{ m.code or 'Sin código' }}</div>
             </td>
-            <td><span class="status-badge status-neutral">{{ m.lab.name }}</span></td>
             <td>{{ m.career.name if m.career else 'Sin carrera' }}</td>
-            <td><span class="status-badge status-neutral">{{ m.category or 'Sin categoría' }}</span></td>
-            <td>{{ m.location | smart_title }}</td>
-            <td class="td-center">{{ m.pieces_text }}</td>
             <td class="td-center">
-              <span class="status-badge {% if 'disponible' in normalized_status %}status-ok{% elif 'baja' in normalized_status or 'inactivo' in normalized_status %}status-bad{% elif 'mantenimiento' in normalized_status %}status-warn{% else %}status-neutral{% endif %}">
-                {{ m.status | smart_title }}
+              <span class="status-badge {% if active_state|lower == 'alta' and condition|lower == 'bueno' %}status-ok{% elif active_state|lower == 'baja' %}status-bad{% else %}status-warn{% endif %}">
+                {{ active_state | smart_title }} · {{ condition | smart_title }}
               </span>
             </td>
-            <td>{{ m.notes or 'Sin observaciones' }}</td>
-            <td class="td-actions">
-              <a href="{{ url_for('inventory.material_detail', material_id=m.id) }}" class="action-btn" title="Ver detalle"><i class="ph ph-eye"></i></a>
-              {% if current_user.is_authenticated and is_admin_role(current_user.role) %}
-              <a href="{{ url_for('inventory.admin_edit_material', material_id=m.id) }}" class="action-btn" title="Editar"><i class="ph ph-pencil-simple"></i></a>
-              {% endif %}
-            </td>
+            <td class="td-center">{{ m.pieces_qty if m.pieces_qty is not none else (m.pieces_text or '-') }}</td>
+            <td>{{ (m.location or '-') | smart_title }}</td>
           </tr>
         {% endfor %}
       </tbody>
@@ -143,11 +120,11 @@
 
   <div class="pagination">
     {% if page > 1 %}
-      <a class="page-btn" href="{{ url_for('inventory.inventory_list', lab_id=selected_lab or '', career_id=selected_career or '', category=selected_category or '', q=q, page=page - 1, include_inactive='1' if include_inactive else '') }}"><i class="ph ph-caret-left"></i><span>Anterior</span></a>
+      <a class="page-btn" href="{{ url_for('inventory.inventory_list', career_id=selected_career or '', category=selected_category or '', q=q, page=page - 1, include_inactive='1' if include_inactive else '') }}"><i class="ph ph-caret-left"></i><span>Anterior</span></a>
     {% endif %}
     <span class="page-current">{{ page }}</span>
     {% if page < total_pages %}
-      <a class="page-btn" href="{{ url_for('inventory.inventory_list', lab_id=selected_lab or '', career_id=selected_career or '', category=selected_category or '', q=q, page=page + 1, include_inactive='1' if include_inactive else '') }}"><span>Siguiente</span><i class="ph ph-caret-right"></i></a>
+      <a class="page-btn" href="{{ url_for('inventory.inventory_list', career_id=selected_career or '', category=selected_category or '', q=q, page=page + 1, include_inactive='1' if include_inactive else '') }}"><span>Siguiente</span><i class="ph ph-caret-right"></i></a>
     {% endif %}
   </div>
 </section>

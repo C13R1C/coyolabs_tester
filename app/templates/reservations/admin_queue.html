@@ -13,7 +13,7 @@
 }
 
 .reservation-admin-action-form .form-control {
-  min-height: 54px;
+  min-height: 90px;
   border-radius: 16px;
 }
 
@@ -102,7 +102,7 @@
               </form>
 
               <form method="post" action="{{ url_for('reservations.admin_reject', res_id=r.id) }}" class="reservation-admin-action-form">
-                <input type="text" name="admin_note" placeholder="Motivo del rechazo (opcional)" class="form-control">
+                <textarea name="admin_note" rows="3" placeholder="Escribe el motivo o comentario..." class="form-control"></textarea>
                 <button type="submit" class="btn btn-ghost">Rechazar</button>
               </form>
             </td>
