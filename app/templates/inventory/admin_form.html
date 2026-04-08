@@ -92,7 +92,7 @@
     </div>
     {% endif %}
     <div class="toolbar-group"><label for="pieces_text">Descripción de piezas (opcional)</label><div class="search-box"><input id="pieces_text" name="pieces_text" placeholder="Ej. 20/20, kit completo, faltan tapas" value="{{ data.get('pieces_text', material.pieces_text if material else '') }}"></div></div>
-    <div class="toolbar-group"><label for="pieces_qty">Cantidad</label><div class="search-box"><input id="pieces_qty" name="pieces_qty" type="number" min="0" placeholder="Ej. 20" value="{{ data.get('pieces_qty', material.pieces_qty if material else '') }}"></div></div>
+    <div class="toolbar-group"><label for="pieces_qty">Cantidad</label><div class="search-box"><input id="pieces_qty" name="pieces_qty" type="number" min="1" placeholder="Ej. 20 (mínimo 1)" value="{{ data.get('pieces_qty', material.pieces_qty if material else '') }}"></div></div>
     <div class="toolbar-group"><label for="brand">Marca</label><div class="search-box"><input id="brand" name="brand" value="{{ data.get('brand', material.brand if material else '') }}"></div></div>
     <div class="toolbar-group"><label for="model">Modelo</label><div class="search-box"><input id="model" name="model" value="{{ data.get('model', material.model if material else '') }}"></div></div>
     <div class="toolbar-group"><label for="code">Código</label><div class="search-box"><input id="code" name="code" value="{{ data.get('code', material.code if material else '') }}"></div></div>
