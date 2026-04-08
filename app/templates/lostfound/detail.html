@@ -4,10 +4,33 @@
 {% block content %}
 <style>
 .lostfound-evidence-img{
-  max-width: min(100%, 420px);
-  border-radius: 12px;
+  max-width: min(100%, 760px);
+  width: 100%;
+  border-radius: 14px;
   border: 1px solid var(--stroke);
   display: block;
+  box-shadow: 0 12px 28px rgba(0,0,0,.12);
+}
+
+.lostfound-cta{
+  margin-top: 12px;
+  border-radius: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--stroke);
+  background: rgba(255,255,255,.7);
+  font-weight: 600;
+}
+
+.lostfound-cta--found{
+  border-color: rgba(91,165,111,.28);
+  background: rgba(91,165,111,.12);
+  color: #2f6b44;
+}
+
+.lostfound-cta--reported{
+  border-color: rgba(212,166,61,.35);
+  background: rgba(212,166,61,.14);
+  color: #8c6914;
 }
 
 @media (max-width: 768px){
@@ -44,30 +67,39 @@
 </section>
 
 <section class="table-card" style="margin-bottom:16px;">
+  {% set is_found = item.status in ['IN_STORAGE', 'RETURNED'] %}
+  <div style="margin-bottom:14px;">
+    {% if item.evidence_ref and ('lostfound/' in item.evidence_ref or 'lostfound\\' in item.evidence_ref) %}
+      <img
+        class="lostfound-evidence-img"
+        src="{{ url_for('upload_file', filename=item.evidence_ref|replace('uploads\\\\', '')|replace('uploads/', '')|replace('\\', '/')) }}"
+        alt="Evidencia del objeto {{ item.title }}"
+      >
+    {% else %}
+      <div class="empty-state" style="margin:0;">
+        <i class="ph ph-image empty-icon"></i>
+        <h3>Sin foto de evidencia</h3>
+      </div>
+    {% endif %}
+  </div>
+
   <div class="table-wrap">
     <table class="inventory-table" style="min-width:800px;">
       <tbody>
-        <tr><td><strong>Título</strong></td><td>{{ item.title }}</td></tr>
+        <tr><td><strong>Nombre</strong></td><td>{{ item.title }}</td></tr>
         <tr><td><strong>Estado</strong></td><td>{{ item.status|status_label }}</td></tr>
         <tr><td><strong>Descripción</strong></td><td>{{ item.description or '-' }}</td></tr>
-        <tr>
-          <td><strong>Foto de evidencia</strong></td>
-          <td>
-            {% if item.evidence_ref and ('lostfound/' in item.evidence_ref or 'lostfound\\' in item.evidence_ref) %}
-              <img
-                class="lostfound-evidence-img"
-                src="{{ url_for('upload_file', filename=item.evidence_ref|replace('uploads\\\\', '')|replace('uploads/', '')|replace('\\', '/')) }}"
-                alt="Evidencia del objeto {{ item.title }}"
-              >
-            {% else %}
-              -
-            {% endif %}
-          </td>
-        </tr>
+        <tr><td><strong>Fecha</strong></td><td>{{ item.created_at }}</td></tr>
         <tr><td><strong>Nota admin</strong></td><td>{{ item.admin_note or '-' }}</td></tr>
-        <tr><td><strong>Creado</strong></td><td>{{ item.created_at }}</td></tr>
       </tbody>
     </table>
+  </div>
+  <div class="lostfound-cta {% if is_found %}lostfound-cta--found{% else %}lostfound-cta--reported{% endif %}">
+    {% if is_found %}
+      👉 ¿Es tuyo? Contacta con administración.
+    {% else %}
+      👉 ¿Lo encontraste? repórtalo.
+    {% endif %}
   </div>
 </section>
 
