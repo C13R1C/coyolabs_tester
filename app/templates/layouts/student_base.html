@@ -24,6 +24,39 @@
       outline-offset: 2px;
     }
     .notification-badge.is-hidden { display: none; }
+    .sidebar-nav .nav-item.active{
+      position: relative;
+      overflow: visible;
+    }
+    .sidebar-nav .nav-item.active::before{
+      content: "";
+      position: absolute;
+      left: -12px;
+      top: 10px;
+      bottom: 10px;
+      width: 4px;
+      border-radius: 999px;
+      background: linear-gradient(180deg, rgba(199,159,51,.95), rgba(226,193,90,.95));
+      box-shadow: 0 0 0 1px rgba(140,106,20,.12);
+    }
+    .sidebar-nav .nav-section-title + .nav-item{
+      margin-top: 6px;
+    }
+    .sidebar-nav .nav-section-title:not(:first-of-type){
+      margin-top: 20px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(102,81,45,.14);
+    }
+    .sidebar-logout{
+      background: rgba(255,255,255,.35) !important;
+      border-color: rgba(102,81,45,.12) !important;
+      color: var(--text-soft) !important;
+    }
+    .sidebar-logout:hover{
+      background: rgba(255,255,255,.55) !important;
+      color: var(--text) !important;
+      border-color: rgba(102,81,45,.18) !important;
+    }
     .notification-center {
       position: absolute;
       left: 18px;
@@ -267,73 +300,79 @@
         <nav class="sidebar-nav">
           <p class="nav-section-title">Principal</p>
 
-
           {% set is_admin_nav = current_user.is_authenticated and is_admin_role(current_user.role) %}
-          <a href="{{ url_for('root_home') }}"
-             class="nav-item {% if active_page == 'home' %}active{% endif %}">
-            <i class="ph ph-house nav-icon"></i>
-            <span class="nav-label">Inicio</span>
-          </a>
           {% if is_admin_nav %}
           <a href="{{ url_for('dashboard.dashboard_home') }}" class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
             <i class="ph ph-gauge nav-icon"></i>
             <span class="nav-label">Panel</span>
           </a>
-          {% endif %}
-          {% if current_user.is_authenticated and is_admin_role(current_user.role) %}
-          <a href="{{ url_for('inventory.inventory_list') }}" class="nav-item {% if active_page == 'inventory' %}active{% endif %}">
-            <i class="ph ph-package nav-icon"></i>
-            <span class="nav-label">Inventario</span>
+          {% else %}
+          <a href="{{ url_for('root_home') }}"
+             class="nav-item {% if active_page == 'home' %}active{% endif %}">
+            <i class="ph ph-house nav-icon"></i>
+            <span class="nav-label">Inicio</span>
           </a>
           {% endif %}
-
-          <a href="{{ url_for('profile.my_profile') }}" class="nav-item {% if active_page == 'profile' %}active{% endif %}">
-            <i class="ph ph-user-circle nav-icon"></i>
-            <span class="nav-label">Mi perfil</span>
-          </a>
-
-          {% if current_user.is_authenticated and is_admin_role(current_user.role) %}
-    <a href="{{ url_for('reports.reports_home') }}" class="nav-item {% if active_page == 'reports' %}active{% endif %}">
-      <i class="ph ph-chart-bar nav-icon"></i>
-      <span class="nav-label">Reportes</span>
-    </a>
-    <a href="{{ url_for('users.admin_panel') }}" class="nav-item {% if active_page == 'users' %}active{% endif %}">
-      <i class="ph ph-users-three nav-icon"></i>
-      <span class="nav-label">Usuarios</span>
-    </a>
-  {% endif %}
-
-          <a href="{{ url_for('ra_client.ra_client_home') }}" class="nav-item {% if active_page == 'ra_client' %}active{% endif %}">
-            <i class="ph ph-qr-code nav-icon"></i>
-            <span class="nav-label">RA Cliente</span>
-          </a>
-
-          <p class="nav-section-title">Servicios</p>
-
           <div class="nav-submenu nav-submenu-static">
-            <a href="{{ url_for('software.software_home') }}" class="nav-subitem {% if active_page == 'software' %}active{% endif %}">
-              <i class="ph ph-app-window nav-subicon"></i>
-              <span>Software</span>
-            </a>
-
-            <a href="{{ url_for('print3d.my_jobs') }}" class="nav-subitem {% if active_page == 'prints3d' %}active{% endif %}">
-              <i class="ph ph-cube nav-subicon"></i>
-              <span>Impresiones 3D</span>
-            </a>
-
             <a href="{{ url_for('reservations.reservations_home') }}" class="nav-subitem {% if active_page == 'reservations' %}active{% endif %}">
               <i class="ph ph-calendar-check nav-subicon"></i>
               <span>Reservaciones</span>
             </a>
-
+            <a href="{{ url_for('inventory_requests.my_daily_request') }}" class="nav-subitem {% if active_page == 'inventory_requests' %}active{% endif %}">
+              <i class="ph ph-clipboard-text nav-subicon"></i>
+              <span>Pedidos diarios</span>
+            </a>
+            {% if current_user.is_authenticated and is_admin_role(current_user.role) %}
+            <a href="{{ url_for('inventory.inventory_list') }}" class="nav-subitem {% if active_page == 'inventory' %}active{% endif %}">
+              <i class="ph ph-package nav-subicon"></i>
+              <span>Inventario</span>
+            </a>
+            {% endif %}
             <a href="{{ url_for('debts.debts_home') }}" class="nav-subitem {% if active_page == 'debts' %}active{% endif %}">
               <i class="ph ph-warning-circle nav-subicon"></i>
               <span>Adeudos</span>
             </a>
+          </div>
 
-            <a href="{{ url_for('inventory_requests.my_daily_request') }}" class="nav-subitem {% if active_page == 'inventory_requests' %}active{% endif %}">
-              <i class="ph ph-clipboard-text nav-subicon"></i>
-              <span>Pedidos diarios</span>
+          <p class="nav-section-title">Servicios</p>
+          <div class="nav-submenu nav-submenu-static">
+            <a href="{{ url_for('print3d.my_jobs') }}" class="nav-subitem {% if active_page == 'prints3d' %}active{% endif %}">
+              <i class="ph ph-cube nav-subicon"></i>
+              <span>Impresiones 3D</span>
+            </a>
+            <a href="{{ url_for('lostfound.lostfound_home') }}" class="nav-subitem {% if active_page == 'lostfound' %}active{% endif %}">
+              <i class="ph ph-suitcase nav-subicon"></i>
+              <span>Objetos perdidos</span>
+            </a>
+            <a href="{{ url_for('forum.forum_home') }}" class="nav-subitem {% if active_page == 'forum' %}active{% endif %}">
+              <i class="ph ph-chats-circle nav-subicon"></i>
+              <span>Foro</span>
+            </a>
+            <a href="{{ url_for('software.software_home') }}" class="nav-subitem {% if active_page == 'software' %}active{% endif %}">
+              <i class="ph ph-app-window nav-subicon"></i>
+              <span>Software</span>
+            </a>
+            <a href="{{ url_for('ra_client.ra_client_home') }}" class="nav-subitem {% if active_page == 'ra_client' %}active{% endif %}">
+              <i class="ph ph-qr-code nav-subicon"></i>
+              <span>RA Cliente</span>
+            </a>
+          </div>
+
+          <p class="nav-section-title">Gestión</p>
+          <div class="nav-submenu nav-submenu-static">
+            {% if current_user.is_authenticated and is_admin_role(current_user.role) %}
+            <a href="{{ url_for('reports.reports_home') }}" class="nav-subitem {% if active_page == 'reports' %}active{% endif %}">
+              <i class="ph ph-chart-bar nav-subicon"></i>
+              <span>Reportes</span>
+            </a>
+            <a href="{{ url_for('users.admin_panel') }}" class="nav-subitem {% if active_page == 'users' %}active{% endif %}">
+              <i class="ph ph-users-three nav-subicon"></i>
+              <span>Usuarios</span>
+            </a>
+            {% endif %}
+            <a href="{{ url_for('profile.my_profile') }}" class="nav-subitem {% if active_page == 'profile' %}active{% endif %}">
+              <i class="ph ph-user-circle nav-subicon"></i>
+              <span>Mi perfil</span>
             </a>
 
             {% if current_user.is_authenticated and is_admin_role(current_user.role) %}
@@ -343,15 +382,6 @@
             </a>
             {% endif %}
 
-            <a href="{{ url_for('forum.forum_home') }}" class="nav-subitem {% if active_page == 'forum' %}active{% endif %}">
-              <i class="ph ph-chats-circle nav-subicon"></i>
-              <span>Foro</span>
-            </a>
-
-            <a href="{{ url_for('lostfound.lostfound_home') }}" class="nav-subitem {% if active_page == 'lostfound' %}active{% endif %}">
-              <i class="ph ph-suitcase nav-subicon"></i>
-              <span>Objetos perdidos</span>
-            </a>
             <form method="post" action="{{ url_for('auth.logout') }}" style="margin:0;">
               <button type="submit" class="btn btn-ghost sidebar-logout">
                 <i class="ph ph-sign-out"></i>
