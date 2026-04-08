@@ -1,6 +1,6 @@
 {% extends "layouts/student_base.html" %}
-{% set crumbs = [("Inicio", url_for('root_home')), ("Pedidos diarios admin", url_for('inventory_requests.admin_daily_requests')), ("Ticket #" ~ ticket.id, url_for('inventory_requests.admin_ticket_detail', ticket_id=ticket.id))] %}
-{% block title %}Pedido #{{ ticket.id }}{% endblock %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Solicitudes de material admin", url_for('inventory_requests.admin_daily_requests')), ("Solicitud #" ~ ticket.id, url_for('inventory_requests.admin_ticket_detail', ticket_id=ticket.id))] %}
+{% block title %}Solicitud #{{ ticket.id }}{% endblock %}
 
 {% block content %}
 <style>
@@ -23,7 +23,7 @@
 <header class="topbar">
   <div class="topbar-left">
     <p class="page-kicker">Inventario</p>
-    <h1>Ticket diario #{{ ticket.id }}</h1>
+    <h1>Solicitud de material #{{ ticket.id }}</h1>
     <p class="page-subtitle">Usuario: {{ ticket.user.email if ticket.user else '-' }} · Fecha: {{ ticket.request_date }}</p>
   </div>
 </header>
@@ -46,13 +46,14 @@
 
     {% if ticket.status != 'CLOSED' %}
     <form method="post" action="{{ url_for('inventory_requests.admin_close_ticket', ticket_id=ticket.id) }}">
-      <button type="submit" class="btn btn-ghost">Cerrar ticket</button>
+      <button type="submit" class="btn btn-ghost">Cerrar solicitud</button>
     </form>
     {% endif %}
   </div>
 </section>
 
 <section class="table-card" style="margin-top:16px;">
+  <p><strong>Materia o motivo:</strong> {{ ticket.notes or '-' }}</p>
   <div class="table-wrap">
     <table class="inventory-table" style="min-width:750px;">
       <thead>

@@ -83,12 +83,18 @@ def _has_min_real_chars(value: str, minimum: int = 3) -> bool:
     return len(normalized) >= minimum
 
 
-def _normalize_and_validate_matricula(raw_matricula: str | None) -> tuple[str | None, str | None]:
+def _normalize_and_validate_matricula(raw_matricula: str | None, role: str | None, email: str | None) -> tuple[str | None, str | None]:
+    normalized_role = normalize_role(role)
+    if normalized_role != ROLE_STUDENT:
+        return (email or "").strip().lower(), None
+
     matricula = re.sub(r"\s+", "", raw_matricula or "")
     if not matricula:
         return None, "La matrícula es obligatoria."
-    if len(matricula) < 8 or len(matricula) > 8:
-        return None, "La matrícula debe tener exactamente 8 caracteres."
+    if not matricula.isdigit():
+        return None, "La matrícula debe contener solo números."
+    if len(matricula) != 8:
+        return None, "La matrícula debe tener exactamente 8 dígitos."
     return matricula, None
 
 
@@ -641,15 +647,13 @@ def complete_profile():
             flash("El nombre completo es obligatorio y debe tener al menos 3 caracteres reales.")
             return redirect(url_for("profile.complete_profile"))
 
-        matricula = None
-        if is_student:
-            matricula, matricula_error = _normalize_and_validate_matricula(matricula_raw)
-            if matricula_error:
-                flash(matricula_error)
-                return redirect(url_for("profile.complete_profile"))
-
-        if is_student and not matricula:
-            flash("La matrícula es obligatoria para estudiantes.")
+        matricula, matricula_error = _normalize_and_validate_matricula(
+            matricula_raw,
+            current_user.role,
+            current_user.email,
+        )
+        if matricula_error:
+            flash(matricula_error)
             return redirect(url_for("profile.complete_profile"))
 
         if not career_id:
@@ -726,6 +730,7 @@ def complete_profile():
                 "career_id": career_obj.id,
                 "academic_level_id": level_obj.id if level_obj else None,
                 "role": current_user.role,
+                "profile_identifier": matricula,
             },
         )
         db.session.commit()

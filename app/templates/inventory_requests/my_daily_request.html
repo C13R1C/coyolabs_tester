@@ -1,17 +1,17 @@
 {% extends "layouts/student_base.html" %}
-{% set crumbs = [("Inicio", url_for('root_home')), ("Pedidos diarios", url_for('inventory_requests.my_daily_request'))] %}
-{% block title %}Pedidos diarios{% endblock %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Solicitud de material", url_for('inventory_requests.my_daily_request'))] %}
+{% block title %}Solicitud de material{% endblock %}
 
 {% block content %}
 <header class="topbar">
   <div class="topbar-left">
     <p class="page-kicker">Inventario</p>
-    <h1>Mi pedido diario</h1>
+    <h1>Mi solicitud de material</h1>
     <p class="page-subtitle">Un solo ticket por día. Puedes agregar o quitar materiales antes de enviar.</p>
   </div>
   {% if is_admin_role(current_user.role) %}
   <div class="topbar-actions">
-    <a href="{{ url_for('inventory_requests.admin_daily_requests') }}" class="btn btn-ghost">Ver pedidos admin</a>
+    <a href="{{ url_for('inventory_requests.admin_daily_requests') }}" class="btn btn-ghost">Ver solicitudes admin</a>
   </div>
   {% endif %}
 </header>
@@ -176,7 +176,7 @@
 </style>
 
 <section class="table-card">
-  <h3 style="margin:0 0 12px 0;">Agregar materiales al pedido de hoy</h3>
+  <h3 style="margin:0 0 12px 0;">Agregar materiales a la solicitud de hoy</h3>
   <form method="post" action="{{ url_for('inventory_requests.add_to_daily_request') }}">
     <div class="material-search">
       <div class="search-box">
@@ -190,6 +190,11 @@
       <div class="cart-empty">Aún no agregas materiales.</div>
     </div>
 
+    <div class="toolbar-group" style="margin:10px 0 12px;">
+      <label for="request_reason">Materia o motivo de la solicitud *</label>
+      <textarea id="request_reason" name="request_reason" class="form-control" rows="3" required placeholder="Ejemplo: Práctica de laboratorio de química orgánica">{{ today_ticket.notes if today_ticket else '' }}</textarea>
+    </div>
+
     <div class="cart-summary">
       <span><strong id="cartKinds">0</strong> materiales distintos</span>
       <strong id="cartTotal">0 piezas</strong>
@@ -197,7 +202,7 @@
 
     <div style="display:flex; justify-content:flex-end; margin-top:10px; gap:8px;">
       <button type="button" id="clearCartBtn" class="btn btn-ghost">Vaciar carrito</button>
-      <button type="submit" class="btn btn-gold">Agregar al ticket de hoy</button>
+      <button type="submit" class="btn btn-gold">Guardar solicitud de hoy</button>
     </div>
 
     <div id="cartHiddenInputs"></div>
@@ -205,11 +210,12 @@
 </section>
 
 <section class="table-card" style="margin-top:16px;">
-  <h3 style="margin:0 0 12px 0;">Ticket de hoy</h3>
+  <h3 style="margin:0 0 12px 0;">Solicitud de hoy</h3>
   {% if not today_ticket %}
-    <p>Aún no tienes ticket de pedido para hoy.</p>
+    <p>Aún no tienes solicitud de material para hoy.</p>
   {% else %}
-    <p><strong>Ticket #{{ today_ticket.id }}</strong> · Estado: <span class="status-badge {% if today_ticket.status == 'OPEN' %}status-warn{% elif today_ticket.status == 'READY_FOR_PICKUP' %}status-ok{% else %}status-bad{% endif %}">{{ today_ticket.status|status_label }}</span></p>
+    <p><strong>Solicitud #{{ today_ticket.id }}</strong> · Estado: <span class="status-badge {% if today_ticket.status == 'OPEN' %}status-warn{% elif today_ticket.status == 'READY_FOR_PICKUP' %}status-ok{% else %}status-bad{% endif %}">{{ today_ticket.status|status_label }}</span></p>
+    <p><strong>Motivo:</strong> {{ today_ticket.notes or '-' }}</p>
     <div class="table-wrap">
       <table class="inventory-table" style="min-width:700px;">
         <thead>
@@ -234,15 +240,16 @@
 <section class="table-card" style="margin-top:16px;">
   <h3 style="margin:0 0 12px 0;">Historial reciente</h3>
   {% if history|length == 0 %}
-    <p>Sin historial de pedidos.</p>
+    <p>Sin historial de solicitudes.</p>
   {% else %}
     <div class="table-wrap">
       <table class="inventory-table" style="min-width:850px;">
         <thead>
           <tr>
-            <th>Ticket</th>
+            <th>Solicitud</th>
             <th>Fecha</th>
             <th>Estado</th>
+            <th>Motivo</th>
             <th>Items</th>
           </tr>
         </thead>
@@ -252,6 +259,7 @@
             <td>#{{ t.id }}</td>
             <td>{{ t.request_date }}</td>
             <td>{{ t.status|status_label }}</td>
+            <td>{{ t.notes or '-' }}</td>
             <td>{{ t.items|length }}</td>
           </tr>
           {% endfor %}

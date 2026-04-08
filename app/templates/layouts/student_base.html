@@ -320,7 +320,7 @@
             </a>
             <a href="{{ url_for('inventory_requests.my_daily_request') }}" class="nav-subitem {% if active_page == 'inventory_requests' %}active{% endif %}">
               <i class="ph ph-clipboard-text nav-subicon"></i>
-              <span>Pedidos diarios</span>
+              <span>Solicitud de material</span>
             </a>
             {% if current_user.is_authenticated and is_admin_role(current_user.role) %}
             <a href="{{ url_for('inventory.inventory_list') }}" class="nav-subitem {% if active_page == 'inventory' %}active{% endif %}">
