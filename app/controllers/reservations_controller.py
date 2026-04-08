@@ -460,12 +460,43 @@ def request_reservation():
     calendar_buildings = sorted({room[:1] for room in ROOMS})
     selected_calendar_building = calendar_building if calendar_building in calendar_buildings else ""
     available_calendar_rooms = _rooms_by_building(selected_calendar_building)
-    selected_calendar_room = calendar_room if calendar_room in available_calendar_rooms else ""
+    is_operational_calendar = is_admin_role(current_user.role)
+    selected_calendar_room = calendar_room if (is_operational_calendar and calendar_room in available_calendar_rooms) else ""
     week_schedule, calendar_rooms = build_week_schedule(
         week_days=week_days,
         selected_room=selected_calendar_room or None,
         rooms_scope=available_calendar_rooms,
     )
+    calendar_day_s = (request.args.get("calendar_day") or "").strip()
+    try:
+        selected_calendar_day = parse_date(calendar_day_s) if calendar_day_s else base_date
+    except ValueError:
+        selected_calendar_day = base_date
+    if selected_calendar_day not in week_days:
+        selected_calendar_day = week_start
+
+    daily_schedule = []
+    for room in calendar_rooms:
+        day_cell = week_schedule.get(room, {}).get(selected_calendar_day, {})
+        slots = day_cell.get("slots", []) if isinstance(day_cell, dict) else []
+        items = day_cell.get("items", []) if isinstance(day_cell, dict) else []
+        cell_state = "available"
+        if slots:
+            slot_states = [slot.get("state") for slot in slots]
+            if "pending" in slot_states:
+                cell_state = "pending"
+            elif "in_progress" in slot_states:
+                cell_state = "progress"
+            elif "occupied" in slot_states:
+                cell_state = "occupied"
+        daily_schedule.append(
+            {
+                "room": room,
+                "slots": slots,
+                "items": items,
+                "state": cell_state,
+            }
+        )
 
     prev_week = week_start - timedelta(days=7)
     next_week = week_start + timedelta(days=7)
@@ -682,6 +713,9 @@ def request_reservation():
     calendar_rooms=calendar_rooms,
     selected_calendar_building=selected_calendar_building,
     selected_calendar_room=selected_calendar_room,
+    selected_calendar_day=selected_calendar_day,
+    daily_schedule=daily_schedule,
+    is_operational_calendar=is_operational_calendar,
     prev_week=prev_week,
     next_week=next_week,
     is_professor=is_professor,
