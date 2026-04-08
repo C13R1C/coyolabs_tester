@@ -304,13 +304,13 @@
           {% if is_admin_nav %}
           <a href="{{ url_for('dashboard.dashboard_home') }}" class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
             <i class="ph ph-gauge nav-icon"></i>
-            <span class="nav-label">Panel</span>
+            <span class="nav-label">Panel (Operación)</span>
           </a>
           {% else %}
           <a href="{{ url_for('root_home') }}"
              class="nav-item {% if active_page == 'home' %}active{% endif %}">
             <i class="ph ph-house nav-icon"></i>
-            <span class="nav-label">Inicio</span>
+            <span class="nav-label">Inicio (Usuario)</span>
           </a>
           {% endif %}
           <div class="nav-submenu nav-submenu-static">
@@ -352,10 +352,12 @@
               <i class="ph ph-app-window nav-subicon"></i>
               <span>Software</span>
             </a>
+            {% if current_user.is_authenticated and is_admin_role(current_user.role) %}
             <a href="{{ url_for('ra_client.ra_client_home') }}" class="nav-subitem {% if active_page == 'ra_client' %}active{% endif %}">
               <i class="ph ph-qr-code nav-subicon"></i>
-              <span>RA Cliente</span>
+              <span>RA Cliente (Experimental)</span>
             </a>
+            {% endif %}
           </div>
 
           <p class="nav-section-title">Gestión</p>
@@ -657,8 +659,37 @@
         }, 180);
       }
 
+      let sseRetryCount = 0;
+      let fallbackPollTimer = null;
+      let fallbackNoticeShown = false;
+
+      function stopFallbackPolling() {
+        if (!fallbackPollTimer) return;
+        clearInterval(fallbackPollTimer);
+        fallbackPollTimer = null;
+      }
+
+      function startFallbackPolling() {
+        if (fallbackPollTimer) return;
+        fallbackPollTimer = setInterval(() => {
+          loadInitialFeed();
+        }, 12000);
+        if (!fallbackNoticeShown) {
+          fallbackNoticeShown = true;
+          createNotification({
+            title: "Notificaciones",
+            message: "Conexión en tiempo real inestable. Activamos actualización automática para mantenerte sincronizado.",
+            type: "warning",
+          });
+        }
+      }
+
       function connectSSE() {
         const source = new EventSource("{{ url_for('notifications.stream_notifications') }}");
+        source.addEventListener("connected", () => {
+          sseRetryCount = 0;
+          stopFallbackPolling();
+        });
         source.addEventListener("notification_created", (event) => {
           const payload = JSON.parse(event.data || "{}");
           upsertNotification(payload);
@@ -674,6 +705,10 @@
         });
         source.addEventListener("error", () => {
           source.close();
+          sseRetryCount += 1;
+          if (sseRetryCount >= 3) {
+            startFallbackPolling();
+          }
           setTimeout(connectSSE, 2000);
         });
       }
