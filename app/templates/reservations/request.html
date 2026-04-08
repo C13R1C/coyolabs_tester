@@ -693,6 +693,7 @@
 
       <input type="hidden" name="week_start" value="{{ week_start.isoformat() }}">
       <button type="submit" class="btn btn-ghost">Aplicar</button>
+      <a class="btn btn-ghost" href="{{ url_for('reservations.request_reservation') }}">Limpiar</a>
     </form>
   </div>
 
