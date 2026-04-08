@@ -67,6 +67,8 @@ DEFAULT_PDF_CURATED_COLUMNS = [
     "created_at",
 ]
 
+DEFAULT_XLSX_CURATED_COLUMNS = DEFAULT_PDF_CURATED_COLUMNS[:]
+
 REPORT_COLUMN_LABELS = {
     "id": "ID",
     "lab_id": "Laboratorio",
@@ -131,7 +133,8 @@ def excel_response(filename: str, headers: list[str], rows: list[list]):
     ws = wb.active
     ws.title = "Reporte"
 
-    ws.append(headers)
+    translated_headers = [REPORT_COLUMN_LABELS.get(h, h.replace("_", " ").title()) for h in headers]
+    ws.append(translated_headers)
     for row in rows:
         ws.append(row)
 
@@ -144,7 +147,7 @@ def excel_response(filename: str, headers: list[str], rows: list[list]):
         header_cell.font = header_font
         header_cell.alignment = header_alignment
 
-    max_widths = [len(str(h)) if h is not None else 0 for h in headers]
+    max_widths = [len(str(h)) if h is not None else 0 for h in translated_headers]
     for row_idx, row in enumerate(rows, start=2):
         for col_idx, value in enumerate(row, start=1):
             cell = ws.cell(row=row_idx, column=col_idx)
@@ -200,6 +203,27 @@ def parse_pdf_selected_columns(headers: list[str]) -> list[str]:
             return normalized[:10]
 
     curated = [col for col in DEFAULT_PDF_CURATED_COLUMNS if col in allowed]
+    if curated:
+        return curated
+
+    fallback = [col for col in headers if col not in PDF_TECHNICAL_EXCLUDED_COLUMNS]
+    return (fallback or headers)[:10]
+
+
+def parse_excel_selected_columns(headers: list[str]) -> list[str]:
+    selected = request.args.getlist("cols")
+    if not selected:
+        raw = (request.args.get("cols") or "").strip()
+        if raw:
+            selected = [part.strip() for part in raw.split(",") if part.strip()]
+
+    allowed = set(headers)
+    if selected:
+        normalized = [col for col in selected if col in allowed and col not in PDF_TECHNICAL_EXCLUDED_COLUMNS]
+        if normalized:
+            return normalized[:10]
+
+    curated = [col for col in DEFAULT_XLSX_CURATED_COLUMNS if col in allowed]
     if curated:
         return curated
 
@@ -592,7 +616,7 @@ def report_inventory_excel():
     status = (request.args.get("status") or "").strip()
     search = (request.args.get("search") or "").strip()
     headers, rows = build_inventory_rows(lab_id=lab_id, status=status or None, search=search or None)
-    selected_columns = parse_selected_columns(headers)
+    selected_columns = parse_excel_selected_columns(headers)
     headers, rows = project_rows(headers, rows, selected_columns)
     fname = "inventory.xlsx" if not lab_id else f"inventory_lab_{lab_id}.xlsx"
     return excel_response(fname, headers, rows)
@@ -652,7 +676,7 @@ def report_debts_excel():
     status = (request.args.get("status") or "").strip()
     user_id = request.args.get("user_id", type=int)
     headers, rows = build_debts_rows(status=status or None, user_id=user_id)
-    selected_columns = parse_selected_columns(headers)
+    selected_columns = parse_excel_selected_columns(headers)
     headers, rows = project_rows(headers, rows, selected_columns)
     return excel_response("debts.xlsx", headers, rows)
 
@@ -728,7 +752,7 @@ def report_logbook_excel():
         date_from=date_from or None,
         date_to=date_to or None,
     )
-    selected_columns = parse_selected_columns(headers)
+    selected_columns = parse_excel_selected_columns(headers)
     headers, rows = project_rows(headers, rows, selected_columns)
     return excel_response("logbook.xlsx", headers, rows)
 
@@ -815,7 +839,7 @@ def report_reservations_excel():
         date_from=date_from or None,
         date_to=date_to or None,
     )
-    selected_columns = parse_selected_columns(headers)
+    selected_columns = parse_excel_selected_columns(headers)
     headers, rows = project_rows(headers, rows, selected_columns)
     return excel_response("reservations.xlsx", headers, rows)
 
