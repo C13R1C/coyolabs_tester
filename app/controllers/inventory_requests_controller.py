@@ -37,7 +37,7 @@ def _notify_admins_for_ticket(ticket: InventoryRequestTicket, message: str) -> l
     for admin in admins:
         notif = Notification(
             user_id=admin.id,
-            title="Pedido diario actualizado",
+            title="Solicitud de material actualizada",
             message=message,
             link=url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id),
         )
@@ -122,6 +122,11 @@ def add_to_daily_request():
 
     material_ids = request.form.getlist("material_id[]")
     quantities = request.form.getlist("quantity[]")
+    request_reason = (request.form.get("request_reason") or "").strip()
+
+    if not request_reason:
+        flash("Debes indicar la materia o motivo de la solicitud.", "error")
+        return redirect(url_for("inventory_requests.my_daily_request"))
 
     parsed_items = []
     for i in range(len(material_ids)):
@@ -171,10 +176,13 @@ def add_to_daily_request():
             user_id=current_user.id,
             request_date=today,
             status=STATUS_OPEN,
+            notes=request_reason,
         )
         db.session.add(ticket)
         db.session.flush()
         created_new = True
+    else:
+        ticket.notes = request_reason
 
     for material, qty in parsed_items:
         existing_item = InventoryRequestItem.query.filter_by(
@@ -199,12 +207,12 @@ def add_to_daily_request():
         ticket.ready_at = None
         admin_notifications = _notify_admins_for_ticket(
             ticket,
-            f"El usuario {current_user.email} actualizó el pedido diario #{ticket.id}; requiere nueva revisión.",
+            f"El usuario {current_user.email} actualizó la solicitud de material #{ticket.id}; requiere nueva revisión.",
         )
     elif created_new:
         admin_notifications = _notify_admins_for_ticket(
             ticket,
-            f"El usuario {current_user.email} creó el pedido diario #{ticket.id}.",
+            f"El usuario {current_user.email} creó la solicitud de material #{ticket.id}.",
         )
 
     log_event(
@@ -212,7 +220,7 @@ def add_to_daily_request():
         action="INVENTORY_DAILY_REQUEST_UPDATED" if not created_new else "INVENTORY_DAILY_REQUEST_CREATED",
         user_id=current_user.id,
         entity_label=f"InventoryRequestTicket #{ticket.id}",
-        description=f"Pedido diario {'actualizado' if not created_new else 'creado'}",
+        description=f"Solicitud de material {'actualizada' if not created_new else 'creada'}",
         metadata={"ticket_id": ticket.id, "request_date": str(ticket.request_date)},
     )
 
@@ -221,9 +229,9 @@ def add_to_daily_request():
         publish_notification_created(notif)
 
     if created_new:
-        flash(f"Pedido del día creado (ticket #{ticket.id}).", "success")
+        flash(f"Solicitud de material creada (ticket #{ticket.id}).", "success")
     else:
-        flash(f"Pedido actualizado en el ticket #{ticket.id}.", "success")
+        flash(f"Solicitud de material actualizada en el ticket #{ticket.id}.", "success")
 
     return redirect(url_for("inventory_requests.my_daily_request"))
 
@@ -267,7 +275,7 @@ def admin_ticket_detail(ticket_id: int):
     )
 
     if not ticket:
-        flash("Pedido no encontrado.", "error")
+        flash("Solicitud no encontrada.", "error")
         return redirect(url_for("inventory_requests.admin_daily_requests"))
 
     return render_template(
@@ -284,11 +292,11 @@ def admin_mark_ready(ticket_id: int):
 
     ticket = InventoryRequestTicket.query.get(ticket_id)
     if not ticket:
-        flash("Pedido no encontrado.", "error")
+        flash("Solicitud no encontrada.", "error")
         return redirect(url_for("inventory_requests.admin_daily_requests"))
 
     if ticket.status == STATUS_CLOSED:
-        flash("No puedes marcar como listo un pedido cerrado.", "error")
+        flash("No puedes marcar como lista una solicitud cerrada.", "error")
         return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
 
     ticket.status = STATUS_READY
@@ -296,8 +304,8 @@ def admin_mark_ready(ticket_id: int):
 
     notification = Notification(
         user_id=ticket.user_id,
-        title="Pedido listo para recoger",
-        message=f"Tu pedido diario #{ticket.id} está listo para recoger.",
+        title="Solicitud de material lista para recoger",
+        message=f"Tu solicitud de material #{ticket.id} está lista para recoger.",
         link=url_for("inventory_requests.my_daily_request"),
     )
     db.session.add(notification)
@@ -306,14 +314,14 @@ def admin_mark_ready(ticket_id: int):
         action="INVENTORY_DAILY_REQUEST_READY",
         user_id=current_user.id,
         entity_label=f"InventoryRequestTicket #{ticket.id}",
-        description=f"Ticket diario #{ticket.id} marcado listo para recoger",
+        description=f"Solicitud de material #{ticket.id} marcada lista para recoger",
         metadata={"ticket_id": ticket.id, "target_user_id": ticket.user_id},
     )
 
     db.session.commit()
     publish_notification_created(notification)
 
-    flash("Pedido marcado como listo y usuario notificado.", "success")
+    flash("Solicitud marcada como lista y usuario notificado.", "success")
     return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
 
 
@@ -324,11 +332,11 @@ def admin_close_ticket(ticket_id: int):
 
     ticket = InventoryRequestTicket.query.get(ticket_id)
     if not ticket:
-        flash("Pedido no encontrado.", "error")
+        flash("Solicitud no encontrada.", "error")
         return redirect(url_for("inventory_requests.admin_daily_requests"))
 
     if ticket.status == STATUS_CLOSED:
-        flash("El pedido ya está cerrado.", "warning")
+        flash("La solicitud ya está cerrada.", "warning")
         return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
 
     ticket.status = STATUS_CLOSED
@@ -338,11 +346,11 @@ def admin_close_ticket(ticket_id: int):
         action="INVENTORY_DAILY_REQUEST_CLOSED",
         user_id=current_user.id,
         entity_label=f"InventoryRequestTicket #{ticket.id}",
-        description=f"Ticket diario #{ticket.id} cerrado",
+        description=f"Solicitud de material #{ticket.id} cerrada",
         metadata={"ticket_id": ticket.id, "target_user_id": ticket.user_id},
     )
 
     db.session.commit()
 
-    flash("Pedido cerrado correctamente.", "success")
+    flash("Solicitud cerrada correctamente.", "success")
     return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
