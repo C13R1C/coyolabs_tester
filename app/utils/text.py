@@ -86,3 +86,24 @@ def status_label(status: str | None) -> str:
 def flash_category_label(category: str | None) -> str:
     normalized = normalize_spaces(category or "info").lower()
     return FLASH_CATEGORY_LABELS.get(normalized, "Información")
+
+
+def normalize_lab_room_code(room: str | None) -> str:
+    """Normaliza códigos como E001/E01/E1 al formato canónico E1."""
+    value = normalize_spaces(room or "").upper()
+    match = re.match(r"^([A-Z])0*(\d+)$", value)
+    if not match:
+        return value
+    building, number = match.groups()
+    return f"{building}{int(number)}"
+
+
+def lab_room_code_variants(room: str | None) -> set[str]:
+    """Genera variantes mínimas para comparaciones sin migrar datos."""
+    canonical = normalize_lab_room_code(room)
+    match = re.match(r"^([A-Z])(\d+)$", canonical)
+    if not match:
+        return {canonical} if canonical else set()
+    building, number = match.groups()
+    padded = f"{building}{int(number):03d}"
+    return {canonical, padded}
