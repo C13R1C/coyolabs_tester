@@ -339,13 +339,13 @@
           {% if is_admin_nav %}
           <a href="{{ url_for('dashboard.dashboard_home') }}" class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
             <i class="ph ph-gauge nav-icon"></i>
-            <span class="nav-label">Panel (Operación)</span>
+            <span class="nav-label">Panel</span>
           </a>
           {% else %}
           <a href="{{ url_for('root_home') }}"
-             class="nav-item {% if active_page == 'home' %}active{% endif %}">
+            class="nav-item {% if active_page == 'home' %}active{% endif %}">
             <i class="ph ph-house nav-icon"></i>
-            <span class="nav-label">Inicio (Usuario)</span>
+            <span class="nav-label">Inicio</span>
           </a>
           {% endif %}
           <div class="nav-submenu nav-submenu-static">
