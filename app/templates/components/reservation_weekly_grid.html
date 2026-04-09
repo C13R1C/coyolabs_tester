@@ -1,0 +1,199 @@
+{% set nombres_dia = {0:'Lunes',1:'Martes',2:'Miércoles',3:'Jueves',4:'Viernes',5:'Sábado',6:'Domingo'} %}
+{% set interactive_slots = interactive_slots if interactive_slots is defined else False %}
+{% set days_to_render = [] %}
+{% if include_day_filter and day_filter_active is defined and day_filter_active and selected_calendar_day is defined %}
+  {% set days_to_render = [selected_calendar_day] %}
+{% else %}
+  {% for d in week_days %}
+    {% if d.weekday() != 6 %}
+      {% set _ = days_to_render.append(d) %}
+    {% endif %}
+  {% endfor %}
+{% endif %}
+
+<style>
+.res-week-card{margin-top:16px}
+.res-week-header{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;padding:14px 16px;border-radius:16px;background:linear-gradient(135deg,#37474f,#607d8b);color:#fff;margin-bottom:12px;box-shadow:0 10px 24px rgba(55,71,79,.28)}
+.res-week-header h2{margin:0;color:#fff}
+.res-week-header .page-subtitle{color:rgba(255,255,255,.88);margin-top:4px}
+.res-week-nav{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.res-legend{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.res-legend-item{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;border:1px solid rgba(0,0,0,.08);background:#fff;font-size:.82rem}
+.res-legend-dot{width:10px;height:10px;border-radius:50%}
+.res-dot-available{background:#43a047}.res-dot-occupied{background:#d32f2f}.res-dot-pending{background:#fbc02d}.res-dot-progress{background:#607d8b}.res-dot-past{background:#9e9e9e}
+.res-week-grid-wrap{overflow-x:auto;padding-bottom:4px}
+.res-week-grid{display:grid;grid-template-columns:120px repeat(6,minmax(180px,1fr));gap:12px;min-width:1260px}
+.res-room-col-head,.res-day-col-head{padding:12px;border-radius:14px;background:#fff;border:1px solid rgba(0,0,0,.08);box-shadow:0 6px 18px rgba(0,0,0,.07);font-weight:700}
+.res-day-col-head small{display:block;color:#667;margin-top:2px;font-weight:500}
+.res-room-label-card{padding:12px;border-radius:14px;background:#fff;border:1px solid rgba(0,0,0,.08);font-weight:700;display:flex;align-items:flex-start}
+.res-day-cell{border:1px solid var(--stroke);border-radius:14px;background:#fff;padding:8px;min-height:180px;box-shadow:0 8px 20px rgba(0,0,0,.06);transition:transform .15s ease,box-shadow .15s ease}
+.res-day-cell:hover{transform:translateY(-1px);box-shadow:0 10px 24px rgba(0,0,0,.1)}
+.res-day-cell.is-available{background:rgba(67,160,71,.08);border-color:rgba(67,160,71,.34)}
+.res-day-cell.is-occupied{background:rgba(211,47,47,.11);border-color:rgba(211,47,47,.35)}
+.res-day-cell.is-pending{background:rgba(251,192,45,.18);border-color:rgba(251,192,45,.42)}
+.res-day-cell.is-progress{background:rgba(96,125,139,.15);border-color:rgba(96,125,139,.4)}
+.time-slot{font-size:.76rem;padding:6px;border-radius:8px;margin-bottom:6px;text-align:center;border:1px solid transparent;transition:.2s;display:block;width:100%}
+.time-slot.available{background:rgba(67,160,71,.18);color:#2e7d32}
+.time-slot.occupied{background:rgba(211,47,47,.23);color:#b71c1c}
+.time-slot.pending{background:rgba(251,192,45,.3);color:#8d6e00}
+.time-slot.in_progress{background:rgba(96,125,139,.26);color:#37474f}
+.time-slot:hover{transform:translateY(-1px) scale(1.02);box-shadow:0 6px 14px rgba(0,0,0,.12)}
+.time-slot.slot-clickable{cursor:pointer}
+.res-slot-btn{background:none;border:none;padding:0;font:inherit}
+.res-slot-btn:focus-visible{outline:2px solid #37474f;outline-offset:2px}
+.time-slot.is-past{background:#e0e0e0;color:#9e9e9e;border-color:#d2d2d2;cursor:not-allowed;box-shadow:none;transform:none}
+.time-slot.is-past:hover{transform:none;box-shadow:none}
+.res-week-card .btn.btn-ghost{border-color:#607d8b;color:#37474f}
+.res-week-card .btn.btn-ghost:hover{background:rgba(96,125,139,.14)}
+</style>
+
+<section class="table-card res-week-card">
+  <div class="res-week-header">
+    <div>
+      <p class="page-kicker">Calendario semanal</p>
+      <h2>{{ calendar_title }}</h2>
+      <p class="page-subtitle">{{ calendar_subtitle }}</p>
+    </div>
+    <div class="res-week-nav">
+      <a class="btn btn-ghost" href="{{ prev_url }}">← Semana anterior</a>
+      <a class="btn btn-ghost" href="{{ next_url }}">Semana siguiente →</a>
+    </div>
+  </div>
+
+  <form method="get" action="{{ filter_action }}" class="reservation-calendar-filter" style="display:flex; gap:10px; align-items:end; flex-wrap:wrap; margin-bottom:10px;">
+    <div class="toolbar-group" style="min-width:180px; margin:0;">
+      <label>Filtrar por edificio</label>
+      <div class="select-wrap">
+        <select name="calendar_building" id="buildingSelect">
+          <option value="">Todos</option>
+          {% for building in calendar_buildings %}
+          <option value="{{ building }}" {% if selected_calendar_building == building %}selected{% endif %}>Edificio {{ building }}</option>
+          {% endfor %}
+        </select>
+        <i class="ph ph-caret-down select-arrow"></i>
+      </div>
+    </div>
+    <div class="toolbar-group" style="min-width:220px; margin:0;">
+      <label>Filtrar por laboratorio</label>
+      <div class="select-wrap">
+        <select name="calendar_room" id="roomSelect">
+          <option value="">Todos</option>
+          {% for r in calendar_filter_rooms %}
+          <option value="{{ r }}" {% if selected_calendar_room == r %}selected{% endif %}>{{ r }}</option>
+          {% endfor %}
+        </select>
+        <i class="ph ph-caret-down select-arrow"></i>
+      </div>
+    </div>
+    {% if include_day_filter %}
+    <div class="toolbar-group" style="min-width:220px; margin:0;">
+      <label>Día</label>
+      <div class="search-box">
+        <i class="ph ph-calendar search-icon"></i>
+        <input type="date" name="calendar_day" value="{{ selected_calendar_day.isoformat() }}">
+      </div>
+    </div>
+    {% endif %}
+    <input type="hidden" name="week_start" value="{{ week_start.isoformat() }}">
+    <button type="submit" class="btn btn-ghost">Aplicar</button>
+    <a class="btn btn-ghost" href="{{ clear_url }}">Limpiar</a>
+  </form>
+
+  <div class="res-legend" aria-label="Leyenda de estados de disponibilidad">
+    <span class="res-legend-item"><span class="res-legend-dot res-dot-available"></span>Disponible</span>
+    <span class="res-legend-item"><span class="res-legend-dot res-dot-occupied"></span>Ocupado</span>
+    <span class="res-legend-item"><span class="res-legend-dot res-dot-pending"></span>Pendiente</span>
+    <span class="res-legend-item"><span class="res-legend-dot res-dot-progress"></span>En progreso</span>
+    <span class="res-legend-item"><span class="res-legend-dot res-dot-past"></span>No disponible (hora pasada)</span>
+  </div>
+
+  <div class="res-week-grid-wrap">
+    <div class="res-week-grid">
+      <div class="res-room-col-head">Laboratorio</div>
+      {% for day in days_to_render %}
+      <div class="res-day-col-head">{{ nombres_dia[day.weekday()] }}<small>{{ day.strftime('%d/%m') }}</small></div>
+      {% endfor %}
+
+      {% for room in calendar_rooms %}
+      <div class="res-room-label-card"><strong>{{ room }}</strong></div>
+      {% for day in days_to_render %}
+      {% set cell = week_schedule[room][day] %}
+      {% set cell_slots = cell.get('slots', []) if cell is mapping else [] %}
+      {% set cell_items = cell.get('items', []) if cell is mapping else [] %}
+      {% set now_dt = calendar_now if calendar_now is defined else none %}
+      {% set cell_state = 'available' %}
+      {% if cell_slots %}
+        {% set slot_states = cell_slots | map(attribute='state') | list %}
+        {% if 'pending' in slot_states %}
+          {% set cell_state = 'pending' %}
+        {% elif 'in_progress' in slot_states %}
+          {% set cell_state = 'progress' %}
+        {% elif 'occupied' in slot_states %}
+          {% set cell_state = 'occupied' %}
+        {% endif %}
+      {% endif %}
+      <div class="res-day-cell is-{{ cell_state }}">
+        {% for slot in cell_slots %}
+          {% set slot_info = namespace(has_reservation=False, requester='-', group='-', subject='-', status='Disponible') %}
+          {% for item in cell_items %}
+            {% set item_inicio = item.start_time.strftime('%H:%M') %}
+            {% set item_fin = item.end_time.strftime('%H:%M') %}
+            {% if item_inicio < slot.end and item_fin > slot.start %}
+              {% set slot_info.has_reservation = True %}
+              {% set slot_info.requester = (item.user.full_name if item.user and item.user.full_name else (item.user.email if item.user else (item.teacher_name or 'Usuario institucional'))) %}
+              {% set slot_info.group = item.group_name or '-' %}
+              {% set slot_info.subject = item.subject or '-' %}
+              {% set slot_info.status = 'Ocupado' if slot.state == 'occupied' else ('Pendiente' if slot.state == 'pending' else 'En progreso') %}
+            {% endif %}
+          {% endfor %}
+
+          {% set is_past_slot = false %}
+          {% if now_dt %}
+            {% set slot_end_dt = now_dt.replace(year=day.year, month=day.month, day=day.day, hour=(slot.end.split(':')[0]|int), minute=(slot.end.split(':')[1]|int), second=0, microsecond=0) %}
+            {% set is_past_slot = slot_end_dt <= now_dt %}
+          {% endif %}
+
+          {% set slot_classes = 'time-slot ' ~ slot.state ~ (' is-past' if is_past_slot else '') %}
+          {% if interactive_slots and slot_info.has_reservation and slot.state != 'available' and not is_past_slot %}
+            <button
+              type="button"
+              class="res-slot-btn {{ slot_classes }} slot-clickable"
+              onclick="openReservationSlotModal({ requester: {{ slot_info.requester|tojson }}, group: {{ slot_info.group|tojson }}, subject: {{ slot_info.subject|tojson }}, status: {{ slot_info.status|tojson }} })">
+              {{ slot.start_label or slot.start }} - {{ slot.end_label or slot.end }}
+            </button>
+          {% else %}
+            <div class="{{ slot_classes }}">{{ slot.start_label or slot.start }} - {{ slot.end_label or slot.end }}</div>
+          {% endif %}
+        {% endfor %}
+      </div>
+      {% endfor %}
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<script>
+(() => {
+  const buildingSelect = document.getElementById("buildingSelect");
+  const roomSelect = document.getElementById("roomSelect");
+  if (!buildingSelect || !roomSelect) return;
+
+  const toggleRoomOptions = () => {
+    const building = (buildingSelect.value || "").trim().toUpperCase();
+    Array.from(roomSelect.options).forEach((opt) => {
+      if (!opt.value) {
+        opt.style.display = "block";
+        return;
+      }
+      const visible = !building || opt.value.toUpperCase().startsWith(building);
+      opt.style.display = visible ? "block" : "none";
+      if (!visible && opt.selected) {
+        roomSelect.value = "";
+      }
+    });
+  };
+
+  buildingSelect.addEventListener("change", toggleRoomOptions);
+  toggleRoomOptions();
+})();
+</script>

@@ -11,6 +11,8 @@ from app.models.reservation import Reservation
 from app.models.debt import Debt
 from app.models.inventory_request_ticket import InventoryRequestTicket
 from app.models.print3d_job import Print3DJob
+from app.utils.statuses import DebtStatus
+from app.utils.text import normalize_lab_room_code
 
 home_bp = Blueprint("home", __name__, url_prefix="/home")
 
@@ -47,7 +49,7 @@ def _build_labs_status(selected_time, reservations):
             matched = None
 
             for reservation in reservations:
-                if reservation.room != lab:
+                if normalize_lab_room_code(reservation.room) != normalize_lab_room_code(lab):
                     continue
 
                 start_str = reservation.start_time.strftime("%H:%M")
@@ -135,7 +137,9 @@ def home_dashboard():
     )
 
     my_open_debts = (
-        Debt.query.filter(Debt.user_id == user.id, Debt.status == "OPEN")
+        Debt.query
+        .filter(Debt.user_id == user.id)
+        .filter(Debt.status.in_([DebtStatus.PENDING, "OPEN"]))
         .order_by(Debt.created_at.desc())
         .limit(5)
         .all()
