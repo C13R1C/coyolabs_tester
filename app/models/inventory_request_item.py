@@ -10,6 +10,8 @@ class InventoryRequestItem(db.Model):
     material_id = db.Column(db.Integer, db.ForeignKey("materials.id"), nullable=False)
 
     quantity_requested = db.Column(db.Integer, nullable=False, default=0)
+    quantity_delivered = db.Column(db.Integer, nullable=False, default=0)
+    quantity_returned = db.Column(db.Integer, nullable=False, default=0)
 
     created_at = db.Column(db.DateTime, server_default=db.func.now(), nullable=False)
 
