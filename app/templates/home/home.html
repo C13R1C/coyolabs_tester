@@ -15,15 +15,6 @@
   .quick-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:16px}
   .quick-link{display:flex;align-items:center;gap:8px;padding:11px 12px;background:rgba(255,255,255,.52);border:1px solid var(--stroke);border-radius:12px;font-weight:700;color:var(--text-soft);transition:.2s}
   .quick-link:hover{transform:translateY(-1px);border-color:var(--stroke-strong);color:var(--text)}
-  .profile-list{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
-  .profile-item{padding:10px 12px;border:1px solid var(--stroke);border-radius:12px;background:rgba(255,255,255,.5)}
-  .profile-item span{display:block;color:var(--text-dim);font-size:.78rem;text-transform:uppercase;letter-spacing:.04em}
-  .profile-item strong{font-size:.95rem;word-break:break-word}
-  .progress-shell{margin-top:14px}
-  .progress-track{height:10px;border-radius:999px;background:rgba(0,0,0,.07);overflow:hidden}
-  .progress-bar{height:100%;background:linear-gradient(90deg,var(--green),var(--gold));border-radius:999px}
-  .status-ok{color:#2d6942;background:rgba(91,165,111,.14);border:1px solid rgba(91,165,111,.3)}
-  .status-warn{color:#8c6914;background:rgba(212,166,61,.15);border:1px solid rgba(212,166,61,.3)}
   .list{margin-top:12px;display:grid;gap:10px}
   .list-item{border:1px solid var(--stroke);border-radius:12px;padding:12px;background:rgba(255,255,255,.48)}
   .list-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
@@ -61,7 +52,6 @@
   }
   @media (max-width: 760px){
     .quick-actions{grid-template-columns:repeat(2,minmax(0,1fr))}
-    .profile-list{grid-template-columns:1fr}
     .labs-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   }
   @media (max-width: 480px){
@@ -200,45 +190,6 @@
   </div>
 
   <div>
-    <article class="card section">
-      <div class="card-title">Resumen de perfil</div>
-      <div class="card-subtitle">Tu información académica y de contacto.</div>
-
-      <div class="profile-list">
-        <div class="profile-item"><span>Nombre completo</span><strong>{{ current_user.full_name or 'Sin capturar' }}</strong></div>
-        <div class="profile-item"><span>Correo</span><strong>{{ current_user.email }}</strong></div>
-        <div class="profile-item"><span>Matrícula</span><strong>{{ current_user.matricula or 'Sin capturar' }}</strong></div>
-        <div class="profile-item"><span>Carrera</span><strong>{{ current_user.career_rel.name if current_user.career_rel else (current_user.career or 'Sin capturar') }}</strong></div>
-        <div class="profile-item"><span>Nivel académico</span><strong>{{ current_user.academic_level_rel.name if current_user.academic_level_rel else (current_user.academic_level or 'Sin capturar') }}</strong></div>
-        <div class="profile-item"><span>Teléfono</span><strong>{{ current_user.phone or 'Sin capturar' }}</strong></div>
-        <div class="profile-item"><span>Rol</span><strong>{{ current_user.role|role_label }}</strong></div>
-        <div class="profile-item"><span>Estado</span>
-          <strong>
-            {% if is_profile_complete %}
-              <span class="chip status-ok">Perfil completo</span>
-            {% else %}
-              <span class="chip status-warn">Perfil incompleto</span>
-            {% endif %}
-          </strong>
-        </div>
-      </div>
-
-      <div class="progress-shell">
-        <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-          <small>Completitud del perfil</small>
-          <strong>{{ profile_completion_percent }}%</strong>
-        </div>
-        <div class="progress-track"><div class="progress-bar" style="width: {{ profile_completion_percent }}%;"></div></div>
-      </div>
-
-      {% if not is_profile_complete %}
-      <div class="empty" style="text-align:left;">
-        <p>Completa tu perfil para evitar bloqueos en procesos académicos.</p>
-        <a class="btn btn-ghost" href="{{ url_for('profile.complete_profile') }}"><i class="ph ph-pencil-simple-line"></i>Completar perfil</a>
-      </div>
-      {% endif %}
-    </article>
-
     <article class="card section">
       <div class="card-title">Solicitudes de material</div>
       <div class="card-subtitle">Solicitudes de material recientes del usuario.</div>
