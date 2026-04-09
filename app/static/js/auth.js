@@ -9,7 +9,7 @@
 
   const overlay = document.querySelector(".forms-overlay");
 
-  // Validación de confirmación de contraseña en registro
+  // Register password confirm
   const pw = document.getElementById("password_reg");
   const pw2 = document.getElementById("confirm_password_reg");
   const pwHint = document.getElementById("pwHint");
@@ -26,7 +26,7 @@
   const changeEmailStatus = document.getElementById("changeEmailStatus");
   const authNotifications = document.querySelectorAll(".auth-notification-stack .notification");
 
-  // Utilidades
+  // Helpers
   const pulseOverlay = () => {
     if (!overlay) return;
     overlay.classList.remove("pulse");
@@ -55,15 +55,15 @@
     pulseOverlay();
   };
 
-  // Modo inicial según la clase del body
+  // Modo inicial según clase del body
   if (body.classList.contains("mode-register")) setMode("register");
   else setMode("login");
 
-  // Botones para alternar modo
+  // Switch buttons
   toRegister?.addEventListener("click", () => setMode("register"));
   toLogin?.addEventListener("click", () => setMode("login"));
 
-  // Mostrar/ocultar contraseña
+  // Toggle password (ojito)
   const toggleBtns = document.querySelectorAll(".toggle-pass[data-toggle]");
   toggleBtns.forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -79,14 +79,14 @@
     });
   });
 
-  // Validación de contraseñas coincidentes (solo registro)
+  // Confirm password validation (solo en register)
   const validateConfirm = () => {
     if (!pw || !pw2 || !pwHint) return true;
 
     const a = pw.value || "";
     const b = pw2.value || "";
 
-    // Evita mostrar aviso mientras no haya interacción
+    // No molestes si aún no teclea
     if (!a && !b) {
       pwHint.textContent = "";
       pwHint.className = "hint";
