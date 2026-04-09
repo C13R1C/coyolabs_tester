@@ -17,6 +17,7 @@ home_bp = Blueprint("home", __name__, url_prefix="/home")
 LAB_FLOORS = {
     "Primer piso": ["B001", "B002", "B003", "B004", "B005", "B006"],
     "Segundo piso": ["B101", "B102", "B103", "B104"],
+    "Edificio E": ["E1", "E2", "E3", "E4", "E5", "E6"],
 }
 
 
