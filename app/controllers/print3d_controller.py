@@ -34,7 +34,9 @@ ACTIVE_PRINT3D_STATUSES = {
     Print3DJobStatus.QUOTED,
     Print3DJobStatus.IN_PROGRESS,
     Print3DJobStatus.READY,
+    Print3DJobStatus.READY_FOR_PICKUP,
 }
+PRINT3D_PRICE_PER_GRAM = Decimal("3.00")
 
 
 def _normalize_print3d_status(raw_status: str | None) -> str:
@@ -48,7 +50,7 @@ def _can_transition_status(current_status: str, next_status: str) -> bool:
 
 def _status_badge_class(status: str | None) -> str:
     normalized = _normalize_print3d_status(status)
-    if normalized in {Print3DJobStatus.READY, Print3DJobStatus.DELIVERED}:
+    if normalized in {Print3DJobStatus.READY, Print3DJobStatus.READY_FOR_PICKUP, Print3DJobStatus.DELIVERED}:
         return "status-ok"
     if normalized == Print3DJobStatus.CANCELED:
         return "status-bad"
@@ -97,67 +99,34 @@ def _active_print3d_jobs_count(user_id: int) -> int:
     )
 
 
-def _notify_ready_once(job: Print3DJob) -> bool:
-    """Notify requester when job becomes READY. Returns True if a new notification was sent."""
+def _build_ready_notification(job: Print3DJob) -> Notification | None:
+    """Build requester notification for READY_FOR_PICKUP once."""
     if job.ready_notified_at is not None:
-        return False
+        return None
 
     requester = job.requester_user
     if not requester or not requester.email:
-        return False
+        return None
 
-    user_notification = Notification(
+    return Notification(
         user_id=job.requester_user_id,
         title="Tu impresión 3D está lista",
-        message=f"Tu solicitud #{job.id} ({job.title}) está lista para entrega.",
+        message=f"Tu solicitud #{job.id} ({job.title}) está lista para recoger.",
         link=url_for("print3d.my_jobs"),
     )
-    db.session.add(user_notification)
 
-    email_sent = False
-    jobs_url = url_for("print3d.my_jobs", _external=True)
-    try:
-        send_print3d_ready_email(
-            requester.email,
-            job_id=job.id,
-            job_title=job.title,
-            jobs_url=jobs_url,
-        )
-        email_sent = True
-    except Exception:
-        logger.warning(
-            "Failed to send print3d READY email",
-            exc_info=True,
-            extra={"job_id": job.id, "target_user_id": job.requester_user_id},
-        )
 
-    job.ready_notified_at = datetime.utcnow()
-
-    log_event(
-        module="PRINT3D",
-        action="PRINT3D_READY_NOTIFIED",
-        user_id=current_user.id,
-        entity_label=f"Print3DJob #{job.id}",
-        description="Notificación de trabajo listo enviada al solicitante",
-        metadata={
-            "job_id": job.id,
-            "target_user_id": job.requester_user_id,
-            "email_sent": email_sent,
-            "notification_channel": ["in_app", "email"],
-        },
+def _build_canceled_notification(job: Print3DJob) -> Notification | None:
+    if not job.requester_user_id:
+        return None
+    reason = (job.admin_note or "").strip()
+    reason_text = f" Motivo: {reason}." if reason else ""
+    return Notification(
+        user_id=job.requester_user_id,
+        title="Tu solicitud 3D fue cancelada",
+        message=f"La solicitud #{job.id} ({job.title}) fue cancelada.{reason_text}",
+        link=url_for("print3d.my_jobs"),
     )
-
-    db.session.flush()
-    try:
-        publish_notification_created(user_notification)
-    except Exception:
-        logger.warning(
-            "SSE publish failed after print3d READY notification",
-            exc_info=True,
-            extra={"job_id": job.id, "notification_id": user_notification.id, "target_user_id": user_notification.user_id},
-        )
-
-    return True
 
 
 def _notify_admins_for_new_job(job: Print3DJob) -> list[Notification]:
@@ -343,15 +312,21 @@ def admin_list():
         jobs=jobs,
         active_page="prints3d",
         status_badge_class=_status_badge_class,
-        print3d_transitions=PRINT3D_ALLOWED_TRANSITIONS,
-        print3d_statuses=[
-            Print3DJobStatus.REQUESTED,
-            Print3DJobStatus.QUOTED,
-            Print3DJobStatus.IN_PROGRESS,
-            Print3DJobStatus.READY,
-            Print3DJobStatus.DELIVERED,
-            Print3DJobStatus.CANCELED,
-        ],
+    )
+
+
+@print3d_bp.route("/admin/<int:job_id>", methods=["GET"])
+@min_role_required("ADMIN")
+def admin_detail(job_id: int):
+    job = Print3DJob.query.get_or_404(job_id)
+    allowed_next = PRINT3D_ALLOWED_TRANSITIONS.get(_normalize_print3d_status(job.status), set())
+    return render_template(
+        "prints3d/admin_detail.html",
+        job=job,
+        active_page="prints3d",
+        status_badge_class=_status_badge_class,
+        allowed_next=allowed_next,
+        price_per_gram=PRINT3D_PRICE_PER_GRAM,
     )
 
 
@@ -363,26 +338,38 @@ def admin_set_status(job_id: int):
     target_status = _normalize_print3d_status(request.form.get("status"))
     current_status = _normalize_print3d_status(job.status)
     admin_note = (request.form.get("admin_note") or "").strip()
-    total_estimated_raw = (request.form.get("total_estimated") or "").strip()
-
-    if total_estimated_raw:
+    estimated_grams_raw = (request.form.get("estimated_grams") or "").strip()
+    if estimated_grams_raw:
         try:
-            total_estimated_value = Decimal(total_estimated_raw)
+            grams_estimated_value = Decimal(estimated_grams_raw)
         except InvalidOperation:
-            flash("El total estimado debe ser un número válido.", "error")
-            return redirect(url_for("print3d.admin_list"))
-        if total_estimated_value < 0:
-            flash("El total estimado no puede ser negativo.", "error")
-            return redirect(url_for("print3d.admin_list"))
-        job.total_estimated = total_estimated_value
+            flash("Los gramos estimados deben ser un número válido.", "error")
+            return redirect(url_for("print3d.admin_detail", job_id=job.id))
+        if grams_estimated_value < 0:
+            flash("Los gramos estimados no pueden ser negativos.", "error")
+            return redirect(url_for("print3d.admin_detail", job_id=job.id))
+        job.grams_estimated = grams_estimated_value
+        job.price_per_gram = PRINT3D_PRICE_PER_GRAM
+        job.total_estimated = (grams_estimated_value * PRINT3D_PRICE_PER_GRAM).quantize(Decimal("0.01"))
 
     if target_status not in PRINT3D_ALLOWED_STATUSES:
         flash("Estado de impresión 3D no válido.", "error")
-        return redirect(url_for("print3d.admin_list"))
+        return redirect(url_for("print3d.admin_detail", job_id=job.id))
 
     if target_status == Print3DJobStatus.CANCELED and not admin_note:
         flash("Debes capturar el motivo para rechazar/cancelar la solicitud.", "error")
-        return redirect(url_for("print3d.admin_list"))
+        return redirect(url_for("print3d.admin_detail", job_id=job.id))
+
+    statuses_requiring_estimate = {
+        Print3DJobStatus.QUOTED,
+        Print3DJobStatus.IN_PROGRESS,
+        Print3DJobStatus.READY,
+        Print3DJobStatus.READY_FOR_PICKUP,
+        Print3DJobStatus.DELIVERED,
+    }
+    if target_status in statuses_requiring_estimate and job.grams_estimated is None:
+        flash("Debes capturar primero los gramos estimados para calcular el total estimado.", "error")
+        return redirect(url_for("print3d.admin_detail", job_id=job.id))
 
     if target_status == Print3DJobStatus.CANCELED:
         job.admin_note = admin_note
@@ -390,13 +377,15 @@ def admin_set_status(job_id: int):
     if current_status == target_status:
         db.session.commit()
         flash("El trabajo ya se encuentra en ese estado.", "info")
-        return redirect(url_for("print3d.admin_list"))
+        return redirect(url_for("print3d.admin_detail", job_id=job.id))
 
     if not _can_transition_status(current_status, target_status):
         flash("Transición de estado no permitida para este trabajo.", "error")
-        return redirect(url_for("print3d.admin_list"))
+        return redirect(url_for("print3d.admin_detail", job_id=job.id))
 
     job.status = target_status
+    should_notify_ready = False
+    should_notify_canceled = False
 
     log_event(
         module="PRINT3D",
@@ -407,9 +396,9 @@ def admin_set_status(job_id: int):
         metadata={"job_id": job.id, "from": current_status, "to": target_status},
     )
 
-    if target_status == Print3DJobStatus.READY:
-        notified = _notify_ready_once(job)
-        if not notified:
+    if target_status == Print3DJobStatus.READY_FOR_PICKUP:
+        ready_candidate = _build_ready_notification(job)
+        if ready_candidate is None:
             log_event(
                 module="PRINT3D",
                 action="PRINT3D_READY_NOTIFY_SKIPPED",
@@ -422,8 +411,71 @@ def admin_set_status(job_id: int):
                     "reason": "already_notified_or_missing_user",
                 },
             )
+        else:
+            should_notify_ready = True
+    elif target_status == Print3DJobStatus.CANCELED:
+        should_notify_canceled = True
 
     db.session.commit()
+    created_user_notification: Notification | None = None
+    if should_notify_ready:
+        created_user_notification = _build_ready_notification(job)
+        if created_user_notification is not None:
+            db.session.add(created_user_notification)
+            job.ready_notified_at = datetime.utcnow()
+            db.session.commit()
+    elif should_notify_canceled:
+        created_user_notification = _build_canceled_notification(job)
+        if created_user_notification is not None:
+            db.session.add(created_user_notification)
+            db.session.commit()
+
+    if created_user_notification is not None:
+        try:
+            publish_notification_created(created_user_notification)
+        except Exception:
+            logger.warning(
+                "SSE publish failed after print3d user notification",
+                exc_info=True,
+                extra={
+                    "job_id": job.id,
+                    "notification_id": created_user_notification.id,
+                    "target_user_id": created_user_notification.user_id,
+                    "target_status": target_status,
+                },
+            )
+
+        if target_status == Print3DJobStatus.READY_FOR_PICKUP and job.requester_user and job.requester_user.email:
+            jobs_url = url_for("print3d.my_jobs", _external=True)
+            email_sent = False
+            try:
+                send_print3d_ready_email(
+                    job.requester_user.email,
+                    job_id=job.id,
+                    job_title=job.title,
+                    jobs_url=jobs_url,
+                )
+                email_sent = True
+            except Exception:
+                logger.warning(
+                    "Failed to send print3d READY email",
+                    exc_info=True,
+                    extra={"job_id": job.id, "target_user_id": job.requester_user_id},
+                )
+            log_event(
+                module="PRINT3D",
+                action="PRINT3D_READY_NOTIFIED",
+                user_id=current_user.id,
+                entity_label=f"Print3DJob #{job.id}",
+                description="Notificación de trabajo listo enviada al solicitante",
+                metadata={
+                    "job_id": job.id,
+                    "target_user_id": job.requester_user_id,
+                    "email_sent": email_sent,
+                    "notification_channel": ["in_app", "email"],
+                },
+            )
+            db.session.commit()
 
     flash("Estado actualizado correctamente.", "success")
-    return redirect(url_for("print3d.admin_list"))
+    return redirect(url_for("print3d.admin_detail", job_id=job.id))

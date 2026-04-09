@@ -30,64 +30,35 @@
 {% else %}
 <section class="table-card">
   <div class="table-wrap">
-    <table class="inventory-table" style="min-width: 1200px;">
+    <table class="inventory-table" style="min-width: 900px;">
       <thead>
         <tr>
-          <th>ID</th>
-          <th>Solicitante</th>
-          <th>Título</th>
-          <th>Archivo</th>
-          <th>Tamaño</th>
+          <th>Solicitud / archivo</th>
+          <th>Usuario</th>
           <th>Estado</th>
           <th>Total estimado</th>
-          <th>Notificado READY</th>
-          <th>Creado</th>
-          <th>Acciones</th>
+          <th>Acción</th>
         </tr>
       </thead>
       <tbody>
       {% for job in jobs %}
         <tr class="print3d-admin-row">
-          <td>#{{ job.id }}</td>
-          <td>{{ job.requester_user.email if job.requester_user else '-' }}</td>
-          <td>{{ job.title }}</td>
-          <td>{{ job.original_filename }}</td>
-          <td>{{ (job.file_size_bytes / 1024)|round(1) }} KB</td>
-          <td><span class="status-badge {{ status_badge_class(job.status) }}">{{ job.status|status_label }}</span></td>
-          <td>{{ ('$' ~ ('%.2f'|format(job.total_estimated))) if job.total_estimated is not none else 'No definido' }}</td>
-          <td>{{ job.ready_notified_at if job.ready_notified_at else '-' }}</td>
-          <td>{{ job.created_at }}</td>
           <td>
-            <div class="toolbar" style="grid-template-columns: 1fr; gap:8px;">
-              <a href="{{ url_for('print3d.download_file', job_id=job.id) }}" class="btn btn-ghost">Descargar</a>
-              {% if job.status == 'REQUESTED' %}
-              <form method="post" action="{{ url_for('print3d.admin_set_status', job_id=job.id) }}" class="toolbar" style="grid-template-columns: 1fr auto; gap:8px;">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                <input type="hidden" name="status" value="QUOTED">
-                <input class="form-control" type="number" name="total_estimated" min="0" step="0.01" placeholder="Total estimado (opcional)">
-                <button type="submit" class="btn btn-gold">Aceptar</button>
-              </form>
-              <form method="post" action="{{ url_for('print3d.admin_set_status', job_id=job.id) }}" class="toolbar" style="grid-template-columns: 1fr auto; gap:8px;">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                <input type="hidden" name="status" value="CANCELED">
-                <textarea class="form-control" name="admin_note" rows="2" placeholder="Motivo de rechazo (obligatorio)" required></textarea>
-                <button type="submit" class="btn btn-ghost">Rechazar</button>
-              </form>
-              {% else %}
-              {% set allowed_next = print3d_transitions.get(job.status, []) %}
-              <form method="post" action="{{ url_for('print3d.admin_set_status', job_id=job.id) }}" class="toolbar" style="grid-template-columns: minmax(180px, 1fr) 1fr auto; gap:8px;">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                <select class="form-control" name="status" required>
-                  <option value="{{ job.status }}" selected>{{ job.status|status_label }} (actual)</option>
-                  {% for status in allowed_next %}
-                    <option value="{{ status }}">{{ status|status_label }}</option>
-                  {% endfor %}
-                </select>
-                <input class="form-control" type="number" name="total_estimated" min="0" step="0.01" value="{{ ('%.2f'|format(job.total_estimated)) if job.total_estimated is not none else '' }}" placeholder="Total estimado">
-                <button type="submit" class="btn btn-gold">Guardar</button>
-              </form>
-              {% endif %}
-            </div>
+            <strong>#{{ job.id }} — {{ job.title }}</strong>
+            <div style="font-size:.82rem; opacity:.8;">{{ job.original_filename }}</div>
+          </td>
+          <td>{{ job.requester_user.email if job.requester_user else '-' }}</td>
+          <td><span class="status-badge {{ status_badge_class(job.status) }}">{{ job.status|status_label }}</span></td>
+          <td>{{ ('$' ~ ('%.2f'|format(job.total_estimated))) if job.total_estimated is not none else 'Pendiente' }}</td>
+          <td>
+            {% set is_terminal = job.status in ['DELIVERED', 'CANCELED'] %}
+            {% if not is_terminal %}
+            <a href="{{ url_for('print3d.admin_detail', job_id=job.id) }}" class="btn btn-gold">Gestionar</a>
+            {% elif job.status == 'DELIVERED' %}
+            <span class="status-badge status-ok">Entregado</span>
+            {% else %}
+            <span class="status-badge status-warn">Cancelado</span>
+            {% endif %}
           </td>
         </tr>
       {% endfor %}

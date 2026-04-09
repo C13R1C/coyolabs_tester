@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from flask import url_for
@@ -76,6 +77,10 @@ def create_debt_for_ticket(ticket: LabTicket, item: TicketItem, missing_qty: int
     if existing_debt:
         if existing_debt.ticket_id is None:
             existing_debt.ticket_id = ticket.id
+        if existing_debt.original_amount is None:
+            existing_debt.original_amount = existing_debt.amount
+        if existing_debt.remaining_amount is None:
+            existing_debt.remaining_amount = existing_debt.amount
         return ServiceResult.success(debt=existing_debt, created=False)
 
     missing = max(0, missing_qty)
@@ -91,6 +96,8 @@ def create_debt_for_ticket(ticket: LabTicket, item: TicketItem, missing_qty: int
         status=DebtStatus.PENDING,
         reason=f"Faltante de {missing} unidad(es) en ticket #{ticket.id} - {material_name}",
         amount=missing,
+        original_amount=missing,
+        remaining_amount=missing,
     )
     db.session.add(debt)
     db.session.flush()
@@ -143,36 +150,53 @@ def sync_ticket_after_debt_resolution(debt: Debt) -> ServiceResult:
     return ServiceResult.success(ticket=ticket, ticket_closed=False)
 
 
-def resolve_debt(debt: Debt, actor_user: User) -> ServiceResult:
-    updated_rows = (
-        Debt.query
-        .filter(Debt.id == debt.id, Debt.status == DebtStatus.PENDING)
-        .update(
-            {
-                Debt.status: DebtStatus.PAID,
-                Debt.closed_at: db.func.now(),
-            },
-            synchronize_session=False,
-        )
-    )
-    if updated_rows == 0:
-        db.session.refresh(debt)
-        if debt.status == DebtStatus.PAID:
-            message = "El adeudo ya fue resuelto."
-        else:
-            message = f"El adeudo no se puede resolver desde estado {debt.status}."
+def resolve_debt(debt: Debt, actor_user: User, payment_amount: str | int | float | Decimal | None = None) -> ServiceResult:
+    if debt.status != DebtStatus.PENDING:
+        message = "El adeudo ya fue resuelto." if debt.status == DebtStatus.PAID else f"El adeudo no se puede resolver desde estado {debt.status}."
         _log_debt_rejected("DEBT_CLOSE_REJECTED", actor_user, debt, message)
         return ServiceResult.failure(message)
 
-    db.session.refresh(debt)
-    previous_status = DebtStatus.PENDING
+    base_original = debt.original_amount if debt.original_amount is not None else debt.amount
+    base_remaining = debt.remaining_amount if debt.remaining_amount is not None else debt.amount
+
+    try:
+        original = Decimal(str(base_original if base_original is not None else 1))
+        remaining = Decimal(str(base_remaining if base_remaining is not None else original))
+        payment = Decimal(str(payment_amount)).quantize(Decimal("0.01")) if payment_amount is not None else remaining
+    except (InvalidOperation, ValueError):
+        _log_debt_rejected("DEBT_CLOSE_REJECTED", actor_user, debt, "Monto de abono inválido.")
+        return ServiceResult.failure("Monto de abono inválido.")
+
+    if payment <= 0:
+        _log_debt_rejected("DEBT_CLOSE_REJECTED", actor_user, debt, "El abono debe ser mayor a 0.")
+        return ServiceResult.failure("El abono debe ser mayor a 0.")
+    if payment > remaining:
+        _log_debt_rejected("DEBT_CLOSE_REJECTED", actor_user, debt, "El abono no puede exceder el pendiente.")
+        return ServiceResult.failure("El abono no puede exceder el pendiente.")
+    if payment != payment.to_integral_value():
+        _log_debt_rejected("DEBT_CLOSE_REJECTED", actor_user, debt, "El abono debe ser una cantidad entera de piezas.")
+        return ServiceResult.failure("El abono debe ser una cantidad entera de piezas.")
+
+    previous_status = debt.status
+    new_remaining = (remaining - payment).quantize(Decimal("0.01"))
+    paid_in_full = new_remaining == Decimal("0.00")
+
+    should_restock = bool(debt.material_id) and "faltante" in (debt.reason or "").lower()
+    if should_restock and debt.material and debt.material.pieces_qty is not None:
+        debt.material.pieces_qty += int(payment)
+
+    debt.original_amount = original
+    debt.remaining_amount = new_remaining
+    debt.amount = new_remaining
+    debt.status = DebtStatus.PAID if paid_in_full else DebtStatus.PENDING
+    debt.closed_at = db.func.now() if paid_in_full else None
 
     log_event(
         module="DEBTS",
-        action="DEBT_CLOSED",
+        action="DEBT_CLOSED" if paid_in_full else "DEBT_PARTIAL_PAYMENT",
         user_id=actor_user.id,
         entity_label=f"Debt #{debt.id}",
-        description=f"Adeudo #{debt.id} marcado como pagado",
+        description=f"Adeudo #{debt.id} {'marcado como pagado' if paid_in_full else 'abonado parcialmente'}",
         metadata={
             "debt_id": debt.id,
             "entity_id": debt.id,
@@ -182,11 +206,13 @@ def resolve_debt(debt: Debt, actor_user: User) -> ServiceResult:
             "status": debt.status,
             "previous_status": previous_status,
             "new_status": debt.status,
+            "payment_amount": float(payment),
+            "remaining_amount": float(new_remaining),
         },
         material_id=debt.material_id,
     )
 
-    sync_result = sync_ticket_after_debt_resolution(debt)
+    sync_result = sync_ticket_after_debt_resolution(debt) if paid_in_full else ServiceResult.success(ticket=None, ticket_closed=False)
     ticket_to_close = sync_result.data.get("ticket") if sync_result.ok else None
     ticket_closed = bool(sync_result.data.get("ticket_closed")) if sync_result.ok else False
 
@@ -220,8 +246,8 @@ def resolve_debt(debt: Debt, actor_user: User) -> ServiceResult:
     for admin in admins:
         notif = Notification(
             user_id=admin.id,
-            title="Adeudo resuelto",
-            message=f"El adeudo #{debt.id} fue marcado como pagado.",
+            title="Adeudo resuelto" if paid_in_full else "Adeudo abonado",
+            message=f"El adeudo #{debt.id} {'fue marcado como pagado' if paid_in_full else f'registró un abono de {payment}'}.",
             link=url_for("debts.admin_list"),
         )
         db.session.add(notif)
@@ -232,4 +258,7 @@ def resolve_debt(debt: Debt, actor_user: User) -> ServiceResult:
         ticket_notification=ticket_notification,
         admin_notifications=admin_notifications,
         debt=debt,
+        paid_in_full=paid_in_full,
+        payment_amount=payment,
+        remaining_amount=new_remaining,
     )
