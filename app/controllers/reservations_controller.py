@@ -250,9 +250,11 @@ def build_week_schedule(week_days, selected_room=None, rooms_scope: list[str] | 
     week_start = week_days[0]
     week_end = week_days[-1]
 
+    valid_statuses = {ReservationStatus.APPROVED, ReservationStatus.PENDING}
+    normalized_reservation_status = func.upper(func.trim(func.coalesce(Reservation.status, "")))
     q = (
         Reservation.query
-        .filter(Reservation.status.in_([ReservationStatus.APPROVED, ReservationStatus.PENDING]))
+        .filter(normalized_reservation_status.in_(valid_statuses))
         .filter(Reservation.date >= week_start)
         .filter(Reservation.date <= week_end)
     )
@@ -285,11 +287,16 @@ def build_week_schedule(week_days, selected_room=None, rooms_scope: list[str] | 
         }
         for room in room_list
     }
+    room_lookup_by_normalized = {
+        normalize_lab_room_code(room): room
+        for room in room_list
+    }
 
     for r in reservations:
         normalized_room = normalize_lab_room_code(r.room)
-        if normalized_room in schedule and r.date in schedule[normalized_room]:
-            schedule[normalized_room][r.date]["items"].append(r)
+        room_key = room_lookup_by_normalized.get(normalized_room)
+        if room_key and r.date in schedule[room_key]:
+            schedule[room_key][r.date]["items"].append(r)
 
     now_dt = datetime.now()
     base_slots = _build_time_slots()
