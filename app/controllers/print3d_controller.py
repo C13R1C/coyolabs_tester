@@ -34,6 +34,7 @@ ACTIVE_PRINT3D_STATUSES = {
     Print3DJobStatus.QUOTED,
     Print3DJobStatus.IN_PROGRESS,
     Print3DJobStatus.READY,
+    Print3DJobStatus.READY_FOR_PICKUP,
 }
 PRINT3D_PRICE_PER_GRAM = Decimal("3.00")
 
@@ -49,7 +50,7 @@ def _can_transition_status(current_status: str, next_status: str) -> bool:
 
 def _status_badge_class(status: str | None) -> str:
     normalized = _normalize_print3d_status(status)
-    if normalized in {Print3DJobStatus.READY, Print3DJobStatus.DELIVERED}:
+    if normalized in {Print3DJobStatus.READY, Print3DJobStatus.READY_FOR_PICKUP, Print3DJobStatus.DELIVERED}:
         return "status-ok"
     if normalized == Print3DJobStatus.CANCELED:
         return "status-bad"
@@ -396,6 +397,7 @@ def admin_set_status(job_id: int):
         Print3DJobStatus.QUOTED,
         Print3DJobStatus.IN_PROGRESS,
         Print3DJobStatus.READY,
+        Print3DJobStatus.READY_FOR_PICKUP,
         Print3DJobStatus.DELIVERED,
     }
     if target_status in statuses_requiring_estimate and job.grams_estimated is None:
@@ -425,7 +427,8 @@ def admin_set_status(job_id: int):
         metadata={"job_id": job.id, "from": current_status, "to": target_status},
     )
 
-    if target_status == Print3DJobStatus.READY:
+    if target_status == Print3DJobStatus.READY_FOR_PICKUP:
+        # Punto preparado para reforzar notificación al usuario cuando quede disponible para recoger.
         notified = _notify_ready_once(job)
         if not notified:
             log_event(

@@ -157,6 +157,15 @@
     </form>
     {% endif %}
 
+    {% if 'READY_FOR_PICKUP' in allowed_next and job.status == 'READY' %}
+    <form method="post" action="{{ url_for('print3d.admin_set_status', job_id=job.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="status" value="READY_FOR_PICKUP">
+      <input type="hidden" name="estimated_grams" value="{{ ('%.2f'|format(job.grams_estimated)) if job.grams_estimated is not none else '' }}">
+      <button type="submit" class="btn btn-gold">Listo para recoger</button>
+    </form>
+    {% endif %}
+
     {% if 'DELIVERED' in allowed_next %}
     <form method="post" action="{{ url_for('print3d.admin_set_status', job_id=job.id) }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
