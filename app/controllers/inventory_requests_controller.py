@@ -448,36 +448,3 @@ def admin_register_return(ticket_id: int):
     flash("Devolución guardada y solicitud cerrada.", "success")
     return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
 
-
-@inventory_requests_bp.route("/admin/<int:ticket_id>/close", methods=["POST"], endpoint="admin_close_ticket")
-@min_role_required("ADMIN")
-def admin_close_ticket(ticket_id: int):
-    ticket = InventoryRequestTicket.query.get(ticket_id)
-    if not ticket:
-        flash("Solicitud no encontrada.", "error")
-        return redirect(url_for("inventory_requests.admin_daily_requests"))
-
-    debt_notifications: list[Notification] = []
-    if created_debts:
-        for debt in created_debts:
-            notif = _build_debt_created_notification(debt)
-            db.session.add(notif)
-            debt_notifications.append(notif)
-        db.session.commit()
-        for notif in debt_notifications:
-            publish_notification_created(notif)
-
-    flash("Devolución guardada y solicitud cerrada.", "success")
-    return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
-
-
-@inventory_requests_bp.route("/admin/<int:ticket_id>/close", methods=["POST"], endpoint="admin_close_ticket")
-@min_role_required("ADMIN")
-def admin_close_ticket(ticket_id: int):
-    ticket = InventoryRequestTicket.query.get(ticket_id)
-    if not ticket:
-        flash("Solicitud no encontrada.", "error")
-        return redirect(url_for("inventory_requests.admin_daily_requests"))
-
-    flash("El cierre final se realiza desde 'Guardar devolución (Cerrar)' en el detalle de la solicitud.", "info")
-    return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
