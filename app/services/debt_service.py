@@ -68,7 +68,10 @@ def create_debt_for_ticket(ticket: LabTicket, item: TicketItem, missing_qty: int
             Debt.status == DebtStatus.PENDING,
             or_(
                 Debt.ticket_id == ticket.id,
-                Debt.ticket_id.is_(None),
+                and_(
+                    Debt.ticket_id.is_(None),
+                    Debt.reason.ilike(f"%ticket #{ticket.id}%"),
+                ),
             ),
         )
         .order_by(Debt.id.desc())

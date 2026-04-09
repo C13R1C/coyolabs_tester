@@ -353,7 +353,7 @@
           <td>{{ load.subject.level if load.subject else '-' }}</td>
           <td>{{ load.subject.quarter if load.subject else '-' }}</td>
           <td>{{ load.group_code }}</td>
-          <td>{{ load.created_at }}</td>
+          <td>{{ load.created_at.strftime('%Y-%m-%d') if load.created_at else '-' }}</td>
           <td>
             <form method="post" action="{{ url_for('profile.remove_teaching_load', load_id=load.id) }}">
               <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -445,7 +445,7 @@
               {{ request_item.status|status_label }}
             </span>
           </td>
-          <td>{{ request_item.created_at }}</td>
+          <td>{{ request_item.created_at.strftime('%Y-%m-%d') if request_item.created_at else '-' }}</td>
           <td>{{ request_item.closed_at or '-' }}</td>
           <td>{{ request_item.notes or '-' }}</td>
         </tr>
@@ -465,7 +465,6 @@
     <table class="inventory-table" style="min-width: 1000px;">
       <thead>
         <tr>
-          <th>ID</th>
           <th>Material</th>
           <th>Razón</th>
           <th>Estado</th>
@@ -476,7 +475,6 @@
       <tbody>
         {% for d in debts %}
         <tr>
-          <td>{{ d.id }}</td>
           <td>{{ d.material.name if d.material else '-' }}</td>
           <td>{{ d.reason or '-' }}</td>
           <td>
@@ -484,7 +482,7 @@
               {{ d.status|status_label }}
             </span>
           </td>
-          <td>{{ d.created_at }}</td>
+          <td>{{ d.created_at.strftime('%Y-%m-%d') if d.created_at else '-' }}</td>
           <td>{{ 'Abierto' if d.status == 'PENDING' else 'Pagado/Cerrado' }}</td>
         </tr>
         {% endfor %}
