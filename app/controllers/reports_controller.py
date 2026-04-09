@@ -697,7 +697,7 @@ def report_debts_view():
         download_url=build_download_url("reports.report_debts"),
         report_description="Vista completa de los adeudos registrados.",
         filter_fields=[
-            {"name": "status", "label": "Estado", "type": "text", "value": status, "placeholder": "Ejemplo: OPEN"},
+            {"name": "status", "label": "Estado", "type": "text", "value": status, "placeholder": "Ejemplo: Abierto"},
             {"name": "user_id", "label": "ID de usuario", "type": "number", "value": user_id or "", "placeholder": "Ejemplo: 42"},
         ],
         selected_columns=selected_columns,

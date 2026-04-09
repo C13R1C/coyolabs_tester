@@ -45,7 +45,15 @@
     {% endif %}
 
     {% if ticket.status != 'CLOSED' %}
-    <form method="post" action="{{ url_for('inventory_requests.admin_close_ticket', ticket_id=ticket.id) }}">
+    <form method="post" action="{{ url_for('inventory_requests.admin_close_ticket', ticket_id=ticket.id) }}" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+      <textarea
+        name="cancel_reason"
+        rows="2"
+        class="form-control"
+        style="min-width:260px;"
+        placeholder="Motivo de cierre/cancelación (obligatorio)"
+        required
+      ></textarea>
       <button type="submit" class="btn btn-ghost">Marcar como atendida (cerrar)</button>
     </form>
     {% endif %}

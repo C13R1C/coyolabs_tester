@@ -47,34 +47,19 @@ def _notify_admins_for_ticket(ticket: InventoryRequestTicket, message: str) -> l
 
 
 def _close_stale_open_tickets() -> None:
-    today = datetime.now().date()
-    stale_tickets = (
-        InventoryRequestTicket.query
-        .filter(InventoryRequestTicket.status.in_([STATUS_OPEN, STATUS_READY]))
-        .filter(InventoryRequestTicket.request_date < today)
-        .all()
-    )
-
-    for ticket in stale_tickets:
-        ticket.status = STATUS_CLOSED
-        ticket.closed_at = datetime.now()
-
-    if stale_tickets:
-        db.session.commit()
+    # Compatibilidad temporal: el flujo dejó de ser "ticket diario".
+    # Se conserva la función para no romper llamadas existentes.
+    return None
 
 
 @inventory_requests_bp.route("/", methods=["GET"])
 @min_role_required("STUDENT")
 def my_daily_request():
-    _close_stale_open_tickets()
-
-    today = datetime.now().date()
-
-    today_ticket = (
+    active_ticket = (
         InventoryRequestTicket.query
         .options(joinedload(InventoryRequestTicket.items).joinedload(InventoryRequestItem.material))
         .filter(InventoryRequestTicket.user_id == current_user.id)
-        .filter(InventoryRequestTicket.request_date == today)
+        .filter(InventoryRequestTicket.status.in_([STATUS_OPEN, STATUS_READY]))
         .order_by(InventoryRequestTicket.created_at.desc())
         .first()
     )
@@ -105,7 +90,7 @@ def my_daily_request():
 
     return render_template(
         "inventory_requests/my_daily_request.html",
-        today_ticket=today_ticket,
+        today_ticket=active_ticket,
         history=history,
         materials=materials,
         materials_json=materials_json,
@@ -116,10 +101,6 @@ def my_daily_request():
 @inventory_requests_bp.route("/add", methods=["POST"])
 @min_role_required("STUDENT")
 def add_to_daily_request():
-    _close_stale_open_tickets()
-
-    today = datetime.now().date()
-
     material_ids = request.form.getlist("material_id[]")
     quantities = request.form.getlist("quantity[]")
     request_reason = (request.form.get("request_reason") or "").strip()
@@ -161,66 +142,35 @@ def add_to_daily_request():
         flash("Agrega al menos un material válido con cantidad positiva.", "error")
         return redirect(url_for("inventory_requests.my_daily_request"))
 
-    ticket = (
-        InventoryRequestTicket.query
-        .filter(InventoryRequestTicket.user_id == current_user.id)
-        .filter(InventoryRequestTicket.request_date == today)
-        .filter(InventoryRequestTicket.status.in_([STATUS_OPEN, STATUS_READY]))
-        .order_by(InventoryRequestTicket.created_at.desc())
-        .first()
+    ticket = InventoryRequestTicket(
+        user_id=current_user.id,
+        request_date=datetime.now().date(),
+        status=STATUS_OPEN,
+        notes=request_reason,
     )
-
-    created_new = False
-    if not ticket:
-        ticket = InventoryRequestTicket(
-            user_id=current_user.id,
-            request_date=today,
-            status=STATUS_OPEN,
-            notes=request_reason,
-        )
-        db.session.add(ticket)
-        db.session.flush()
-        created_new = True
-    else:
-        ticket.notes = request_reason
+    db.session.add(ticket)
+    db.session.flush()
 
     for material, qty in parsed_items:
-        existing_item = InventoryRequestItem.query.filter_by(
-            ticket_id=ticket.id,
-            material_id=material.id,
-        ).first()
-
-        if existing_item:
-            existing_item.quantity_requested += qty
-        else:
-            db.session.add(
-                InventoryRequestItem(
-                    ticket_id=ticket.id,
-                    material_id=material.id,
-                    quantity_requested=qty,
-                )
+        db.session.add(
+            InventoryRequestItem(
+                ticket_id=ticket.id,
+                material_id=material.id,
+                quantity_requested=qty,
             )
+        )
 
-    admin_notifications: list[Notification] = []
-    if ticket.status == STATUS_READY:
-        ticket.status = STATUS_OPEN
-        ticket.ready_at = None
-        admin_notifications = _notify_admins_for_ticket(
-            ticket,
-            f"El usuario {current_user.email} actualizó la solicitud de material #{ticket.id}; requiere nueva revisión.",
-        )
-    elif created_new:
-        admin_notifications = _notify_admins_for_ticket(
-            ticket,
-            f"El usuario {current_user.email} creó la solicitud de material #{ticket.id}.",
-        )
+    admin_notifications = _notify_admins_for_ticket(
+        ticket,
+        f"El usuario {current_user.email} creó la solicitud de material #{ticket.id}.",
+    )
 
     log_event(
         module="INVENTORY_REQUESTS",
-        action="INVENTORY_DAILY_REQUEST_UPDATED" if not created_new else "INVENTORY_DAILY_REQUEST_CREATED",
+        action="INVENTORY_DAILY_REQUEST_CREATED",
         user_id=current_user.id,
         entity_label=f"InventoryRequestTicket #{ticket.id}",
-        description=f"Solicitud de material {'actualizada' if not created_new else 'creada'}",
+        description="Solicitud de material creada",
         metadata={"ticket_id": ticket.id, "request_date": str(ticket.request_date)},
     )
 
@@ -228,10 +178,7 @@ def add_to_daily_request():
     for notif in admin_notifications:
         publish_notification_created(notif)
 
-    if created_new:
-        flash(f"Solicitud de material creada (ticket #{ticket.id}).", "success")
-    else:
-        flash(f"Solicitud de material actualizada en el ticket #{ticket.id}.", "success")
+    flash(f"Solicitud de material creada (ticket #{ticket.id}).", "success")
 
     return redirect(url_for("inventory_requests.my_daily_request"))
 
@@ -339,8 +286,15 @@ def admin_close_ticket(ticket_id: int):
         flash("La solicitud ya está cerrada.", "warning")
         return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
 
+    cancel_reason = (request.form.get("cancel_reason") or "").strip()
+    if not cancel_reason:
+        flash("Debes capturar el motivo para cerrar/cancelar la solicitud.", "error")
+        return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
+
     ticket.status = STATUS_CLOSED
     ticket.closed_at = datetime.now()
+    previous_notes = (ticket.notes or "").strip()
+    ticket.notes = f"{previous_notes}\n[Cierre admin] {cancel_reason}".strip() if previous_notes else f"[Cierre admin] {cancel_reason}"
     log_event(
         module="INVENTORY_REQUESTS",
         action="INVENTORY_DAILY_REQUEST_CLOSED",
