@@ -1582,3 +1582,22 @@ textarea.form-control{
 
   z-index: 10;
 }
+
+/* --- FIX QA: Estilos para campos readonly y prevención de overflow en Flexbox --- */
+.search-box input[readonly],
+.form-control[readonly] {
+  background: rgba(245, 245, 245, 0.9);
+  color: var(--text-soft, #6b7280);
+  cursor: default;
+  border-style: dashed;
+}
+
+.search-box input {
+  min-width: 0; /* Fix clásico de overflow en Flexbox */
+}
+
+.search-box input[readonly] {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
