@@ -1,0 +1,98 @@
+{% extends "layouts/student_base.html" %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Impresiones 3D admin", url_for('print3d.admin_list')), ("Solicitud #" ~ job.id, url_for('print3d.admin_detail', job_id=job.id))] %}
+{% block title %}Gestionar solicitud 3D #{{ job.id }}{% endblock %}
+
+{% block content %}
+<header class="topbar">
+  <div class="topbar-left">
+    <p class="page-kicker">Impresiones 3D</p>
+    <h1>Gestionar solicitud #{{ job.id }}</h1>
+    <p class="page-subtitle">Opera esta solicitud desde un solo detalle administrativo.</p>
+  </div>
+</header>
+
+<section class="toolbar-card">
+  <div class="toolbar-actions">
+    <a href="{{ url_for('print3d.admin_list') }}" class="btn btn-ghost">Volver al listado</a>
+    <a href="{{ url_for('print3d.download_file', job_id=job.id) }}" class="btn btn-ghost">Descargar archivo</a>
+  </div>
+</section>
+
+<section class="table-card" style="margin-top:16px;">
+  <p><strong>Estado:</strong> <span class="status-badge {{ status_badge_class(job.status) }}">{{ job.status|status_label }}</span></p>
+  <p><strong>Usuario:</strong> {{ job.requester_user.email if job.requester_user else '-' }}</p>
+  <p><strong>Archivo:</strong> {{ job.original_filename }} ({{ (job.file_size_bytes / 1024)|round(1) }} KB)</p>
+  <p><strong>Título:</strong> {{ job.title }}</p>
+  <p><strong>Descripción:</strong> {{ job.description or '-' }}</p>
+  <p><strong>Observación admin:</strong> {{ job.admin_note or '-' }}</p>
+</section>
+
+<section class="table-card" style="margin-top:16px;">
+  <h3 style="margin-top:0;">Costo estimado</h3>
+  <p class="page-subtitle" style="margin-top:0;">Tarifa institucional fija: <strong>$3.00 por gramo</strong>. El total es estimado para demo.</p>
+  <form method="post" action="{{ url_for('print3d.admin_set_status', job_id=job.id) }}" class="toolbar" style="grid-template-columns: repeat(2, minmax(220px,1fr)); gap:10px;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="status" value="{{ job.status }}">
+    <div class="toolbar-group">
+      <label>Gramos estimados</label>
+      <input class="form-control" type="number" name="estimated_grams" min="0" step="0.01" value="{{ ('%.2f'|format(job.grams_estimated)) if job.grams_estimated is not none else '' }}" placeholder="Ej. 45.5">
+    </div>
+    <div class="toolbar-group">
+      <label>Total estimado</label>
+      <input class="form-control" type="text" value="{{ ('$' ~ ('%.2f'|format(job.total_estimated))) if job.total_estimated is not none else 'Se calcula automáticamente' }}" readonly>
+    </div>
+    <div class="toolbar-actions" style="grid-column:1/-1;">
+      <button type="submit" class="btn btn-gold">Guardar estimación</button>
+    </div>
+  </form>
+</section>
+
+<section class="table-card" style="margin-top:16px;">
+  <h3 style="margin-top:0;">Acciones de estado</h3>
+  <div class="toolbar-actions" style="display:flex; flex-wrap:wrap; gap:8px; align-items:flex-start;">
+    {% if job.status == 'REQUESTED' %}
+    <form method="post" action="{{ url_for('print3d.admin_set_status', job_id=job.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="status" value="QUOTED">
+      <input type="hidden" name="estimated_grams" value="{{ ('%.2f'|format(job.grams_estimated)) if job.grams_estimated is not none else '' }}">
+      <button type="submit" class="btn btn-gold">Aceptar</button>
+    </form>
+    {% endif %}
+
+    {% if 'IN_PROGRESS' in allowed_next %}
+    <form method="post" action="{{ url_for('print3d.admin_set_status', job_id=job.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="status" value="IN_PROGRESS">
+      <input type="hidden" name="estimated_grams" value="{{ ('%.2f'|format(job.grams_estimated)) if job.grams_estimated is not none else '' }}">
+      <button type="submit" class="btn btn-gold">Iniciar impresión</button>
+    </form>
+    {% endif %}
+
+    {% if 'READY' in allowed_next %}
+    <form method="post" action="{{ url_for('print3d.admin_set_status', job_id=job.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="status" value="READY">
+      <input type="hidden" name="estimated_grams" value="{{ ('%.2f'|format(job.grams_estimated)) if job.grams_estimated is not none else '' }}">
+      <button type="submit" class="btn btn-gold">Marcar listo</button>
+    </form>
+    {% endif %}
+
+    {% if 'DELIVERED' in allowed_next %}
+    <form method="post" action="{{ url_for('print3d.admin_set_status', job_id=job.id) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="status" value="DELIVERED">
+      <button type="submit" class="btn btn-gold">Marcar entregado</button>
+    </form>
+    {% endif %}
+
+    {% if 'CANCELED' in allowed_next %}
+    <form method="post" action="{{ url_for('print3d.admin_set_status', job_id=job.id) }}" style="min-width:320px;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="status" value="CANCELED">
+      <textarea class="form-control" name="admin_note" rows="2" placeholder="Motivo de rechazo/cancelación" required></textarea>
+      <button type="submit" class="btn btn-ghost" style="margin-top:6px;">Rechazar / Cancelar</button>
+    </form>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}
