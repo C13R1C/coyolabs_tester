@@ -47,6 +47,7 @@ def forum_home():
     posts = query.limit(200).all()
     post_ids = [post.id for post in posts]
     comment_counts: dict[int, int] = {}
+    comment_previews_by_post: dict[int, list[ForumComment]] = {}
     if post_ids:
         comments_query = (
             db.session.query(ForumComment.post_id, func.count(ForumComment.id))
@@ -56,10 +57,37 @@ def forum_home():
             comments_query = comments_query.filter(ForumComment.is_hidden.is_(False))
         comment_counts = {post_id: total for post_id, total in comments_query.group_by(ForumComment.post_id).all()}
 
+        ranked_comments = (
+            db.session.query(
+                ForumComment.id.label("comment_id"),
+                ForumComment.post_id.label("post_id"),
+                func.row_number().over(
+                    partition_by=ForumComment.post_id,
+                    order_by=ForumComment.created_at.desc(),
+                ).label("rn"),
+            )
+            .filter(ForumComment.post_id.in_(post_ids))
+        )
+        if not _is_admin():
+            ranked_comments = ranked_comments.filter(ForumComment.is_hidden.is_(False))
+
+        ranked_subq = ranked_comments.subquery()
+        preview_comments = (
+            ForumComment.query
+            .options(joinedload(ForumComment.author))
+            .join(ranked_subq, ForumComment.id == ranked_subq.c.comment_id)
+            .filter(ranked_subq.c.rn <= 2)
+            .order_by(ForumComment.post_id.asc(), ForumComment.created_at.desc())
+            .all()
+        )
+        for comment in preview_comments:
+            comment_previews_by_post.setdefault(comment.post_id, []).append(comment)
+
     return render_template(
         "forum/list.html",
         posts=posts,
         comment_counts=comment_counts,
+        comment_previews_by_post=comment_previews_by_post,
         categories=FORUM_CATEGORIES,
         selected_category=selected_category,
         is_admin=_is_admin(),
