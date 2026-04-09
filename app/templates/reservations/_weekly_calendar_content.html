@@ -1,6 +1,7 @@
 {% set calendar_title = "Disponibilidad de laboratorios" if day_filter_active else "Disponibilidad semanal de laboratorios" %}
 {% if day_filter_active %}
-  {% set calendar_subtitle = selected_calendar_day.strftime('%A %d/%m/%Y') %}
+  {% set nombres_dia = {0:'Lunes',1:'Martes',2:'Miércoles',3:'Jueves',4:'Viernes',5:'Sábado',6:'Domingo'} %}
+  {% set calendar_subtitle = nombres_dia[selected_calendar_day.weekday()] ~ ' ' ~ selected_calendar_day.strftime('%d/%m/%Y') %}
 {% else %}
   {% set calendar_subtitle = "Semana del " ~ week_start.strftime('%d/%m/%Y') ~ " al " ~ week_end.strftime('%d/%m/%Y') %}
 {% endif %}

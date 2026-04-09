@@ -1,6 +1,7 @@
 {% set nombres_dia = {0:'Lunes',1:'Martes',2:'Miércoles',3:'Jueves',4:'Viernes',5:'Sábado',6:'Domingo'} %}
 {% set interactive_slots = interactive_slots if interactive_slots is defined else False %}
 {% set days_to_render = [] %}
+{% set day_columns = 1 %}
 {% if include_day_filter and day_filter_active is defined and day_filter_active and selected_calendar_day is defined %}
   {% set days_to_render = [selected_calendar_day] %}
 {% else %}
@@ -10,19 +11,23 @@
     {% endif %}
   {% endfor %}
 {% endif %}
+{% set day_columns = (days_to_render|length) if (days_to_render|length) > 0 else 1 %}
 
 <style>
 .res-week-card{margin-top:16px}
-.res-week-header{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;padding:14px 16px;border-radius:16px;background:linear-gradient(135deg,#37474f,#607d8b);color:#fff;margin-bottom:12px;box-shadow:0 10px 24px rgba(55,71,79,.28)}
-.res-week-header h2{margin:0;color:#fff}
-.res-week-header .page-subtitle{color:rgba(255,255,255,.88);margin-top:4px}
+.res-week-header{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;padding:14px 16px;border-radius:16px;background:linear-gradient(135deg,#d7e3e8,#cfdde3);color:#2f3e46;margin-bottom:12px;border:1px solid rgba(120,138,147,.28);box-shadow:0 8px 18px rgba(79,99,110,.14)}
+.res-week-header h2{margin:0;color:#2f3e46}
+.res-week-header .page-kicker{color:#c79a2b}
+.res-week-header .page-subtitle{color:#52636b;margin-top:4px}
 .res-week-nav{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .res-legend{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
 .res-legend-item{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;border:1px solid rgba(0,0,0,.08);background:#fff;font-size:.82rem}
 .res-legend-dot{width:10px;height:10px;border-radius:50%}
 .res-dot-available{background:#43a047}.res-dot-occupied{background:#d32f2f}.res-dot-pending{background:#fbc02d}.res-dot-progress{background:#607d8b}.res-dot-past{background:#9e9e9e}
 .res-week-grid-wrap{overflow-x:auto;padding-bottom:4px}
-.res-week-grid{display:grid;grid-template-columns:120px repeat(6,minmax(180px,1fr));gap:12px;min-width:1260px}
+.res-week-grid{display:grid;gap:12px}
+.res-week-grid.day-filter-active{min-width:420px}
+.res-week-grid.week-filter-active{min-width:1260px}
 .res-room-col-head,.res-day-col-head{padding:12px;border-radius:14px;background:#fff;border:1px solid rgba(0,0,0,.08);box-shadow:0 6px 18px rgba(0,0,0,.07);font-weight:700}
 .res-day-col-head small{display:block;color:#667;margin-top:2px;font-weight:500}
 .res-room-label-card{padding:12px;border-radius:14px;background:#fff;border:1px solid rgba(0,0,0,.08);font-weight:700;display:flex;align-items:flex-start}
@@ -37,14 +42,44 @@
 .time-slot.occupied{background:rgba(211,47,47,.23);color:#b71c1c}
 .time-slot.pending{background:rgba(251,192,45,.3);color:#8d6e00}
 .time-slot.in_progress{background:rgba(96,125,139,.26);color:#37474f}
+.time-slot[data-slot-tooltip]{position:relative}
+.time-slot[data-slot-tooltip]:hover::after{
+  content:attr(data-slot-tooltip);
+  position:absolute;
+  left:50%;
+  bottom:calc(100% + 8px);
+  transform:translateX(-50%);
+  width:min(240px,85vw);
+  white-space:pre-line;
+  text-align:left;
+  background:#263238;
+  color:#fff;
+  font-size:.72rem;
+  line-height:1.35;
+  padding:8px 10px;
+  border-radius:10px;
+  box-shadow:0 10px 26px rgba(0,0,0,.28);
+  z-index:35;
+  pointer-events:none;
+}
+.time-slot[data-slot-tooltip]:hover::before{
+  content:'';
+  position:absolute;
+  left:50%;
+  bottom:calc(100% + 2px);
+  transform:translateX(-50%);
+  border:6px solid transparent;
+  border-top-color:#263238;
+  z-index:34;
+}
 .time-slot:hover{transform:translateY(-1px) scale(1.02);box-shadow:0 6px 14px rgba(0,0,0,.12)}
 .time-slot.slot-clickable{cursor:pointer}
 .res-slot-btn{background:none;border:none;padding:0;font:inherit}
 .res-slot-btn:focus-visible{outline:2px solid #37474f;outline-offset:2px}
 .time-slot.is-past{background:#e0e0e0;color:#9e9e9e;border-color:#d2d2d2;cursor:not-allowed;box-shadow:none;transform:none}
 .time-slot.is-past:hover{transform:none;box-shadow:none}
-.res-week-card .btn.btn-ghost{border-color:#607d8b;color:#37474f}
-.res-week-card .btn.btn-ghost:hover{background:rgba(96,125,139,.14)}
+.res-week-card .btn.btn-ghost{border-color:rgba(82,99,107,.28);color:#33454e;background:rgba(255,255,255,.62)}
+.res-week-card .btn.btn-ghost:hover{background:rgba(255,255,255,.88);border-color:rgba(82,99,107,.4)}
 </style>
 
 <section class="table-card res-week-card">
@@ -108,7 +143,7 @@
   </div>
 
   <div class="res-week-grid-wrap">
-    <div class="res-week-grid">
+    <div class="res-week-grid {{ 'day-filter-active' if day_filter_active else 'week-filter-active' }}" style="grid-template-columns:120px repeat({{ day_columns }}, minmax(180px,1fr));">
       <div class="res-room-col-head">Laboratorio</div>
       {% for day in days_to_render %}
       <div class="res-day-col-head">{{ nombres_dia[day.weekday()] }}<small>{{ day.strftime('%d/%m') }}</small></div>
@@ -124,10 +159,10 @@
       {% set cell_state = 'available' %}
       {% if cell_slots %}
         {% set slot_states = cell_slots | map(attribute='state') | list %}
-        {% if 'pending' in slot_states %}
-          {% set cell_state = 'pending' %}
-        {% elif 'in_progress' in slot_states %}
+        {% if 'in_progress' in slot_states %}
           {% set cell_state = 'progress' %}
+        {% elif 'pending' in slot_states %}
+          {% set cell_state = 'pending' %}
         {% elif 'occupied' in slot_states %}
           {% set cell_state = 'occupied' %}
         {% endif %}
@@ -147,22 +182,25 @@
             {% endif %}
           {% endfor %}
 
-          {% set is_past_slot = false %}
-          {% if now_dt %}
-            {% set slot_end_dt = now_dt.replace(year=day.year, month=day.month, day=day.day, hour=(slot.end.split(':')[0]|int), minute=(slot.end.split(':')[1]|int), second=0, microsecond=0) %}
-            {% set is_past_slot = slot_end_dt <= now_dt %}
+          {% set is_past_slot = slot.state == 'past' %}
+
+          {% if slot.state == 'past' %}
+            {% set slot_info.status = 'No disponible (hora pasada)' %}
           {% endif %}
 
           {% set slot_classes = 'time-slot ' ~ slot.state ~ (' is-past' if is_past_slot else '') %}
-          {% if interactive_slots and slot_info.has_reservation and slot.state != 'available' and not is_past_slot %}
+          {% set has_tooltip = slot_info.has_reservation and slot.state not in ['available', 'past'] %}
+          {% set tooltip_text = 'Solicitante: ' ~ slot_info.requester ~ '\nGrupo: ' ~ slot_info.group ~ '\nMateria: ' ~ slot_info.subject ~ '\nEstado: ' ~ slot_info.status %}
+          {% if interactive_slots and slot_info.has_reservation and slot.state not in ['available', 'past'] and not is_past_slot %}
             <button
               type="button"
               class="res-slot-btn {{ slot_classes }} slot-clickable"
+              {% if has_tooltip %}data-requester="{{ slot_info.requester|e }}" data-group="{{ slot_info.group|e }}" data-subject="{{ slot_info.subject|e }}" data-status="{{ slot_info.status|e }}" data-slot-tooltip="{{ tooltip_text|e }}" title="{{ tooltip_text|e }}"{% endif %}
               onclick="openReservationSlotModal({ requester: {{ slot_info.requester|tojson }}, group: {{ slot_info.group|tojson }}, subject: {{ slot_info.subject|tojson }}, status: {{ slot_info.status|tojson }} })">
               {{ slot.start_label or slot.start }} - {{ slot.end_label or slot.end }}
             </button>
           {% else %}
-            <div class="{{ slot_classes }}">{{ slot.start_label or slot.start }} - {{ slot.end_label or slot.end }}</div>
+            <div class="{{ slot_classes }}" {% if has_tooltip %}data-requester="{{ slot_info.requester|e }}" data-group="{{ slot_info.group|e }}" data-subject="{{ slot_info.subject|e }}" data-status="{{ slot_info.status|e }}" data-slot-tooltip="{{ tooltip_text|e }}" title="{{ tooltip_text|e }}"{% endif %}>{{ slot.start_label or slot.start }} - {{ slot.end_label or slot.end }}</div>
           {% endif %}
         {% endfor %}
       </div>
