@@ -168,6 +168,7 @@ function bindAdminCalendarAsyncFilters() {
   const form = content.querySelector("form.reservation-calendar-filter");
   if (!form) return;
   const clearBtn = form.querySelector('a.btn.btn-ghost:last-of-type');
+<<<<<<< codex/fix-weekly-reservation-calendars-issues-laot4q
   const buildingSelect = form.querySelector("#buildingSelect");
   const roomSelect = form.querySelector("#roomSelect");
 
@@ -184,6 +185,8 @@ function bindAdminCalendarAsyncFilters() {
       if (!visible && opt.selected) roomSelect.value = "";
     });
   };
+=======
+>>>>>>> main
 
   const refreshCalendar = async (params) => {
     const query = new URLSearchParams(params);
@@ -205,6 +208,7 @@ function bindAdminCalendarAsyncFilters() {
     event.preventDefault();
     refreshCalendar(new URLSearchParams());
   });
+<<<<<<< codex/fix-weekly-reservation-calendars-issues-laot4q
 
   buildingSelect?.addEventListener("change", () => {
     syncRoomOptionsByBuilding();
@@ -216,6 +220,8 @@ function bindAdminCalendarAsyncFilters() {
   });
 
   syncRoomOptionsByBuilding();
+=======
+>>>>>>> main
 }
 
 bindAdminCalendarAsyncFilters();
