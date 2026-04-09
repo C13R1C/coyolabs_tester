@@ -36,6 +36,23 @@
             {% if post.is_hidden %}<span class="status-badge status-danger">OCULTA</span>{% endif %}
           </div>
           <div class="text-dim">{{ post.content[:180] }}{% if post.content|length > 180 %}...{% endif %}</div>
+          {% set preview_comments = comment_previews_by_post.get(post.id, []) %}
+          {% if preview_comments %}
+          <div style="margin-top:10px; display:grid; gap:6px;">
+            {% for comment in preview_comments %}
+            <div style="padding:8px 10px; border:1px solid var(--stroke); border-radius:10px; background:rgba(255,255,255,.42);">
+              <div class="text-dim" style="font-size:.85rem;">
+                <strong>{{ author_label_fn(comment.author, comment.is_anonymous) }}</strong>:
+                {{ comment.content[:110] }}{% if comment.content|length > 110 %}...{% endif %}
+              </div>
+            </div>
+            {% endfor %}
+            {% set hidden_count = comment_counts.get(post.id, 0) - (preview_comments|length) %}
+            {% if hidden_count > 0 %}
+            <div class="text-dim" style="font-size:.85rem;">+ {{ hidden_count }} comentario(s) más</div>
+            {% endif %}
+          </div>
+          {% endif %}
           <div class="text-dim" style="margin-top:6px;">Autor: {{ author_label_fn(post.author, post.is_anonymous) }} · {{ post.created_at }}</div>
         </div>
       </div>
