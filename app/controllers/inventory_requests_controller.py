@@ -26,6 +26,8 @@ inventory_requests_bp = Blueprint("inventory_requests", __name__, url_prefix="/i
 STATUS_OPEN = InventoryRequestStatus.OPEN
 STATUS_READY = InventoryRequestStatus.READY
 STATUS_CLOSED = InventoryRequestStatus.CLOSED
+DEBT_CLOSED_MARKER = "[CERRADO_CON_ADEUDO]"
+RETURN_REGISTERED_MARKER = "[DEVOLUCION_REGISTRADA]"
 
 
 def _is_student_role(role: str | None) -> bool:
@@ -360,7 +362,7 @@ def admin_register_return(ticket_id: int):
         item.quantity_returned = returned
 
     previous_notes = (ticket.notes or "").strip()
-    marker = "[DEVOLUCION_REGISTRADA]"
+    marker = RETURN_REGISTERED_MARKER
     if marker not in previous_notes:
         ticket.notes = f"{previous_notes}\n{marker}".strip() if previous_notes else marker
 
@@ -387,7 +389,7 @@ def admin_close_ticket(ticket_id: int):
         return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
 
     has_delivered_items = any((item.quantity_delivered or 0) > 0 for item in (ticket.items or []))
-    if has_delivered_items and "[DEVOLUCION_REGISTRADA]" not in (ticket.notes or ""):
+    if has_delivered_items and RETURN_REGISTERED_MARKER not in (ticket.notes or ""):
         flash("Debes registrar la devolución antes de cerrar la solicitud.", "error")
         return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
 
@@ -396,13 +398,32 @@ def admin_close_ticket(ticket_id: int):
         flash("Debes capturar el motivo para cerrar/cancelar la solicitud.", "error")
         return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
 
+    has_missing = False
     for item in (ticket.items or []):
         delivered = max(0, item.quantity_delivered or 0)
         returned = max(0, item.quantity_returned or 0)
+
+        material = item.material
+        if material and material.pieces_qty is not None and returned > 0:
+            material.pieces_qty += returned
+
         missing = max(0, delivered - returned)
         if missing <= 0:
             continue
+        has_missing = True
         material_name = item.material.name if item.material else f"Material ID {item.material_id}"
+        existing_debt = (
+            Debt.query
+            .filter(
+                Debt.user_id == ticket.user_id,
+                Debt.material_id == item.material_id,
+                Debt.status == DebtStatus.PENDING,
+                Debt.reason.ilike(f"%Solicitud #{ticket.id}%"),
+            )
+            .first()
+        )
+        if existing_debt:
+            continue
         debt = Debt(
             user_id=ticket.user_id,
             material_id=item.material_id,
@@ -415,7 +436,9 @@ def admin_close_ticket(ticket_id: int):
     ticket.status = STATUS_CLOSED
     ticket.closed_at = datetime.now()
     previous_notes = (ticket.notes or "").strip()
-    ticket.notes = f"{previous_notes}\n[Cierre admin] {cancel_reason}".strip() if previous_notes else f"[Cierre admin] {cancel_reason}"
+    status_note = DEBT_CLOSED_MARKER if has_missing else "[CERRADO]"
+    close_note = f"[Cierre admin] {cancel_reason}"
+    ticket.notes = f"{previous_notes}\n{status_note}\n{close_note}".strip() if previous_notes else f"{status_note}\n{close_note}"
     log_event(
         module="INVENTORY_REQUESTS",
         action="INVENTORY_DAILY_REQUEST_CLOSED",
