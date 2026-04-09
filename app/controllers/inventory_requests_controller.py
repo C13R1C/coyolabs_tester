@@ -178,7 +178,7 @@ def add_to_daily_request():
     for notif in admin_notifications:
         publish_notification_created(notif)
 
-    flash(f"Solicitud de material creada (ticket #{ticket.id}).", "success")
+    flash(f"Solicitud de material creada (#{ticket.id}).", "success")
 
     return redirect(url_for("inventory_requests.my_daily_request"))
 
