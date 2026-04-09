@@ -73,6 +73,8 @@
             <th>Usuario</th>
             <th>Estado</th>
             <th>Material</th>
+            <th>Cant. original</th>
+            <th>Cant. pendiente</th>
             <th>Razón</th>
             <th>Fecha</th>
             <th>Acción</th>
@@ -102,6 +104,9 @@
               {% endif %}
             </td>
 
+            <td>{{ d.original_amount if d.original_amount is not none else d.amount }}</td>
+            <td>{{ d.remaining_amount if d.remaining_amount is not none else d.amount }}</td>
+
             <td>{{ d.reason or '-' }}</td>
 
             <td>{{ d.created_at }}</td>
@@ -109,7 +114,20 @@
             <td>
               {% if d.status == "PENDING" %}
                 <form method="post" action="{{ url_for('debts.admin_close', debt_id=d.id) }}">
-                  <button type="submit" class="btn btn-gold">Marcar pagado</button>
+                  <div style="display:flex; gap:6px; align-items:center;">
+                    <input
+                      type="number"
+                      name="payment_amount"
+                      min="0.01"
+                      step="0.01"
+                      max="{{ d.remaining_amount if d.remaining_amount is not none else d.amount }}"
+                      value="{{ d.remaining_amount if d.remaining_amount is not none else d.amount }}"
+                      class="form-control"
+                      style="max-width:120px;"
+                      required
+                    >
+                    <button type="submit" class="btn btn-gold">Registrar abono</button>
+                  </div>
                 </form>
               {% else %}
                 <span class="status-badge status-neutral">Pagado</span>

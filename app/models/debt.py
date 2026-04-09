@@ -25,6 +25,8 @@ class Debt(db.Model):
 
     # Monto (si aplica)
     amount = db.Column(db.Numeric(10, 2), nullable=True)
+    original_amount = db.Column(db.Numeric(10, 2), nullable=True)
+    remaining_amount = db.Column(db.Numeric(10, 2), nullable=True)
 
     # Fechas
     created_at = db.Column(db.DateTime, server_default=db.func.now(), nullable=False)
