@@ -120,7 +120,11 @@ def _process_close_after_return(ticket: InventoryRequestTicket, cancel_reason: s
     previous_notes = (ticket.notes or "").strip()
     status_note = DEBT_CLOSED_MARKER if has_missing else "[CERRADO]"
     close_note = f"[Cierre admin] {cancel_reason}"
-    ticket.notes = f"{previous_notes}\n{status_note}\n{close_note}".strip() if previous_notes else f"{status_note}\n{close_note}"
+    ticket.notes = (
+        f"{previous_notes}\n{RETURN_REGISTERED_MARKER}\n{status_note}\n{close_note}".strip()
+        if previous_notes
+        else f"{RETURN_REGISTERED_MARKER}\n{status_note}\n{close_note}"
+    )
     log_event(
         module="INVENTORY_REQUESTS",
         action="INVENTORY_DAILY_REQUEST_CLOSED",
@@ -394,14 +398,6 @@ def admin_register_return(ticket_id: int):
     if ticket.status != STATUS_READY:
         flash("Solo puedes registrar devolución en solicitudes listas para recoger.", "error")
         return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
-    if ticket.status != STATUS_READY:
-        flash("La solicitud debe pasar por estado LISTA antes de cerrarse.", "error")
-        return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
-
-    has_delivered_items = any((item.quantity_delivered or 0) > 0 for item in (ticket.items or []))
-    if has_delivered_items and RETURN_REGISTERED_MARKER not in (ticket.notes or ""):
-        flash("Debes registrar la devolución antes de cerrar la solicitud.", "error")
-        return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
 
     for item in (ticket.items or []):
         returned_raw = (request.form.get(f"returned_{item.id}") or "").strip()
@@ -420,11 +416,6 @@ def admin_register_return(ticket_id: int):
             return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
 
         item.quantity_returned = returned
-
-    previous_notes = (ticket.notes or "").strip()
-    marker = RETURN_REGISTERED_MARKER
-    if marker not in previous_notes:
-        ticket.notes = f"{previous_notes}\n{marker}".strip() if previous_notes else marker
 
     cancel_reason = (request.form.get("cancel_reason") or "").strip()
     if not cancel_reason:
