@@ -286,6 +286,14 @@
       cursor: not-allowed;
       background: rgba(245,245,245,.9);
     }
+    form[data-form-mode="create"] .search-box input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+    form[data-form-mode="create"] .search-box input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):focus {
+      border: none;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+      padding: 0;
+    }
     .form-readonly-visual {
       display: inline-flex;
       align-items: center;
