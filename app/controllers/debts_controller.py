@@ -113,7 +113,7 @@ def admin_create():
         email = (request.form.get("email") or "").strip().lower()
         material_id = request.form.get("material_id", type=int)
         reason = (request.form.get("reason") or "").strip()
-        amount = request.form.get("amount", type=float)
+        amount = request.form.get("amount", type=int)
 
         user = User.query.filter_by(email=email).first()
         if not user:
@@ -212,7 +212,7 @@ def admin_close(debt_id: int):
         flash("Adeudo marcado como pagado.", "success")
     else:
         flash(
-            f"Abono registrado. Pendiente actual: {result.data.get('remaining_amount')}.",
+            f"Abono registrado. Pendiente actual: {int(result.data.get('remaining_amount'))}.",
             "success",
         )
     return redirect(url_for("debts.admin_list"))
