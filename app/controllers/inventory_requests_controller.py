@@ -52,6 +52,28 @@ def _close_stale_open_tickets() -> None:
     return None
 
 
+def _apply_stock_delivery_for_request(ticket: InventoryRequestTicket) -> tuple[bool, str | None]:
+    items = ticket.items or []
+    if not items:
+        return True, None
+
+    for item in items:
+        material = item.material
+        if not material:
+            return False, "Uno de los materiales de la solicitud ya no existe."
+        if material.pieces_qty is None:
+            continue
+        if item.quantity_requested > material.pieces_qty:
+            return False, f"{material.name}: stock insuficiente para entregar {item.quantity_requested} unidad(es)."
+
+    for item in items:
+        material = item.material
+        if material and material.pieces_qty is not None:
+            material.pieces_qty -= item.quantity_requested
+
+    return True, None
+
+
 @inventory_requests_bp.route("/", methods=["GET"])
 @min_role_required("STUDENT")
 def my_daily_request():
@@ -244,6 +266,15 @@ def admin_mark_ready(ticket_id: int):
 
     if ticket.status == STATUS_CLOSED:
         flash("No puedes marcar como lista una solicitud cerrada.", "error")
+        return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
+    if ticket.status == STATUS_READY:
+        flash("La solicitud ya está marcada como lista para recoger.", "warning")
+        return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
+
+    ok, stock_error = _apply_stock_delivery_for_request(ticket)
+    if not ok:
+        db.session.rollback()
+        flash(stock_error or "No se pudo preparar la solicitud por stock.", "error")
         return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
 
     ticket.status = STATUS_READY
