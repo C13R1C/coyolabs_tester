@@ -113,6 +113,7 @@ def admin_create():
         email = (request.form.get("email") or "").strip().lower()
         material_id = request.form.get("material_id", type=int)
         reason = (request.form.get("reason") or "").strip()
+        amount = request.form.get("amount", type=int)
 
         user = User.query.filter_by(email=email).first()
         if not user:
@@ -131,6 +132,9 @@ def admin_create():
             material_id=material.id if material else None,
             status=DebtStatus.PENDING,
             reason=reason or None,
+            amount=amount if amount is not None else 1,
+            original_amount=amount if amount is not None else 1,
+            remaining_amount=amount if amount is not None else 1,
         )
 
         db.session.add(debt)
@@ -177,7 +181,10 @@ def admin_close(debt_id: int):
         flash("Adeudo no encontrado.", "error")
         return redirect(url_for("debts.admin_list"))
 
-    result = resolve_debt(debt=debt, actor_user=current_user)
+    payment_amount = (request.form.get("payment_amount") or "").strip()
+    parsed_payment = payment_amount if payment_amount else None
+
+    result = resolve_debt(debt=debt, actor_user=current_user, payment_amount=parsed_payment)
     if not result.ok:
         flash(result.message, "error")
         return redirect(url_for("debts.admin_list"))
@@ -201,5 +208,11 @@ def admin_close(debt_id: int):
                 extra={"debt_id": debt.id, "notification_id": admin_notif.id, "target_user_id": admin_notif.user_id},
             )
 
-    flash("Adeudo marcado como pagado.", "success")
+    if result.data.get("paid_in_full"):
+        flash("Adeudo marcado como pagado.", "success")
+    else:
+        flash(
+            f"Abono registrado. Pendiente actual: {int(result.data.get('remaining_amount'))}.",
+            "success",
+        )
     return redirect(url_for("debts.admin_list"))
