@@ -3,7 +3,6 @@ import os
 import base64
 import binascii
 from datetime import datetime, timedelta
-import json
 from uuid import uuid4
 
 from flask import Blueprint, current_app, render_template, request, redirect, url_for, flash
@@ -541,43 +540,6 @@ def request_reservation():
         db.session.add(r)
         db.session.flush()
 
-        material_ids = request.form.getlist("material_id[]")
-        quantities = request.form.getlist("quantity[]")
-
-        for i in range(len(material_ids)):
-            try:
-                material_id = int(material_ids[i])
-                qty = int(quantities[i])
-            except (ValueError, IndexError):
-                continue
-
-            if qty <= 0:
-                continue
-
-            material = Material.query.get(material_id)
-            if not material:
-                continue
-            if _is_inactive_status(material.status):
-                db.session.rollback()
-                flash(f"{material.name}: está inactivo y no se puede solicitar.", "error")
-                return redirect(url_for("reservations.request_reservation"))
-            if _is_student_role(current_user.role) and material.career_id != current_user.career_id:
-                db.session.rollback()
-                flash(f"{material.name}: no pertenece a tu carrera.", "error")
-                return redirect(url_for("reservations.request_reservation"))
-
-            if material.pieces_qty is not None and qty > material.pieces_qty:
-                db.session.rollback()
-                flash(f"{material.name}: solo hay {material.pieces_qty} disponibles", "error")
-                return redirect(url_for("reservations.request_reservation"))
-
-            item = ReservationItem(
-                reservation_id=r.id,
-                material_id=material_id,
-                quantity_requested=qty
-            )
-            db.session.add(item)
-
         admins = User.query.filter(User.role.in_(["ADMIN", "SUPERADMIN"])).all()
         admin_notifications: list[Notification] = []
 
@@ -613,29 +575,12 @@ def request_reservation():
         flash("Solicitud enviada. Queda pendiente de aprobación.", "success")
         return redirect(url_for("reservations.my_reservations"))
 
-    materials = (
-        _exclude_inactive_materials(Material.query)
-        .filter(Material.career_id == current_user.career_id if _is_student_role(current_user.role) else True)
-        .order_by(Material.name.asc())
-        .all()
-    )
-    materials_json = json.dumps([
-        {
-            "id": m.id,
-            "name": m.name,
-            "pieces_qty": m.pieces_qty if m.pieces_qty is not None else 0
-        }
-        for m in materials
-    ])
-
     return render_template(
         "reservations/request.html",
     rooms=ROOMS,
     calendar_buildings=calendar_buildings,
     calendar_rooms_by_building=calendar_rooms_by_building,
     calendar_filter_rooms=available_calendar_rooms,
-    materials=materials,
-    materials_json=materials_json,
     week_days=week_days,
     week_start=week_start,
     week_end=week_end,
