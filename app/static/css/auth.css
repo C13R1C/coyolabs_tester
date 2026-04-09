@@ -145,7 +145,7 @@ body.mode-register .shape.three{
 .card-logo{
   position:absolute;
   left:50%;
-  top: 6px;
+  top:10;
   transform: translate(-50%, -70%);
   pointer-events:none;
 }
@@ -442,21 +442,30 @@ body.mode-register .form-login {
   display: none !important;
 }
 
-/* Compactación y accesibilidad */
+/* Evitar que el contenedor crezca demasiado */
+.card {
+  max-width: 420px;   /* ajusta si quieres */
+  width: 100%;
+}
+
+/* Si el contenido aún se alarga, permite scroll interno */
+.forms {
+  width: 100%;
+}/* ---------- OJITO PASSWORD ---------- */
 .toggle-pass{
   background: transparent;
   border: none;
   cursor: pointer;
-  padding: 4px;
-  border-radius: 8px;
+  padding: 6px;
+  border-radius: 10px;
   display:flex;
   align-items:center;
   justify-content:center;
   transition: background .18s ease, transform .18s ease;
 }
 .toggle-pass svg{
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   fill: rgba(255,255,255,0.78);
 }
 .toggle-pass:hover{
@@ -467,10 +476,10 @@ body.mode-register .form-login {
   fill: rgba(255,255,255,0.95);
 }
 
+/* ---------- Overlay para transición más “wow” ---------- */
 .forms{
   position: relative;
   isolation: isolate;
-  width: 100%;
 }
 .forms-overlay{
   position:absolute;
@@ -479,7 +488,9 @@ body.mode-register .form-login {
   pointer-events:none;
   opacity: 0;
   z-index: 0;
-  background: radial-gradient(450px 260px at 30% 30%, rgba(255,255,255,0.10), transparent 60%);
+  background: radial-gradient(450px 260px at 30% 30%,
+      rgba(255,255,255,0.10),
+      transparent 60%);
   transform: scale(0.98);
 }
 .forms-overlay.pulse{
@@ -491,8 +502,10 @@ body.mode-register .form-login {
   100% { opacity:0; transform: scale(1.02); }
 }
 
-.form{ position: relative; z-index: 1; gap: 12px; }
+/* Asegura que forms queden arriba del overlay */
+.form{ position: relative; z-index: 1; }
 
+/* ---------- Animación de entrada por campo ---------- */
 body.mode-login .form-login .field,
 body.mode-register .form-register .field{
   animation: fieldIn 420ms ease both;
@@ -508,6 +521,7 @@ body.mode-register .form-register .field:nth-of-type(3){ animation-delay: 160ms;
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* ---------- Hint + validación confirm ---------- */
 .hint{
   margin-top: 8px;
   font-size: 12px;
@@ -517,18 +531,143 @@ body.mode-register .form-register .field:nth-of-type(3){ animation-delay: 160ms;
 .hint.good{ color: rgba(170, 255, 210, 0.95); }
 .hint.bad { color: rgba(255, 190, 190, 0.95); }
 
-/* Layout estable para evitar solapamientos en pantallas pequeñas */
+.input-good{
+  outline: none;
+}
+.input-bad{
+  outline: none;
+}
+
+/* Si quieres marcar el field completo (opcional): */
+.input-good{
+  box-shadow: 0 0 0 0px transparent;
+}
+.input-bad{
+  box-shadow: 0 0 0 0px transparent;
+}/* ====== FIX VISIBILIDAD CARD + LOGO (pegar al final) ====== */
+
+/* Asegura capas correctas */
+.grid,
+.background {
+  z-index: 0;
+}
+
+.card {
+  position: relative;
+  z-index: 10;               /* card arriba del fondo */
+  background: rgba(255,255,255,0.12);  /* un poquito más visible */
+  border: 1px solid rgba(255,255,255,0.18);
+  backdrop-filter: blur(14px);
+}
+
+/* Overlay SIEMPRE atrás del contenido (no encima) */
+.forms-overlay {
+  z-index: 0 !important;
+  opacity: 0;               /* base invisible */
+}
+
+/* Contenido del form arriba del overlay */
+.form {
+  position: relative;
+  z-index: 2;
+}
+
+/* Logo flotante: arriba de TODO y más nítido */
+.card-logo {
+  z-index: 20;
+}
+
+.card-logo img{
+  opacity: 1;
+  filter: drop-shadow(0 18px 34px rgba(0,0,0,0.55));
+}
+
+/* Si el logo se “corta” o se ve raro */
+.card {
+  overflow: visible; /* permite que el logo salga del card */
+}
+
+/* Mejora contraste del texto y campos */
+.title { color: rgba(255,255,255,0.96); }
+.subtitle { color: rgba(255,255,255,0.82); }
+
+.field{
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.16);
+}
+.field input {
+  flex: 1;
+  min-width: 0;
+}/* ====== COMPACTAR FIELDS + FIX LOGO REGISTER ====== */
+
+/* Card: un poco menos alto arriba (porque el logo ya no debe empujar) */
+.card{
+  padding: 56px 28px 24px;   /* antes: clamp(54px..68px) 28px 28px */
+  overflow: visible;         /* para que el logo pueda salir sin cortarse */
+}
+
+/* Logo: bájalo un poco y hazlo ligeramente más pequeño */
+.card-logo{
+  top: 6px;                  /* antes: top:0 */
+  transform: translate(-50%, -62%); /* ajusta el “flotado” */
+}
+.card-logo img{
+  width: clamp(110px, 22vw, 150px); /* antes: 120..175 */
+}
+
+/* Fields más “delgados” */
+.field{
+  padding: 9px 12px;         /* antes: 12px */
+  border-radius: 11px;
+}
+input{
+  font-size: 13px;           /* antes: 14px */
+}
+
+/* Iconos un poco más pequeños */
+.icon{ width: 16px; }
+
+/* Botón del ojito más compacto */
+.toggle-pass{
+  padding: 4px;
+  border-radius: 8px;
+}
+.toggle-pass svg{
+  width: 18px;
+  height: 18px;
+}
+
+/* Menos separación vertical entre bloques del form */
+.form{ gap: 12px; }          /* antes: 14px */
+
+/* (Opcional) reduce margen de subtítulo para ganar espacio */
+.subtitle{ margin-bottom: 14px; }  /* antes: 18px */
+@media (max-height: 720px){
+  .card{ padding-top: 52px; }
+  .card-logo{ transform: translate(-50%, -55%); }
+}/* Logo estable en desktop */
+.card-logo img{
+  width: 160px;      /* fijo */
+  max-width: 160px;
+}
+
+/* En pantallas chicas sí lo bajas */
+@media (max-width: 420px){
+  .card-logo img{
+    width: 130px;
+    max-width: 130px;
+  }
+}
 html, body {
   min-height: 100%;
   margin: 0;
 }
 
 body {
+  font-family: 'Poppins', sans-serif;
   position: relative;
   min-height: 100vh;
   overflow-x: hidden;
-  padding: 0;
-  align-items: initial;
 }
 
 .auth-layout {
@@ -546,22 +685,7 @@ body {
 
 .card {
   width: 100%;
-  max-width: 420px;
-  padding: 56px 28px 24px;
-  z-index: 10;
-  overflow: visible;
-}
-
-.card-logo {
-  top: 6px;
-  z-index: 20;
-  transform: translate(-50%, -62%);
-}
-
-.card-logo img{
-  width: 160px;
-  max-width: 160px;
-  filter: drop-shadow(0 18px 34px rgba(0,0,0,0.55));
+  max-width: 450px;
 }
 
 .auth-footer {
@@ -596,9 +720,7 @@ body {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-}
-
-.consent-box {
+}.consent-box {
   margin: 14px 0 10px;
   padding: 12px 14px;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -636,15 +758,51 @@ body {
   text-decoration: underline;
 }
 
+.consent-note {
+  margin: 8px 0 0 26px;
+  font-size: 0.82rem;
+  color: #9ea9bc;
+}.auth-layout{
+  padding-top: 20px;
+}
+
+/* ====== CONSISTENCIA VISUAL FORM CONTROLS (AUTH) ====== */
+.auth-layout label{
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.auth-layout .field{
+  min-height: 54px;
+  border-radius: 16px;
+  padding: 0 14px;
+}
+
+.auth-layout .field input{
+  font-size: 0.96rem;
+}
+
+.auth-layout .btn{
+  min-height: 54px;
+  border-radius: 16px;
+  padding: 0 18px;
+}
+
+.auth-layout .consent-check input[type="checkbox"]{
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  accent-color: #E0B12C;
+}
+
 @media (max-width: 420px){
-  .card{
-    padding: 58px 18px 20px;
+  .auth-layout .field{
+    min-height: 50px;
     border-radius: 14px;
   }
-  .field{ padding: 11px; }
-  .btn{ padding: 12px; }
-  .card-logo img{
-    width: 130px;
-    max-width: 130px;
+
+  .auth-layout .btn{
+    min-height: 50px;
+    border-radius: 14px;
   }
 }
