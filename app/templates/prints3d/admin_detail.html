@@ -3,6 +3,56 @@
 {% block title %}Gestionar solicitud 3D #{{ job.id }}{% endblock %}
 
 {% block content %}
+<style>
+.print3d-summary-card {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.75));
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.05);
+}
+
+.print3d-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.print3d-meta-item {
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.75);
+}
+
+.print3d-meta-label {
+  display: block;
+  font-size: .78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--text-dim, #728078);
+  margin-bottom: 4px;
+}
+
+.print3d-meta-value {
+  color: var(--text, #1d2a22);
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.print3d-text-block {
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+@media (max-width: 900px) {
+  .print3d-summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
 <header class="topbar">
   <div class="topbar-left">
     <p class="page-kicker">Impresiones 3D</p>
@@ -18,13 +68,43 @@
   </div>
 </section>
 
-<section class="table-card" style="margin-top:16px;">
-  <p><strong>Estado:</strong> <span class="status-badge {{ status_badge_class(job.status) }}">{{ job.status|status_label }}</span></p>
-  <p><strong>Usuario:</strong> {{ job.requester_user.email if job.requester_user else '-' }}</p>
-  <p><strong>Archivo:</strong> {{ job.original_filename }} ({{ (job.file_size_bytes / 1024)|round(1) }} KB)</p>
-  <p><strong>Título:</strong> {{ job.title }}</p>
-  <p><strong>Descripción:</strong> {{ job.description or '-' }}</p>
-  <p><strong>Observación admin:</strong> {{ job.admin_note or '-' }}</p>
+<section class="table-card print3d-summary-card" style="margin-top:16px;">
+  <h3 style="margin-top:0;">Resumen de la solicitud</h3>
+
+  <div class="print3d-summary-grid" style="margin-top:10px;">
+    <article class="print3d-meta-item">
+      <span class="print3d-meta-label">Estado</span>
+      <span class="print3d-meta-value">
+        <span class="status-badge {{ status_badge_class(job.status) }}">{{ job.status|status_label }}</span>
+      </span>
+    </article>
+
+    <article class="print3d-meta-item">
+      <span class="print3d-meta-label">Usuario</span>
+      <span class="print3d-meta-value">{{ job.requester_user.email if job.requester_user else '-' }}</span>
+    </article>
+
+    <article class="print3d-meta-item">
+      <span class="print3d-meta-label">Archivo</span>
+      <span class="print3d-meta-value">{{ job.original_filename }} ({{ (job.file_size_bytes / 1024)|round(1) }} KB)</span>
+    </article>
+
+    <article class="print3d-meta-item">
+      <span class="print3d-meta-label">Título</span>
+      <span class="print3d-meta-value">{{ job.title }}</span>
+    </article>
+  </div>
+
+  <div style="display:grid; gap:10px; margin-top:12px;">
+    <article class="print3d-text-block">
+      <span class="print3d-meta-label">Descripción</span>
+      <div class="print3d-meta-value">{{ job.description or 'Sin descripción proporcionada.' }}</div>
+    </article>
+    <article class="print3d-text-block">
+      <span class="print3d-meta-label">Observación admin</span>
+      <div class="print3d-meta-value">{{ job.admin_note or 'Sin observaciones administrativas.' }}</div>
+    </article>
+  </div>
 </section>
 
 <section class="table-card" style="margin-top:16px;">
