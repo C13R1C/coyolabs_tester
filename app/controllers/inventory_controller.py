@@ -108,7 +108,9 @@ def _material_payload_from_form(material: Material | None = None) -> tuple[dict,
     if not name:
         return {}, "El nombre del material es obligatorio."
 
-    lab_id = request.form.get("lab_id", type=int)
+    lab_id = None
+    if material is not None:
+        lab_id = request.form.get("lab_id", type=int)
     if not lab_id and material is not None:
         lab_id = material.lab_id
     if not lab_id:
@@ -150,6 +152,9 @@ def _material_payload_from_form(material: Material | None = None) -> tuple[dict,
         status = f"{active_state or 'Alta'} - {tool_condition or 'Bueno'}"
     if not status:
         status = material.status if material else "Alta - Bueno"
+    status_change_reason = normalize_spaces(request.form.get("status_change_reason") or "")
+    if material is None and _is_inactive_status(status) and not status_change_reason:
+        return {}, "Debes capturar el motivo al crear un material en estado de baja."
 
     category = normalize_spaces(request.form.get("category") or "").upper()
     if category and category not in MATERIAL_CATEGORIES:
@@ -184,6 +189,8 @@ def _material_payload_from_form(material: Material | None = None) -> tuple[dict,
         "tutorial_url": tutorial_url or None,
         "notes": normalize_spaces(request.form.get("notes") or "") or None,
     }
+    if material is None and _is_inactive_status(status):
+        payload["notes"] = status_change_reason
     return payload, None
 
 
