@@ -64,11 +64,6 @@
           <td>
             <div style="display:flex; flex-wrap:wrap; gap:6px;">
               <a href="{{ url_for('inventory_requests.admin_ticket_detail', ticket_id=t.id) }}" class="btn btn-ghost">Ver solicitud</a>
-              {% if t.status == 'OPEN' %}
-              <form method="post" action="{{ url_for('inventory_requests.admin_mark_ready', ticket_id=t.id) }}">
-                <button type="submit" class="btn btn-gold">Entregar material</button>
-              </form>
-              {% endif %}
             </div>
           </td>
         </tr>
