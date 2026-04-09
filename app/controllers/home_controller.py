@@ -10,12 +10,14 @@ from app.utils.roles import is_admin_role
 from app.models.reservation import Reservation
 from app.models.debt import Debt
 from app.models.inventory_request_ticket import InventoryRequestTicket
+from app.models.print3d_job import Print3DJob
 
 home_bp = Blueprint("home", __name__, url_prefix="/home")
 
 LAB_FLOORS = {
     "Primer piso": ["B001", "B002", "B003", "B004", "B005", "B006"],
     "Segundo piso": ["B101", "B102", "B103", "B104"],
+    "Edificio E": ["E1", "E2", "E3", "E4", "E5", "E6"],
 }
 
 
@@ -125,6 +127,13 @@ def home_dashboard():
         .all()
     )
 
+    recent_print3d_jobs = (
+        Print3DJob.query.filter(Print3DJob.requester_user_id == user.id)
+        .order_by(Print3DJob.created_at.desc())
+        .limit(3)
+        .all()
+    )
+
     my_open_debts = (
         Debt.query.filter(Debt.user_id == user.id, Debt.status == "OPEN")
         .order_by(Debt.created_at.desc())
@@ -150,6 +159,7 @@ def home_dashboard():
         upcoming_reservations=upcoming_reservations,
         recent_reservations=recent_reservations,
         recent_material_requests=recent_material_requests,
+        recent_print3d_jobs=recent_print3d_jobs,
         my_open_debts=my_open_debts,
         selected_date=selected_date,
         selected_time=selected_time.strftime("%H:%M"),

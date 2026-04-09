@@ -32,6 +32,8 @@
   .chip-APPROVED,.chip-CLOSED,.chip-PAID{background:rgba(91,165,111,.15);border-color:rgba(91,165,111,.35);color:#2f6b44}
   .chip-PENDING,.chip-OPEN{background:rgba(212,166,61,.16);border-color:rgba(212,166,61,.35);color:#7d5f13}
   .chip-REJECTED,.chip-CANCELED{background:rgba(200,91,91,.14);border-color:rgba(200,91,91,.35);color:#893b3b}
+  .chip-REQUESTED,.chip-QUOTED,.chip-IN_PROGRESS{background:rgba(212,166,61,.16);border-color:rgba(212,166,61,.35);color:#7d5f13}
+  .chip-READY,.chip-READY_FOR_PICKUP,.chip-DELIVERED{background:rgba(91,165,111,.15);border-color:rgba(91,165,111,.35);color:#2f6b44}
   .empty{margin-top:12px;border:1px dashed var(--stroke-strong);border-radius:12px;padding:16px;text-align:center;background:rgba(255,255,255,.42)}
   .empty p{color:var(--text-soft);margin-bottom:10px}
   .btn-ghost{display:inline-flex;align-items:center;gap:6px;padding:9px 12px;border-radius:10px;border:1px solid var(--stroke);background:rgba(255,255,255,.65);font-weight:700;color:var(--text-soft)}
@@ -264,6 +266,34 @@
     </article>
 
     <article class="card section">
+      <div class="card-title">Impresiones 3D</div>
+      <div class="card-subtitle">Solicitudes recientes de impresión 3D.</div>
+      {% if recent_print3d_jobs %}
+      <div class="list">
+        {% for job in recent_print3d_jobs %}
+        <div class="list-item">
+          <div class="list-head">
+            <strong>Solicitud #{{ job.id }}</strong>
+            <span class="chip chip-{{ job.status }}">{{ job.status|status_label }}</span>
+          </div>
+          <div class="meta">
+            <span><i class="ph ph-calendar"></i> {{ job.created_at.strftime('%d/%m/%Y %H:%M') }}</span>
+            {% if job.total_estimated is not none %}
+            <span><i class="ph ph-currency-circle-dollar"></i> Total estimado: ${{ '%.2f'|format(job.total_estimated) }}</span>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty">
+        <p>Aún no tienes solicitudes de impresión 3D.</p>
+        <a class="btn btn-ghost" href="{{ url_for('print3d.my_jobs') }}"><i class="ph ph-cube"></i>Ir a impresiones 3D</a>
+      </div>
+      {% endif %}
+    </article>
+
+    <article class="card section">
       <div class="card-title">Adeudos activos</div>
       {% if my_open_debts %}
       <div class="list">
@@ -292,6 +322,7 @@
         <a class="quick-link" href="{{ url_for('reservations.my_reservations') }}"><i class="ph ph-calendar-check"></i>Mis reservas</a>
         <a class="quick-link" href="{{ url_for('reservations.request_reservation') }}"><i class="ph ph-calendar-plus"></i>Nueva reservación</a>
         <a class="quick-link" href="{{ url_for('inventory_requests.my_daily_request') }}"><i class="ph ph-clipboard-text"></i>Mis solicitudes</a>
+        <a class="quick-link" href="{{ url_for('print3d.my_jobs') }}"><i class="ph ph-cube"></i>Mis impresiones 3D</a>
         <a class="quick-link" href="{{ url_for('debts.my_debts') }}"><i class="ph ph-warning-circle"></i>Mis adeudos</a>
         <a class="quick-link" href="{{ url_for('forum.forum_home') }}"><i class="ph ph-chats-circle"></i>Foro</a>
       </div>
