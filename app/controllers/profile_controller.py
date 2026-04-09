@@ -9,7 +9,7 @@ from app.extensions import db
 from app.models.academic_level import AcademicLevel
 from app.models.career import Career
 from app.models.debt import Debt
-from app.models.lab_ticket import LabTicket
+from app.models.inventory_request_ticket import InventoryRequestTicket
 from app.models.notification import Notification
 from app.models.profile_change_request import ProfileChangeRequest
 from app.models.reservation import Reservation
@@ -123,11 +123,10 @@ def my_profile():
         .all()
     )
 
-    tickets = (
-        LabTicket.query
-        .options(joinedload(LabTicket.reservation))
-        .filter(LabTicket.owner_user_id == current_user.id)
-        .order_by(LabTicket.opened_at.desc())
+    material_requests = (
+        InventoryRequestTicket.query
+        .filter(InventoryRequestTicket.user_id == current_user.id)
+        .order_by(InventoryRequestTicket.request_date.desc(), InventoryRequestTicket.created_at.desc())
         .all()
     )
 
@@ -202,7 +201,7 @@ def my_profile():
     return render_template(
         "profile/my_profile.html",
         reservations=reservations,
-        tickets=tickets,
+        material_requests=material_requests,
         debts=debts,
         active_page="profile",
         is_professor=_is_professor_role(current_user.role),
