@@ -5,10 +5,10 @@
 {% block content %}
 <style>
 .inventory-summary-card {
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(32, 85, 59, 0.2);
   border-radius: 14px;
-  background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.75));
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.05);
+  background: linear-gradient(180deg, #ffffff, #f4f9f6);
+  box-shadow: 0 14px 28px rgba(20, 44, 32, 0.08);
 }
 
 .inventory-summary-grid {
@@ -18,10 +18,10 @@
 }
 
 .inventory-meta-item {
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(32, 85, 59, 0.16);
   border-radius: 12px;
   padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.95);
 }
 
 .inventory-meta-label {
@@ -30,30 +30,57 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: .04em;
-  color: var(--text-dim, #728078);
+  color: #4d675a;
   margin-bottom: 4px;
 }
 
 .inventory-meta-value {
-  color: var(--text, #1d2a22);
-  font-weight: 600;
+  color: #1d2a22;
+  font-weight: 700;
   word-break: break-word;
 }
 
 .inventory-text-block {
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(32, 85, 59, 0.16);
   border-radius: 12px;
-  padding: 12px;
-  background: rgba(255, 255, 255, 0.78);
+  padding: 13px 14px;
+  background: #fff;
 }
 
 .admin-action-card {
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(32, 85, 59, 0.18);
   border-radius: 12px;
-  padding: 12px;
-  background: rgba(255,255,255,0.8);
+  padding: 14px;
+  background: linear-gradient(180deg, #ffffff, #f8fbf9);
   display: grid;
-  gap: 8px;
+  gap: 10px;
+}
+
+.inventory-summary-card .status-badge,
+.admin-action-card .status-badge {
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.inventory-summary-card .status-badge.status-warn,
+.admin-action-card .status-badge.status-warn {
+  background: #fff4cf;
+  border-color: #efc24e;
+  color: #7f5b00;
+}
+
+.inventory-summary-card .status-badge.status-ok,
+.admin-action-card .status-badge.status-ok {
+  background: #e6f6ee;
+  border-color: #8bc8a7;
+  color: #216746;
+}
+
+.inventory-summary-card .status-badge.status-bad,
+.admin-action-card .status-badge.status-bad {
+  background: #fdeaea;
+  border-color: #e8a4a4;
+  color: #9a2727;
 }
 
 @media (max-width: 900px) {

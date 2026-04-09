@@ -4,12 +4,91 @@
 
 {% block content %}
 <style>
+.inventory-admin-shell .topbar h1{
+  font-size: clamp(1.55rem, 2vw, 1.95rem);
+  letter-spacing: .01em;
+}
+.inventory-admin-shell .page-subtitle{
+  max-width: 70ch;
+  color: #4c5f54;
+}
+.inventory-admin-shell .toolbar-card{
+  border: 1px solid rgba(44, 93, 67, 0.16);
+  box-shadow: 0 8px 18px rgba(18, 36, 27, 0.06);
+}
+.inventory-admin-shell .search-box{
+  border: 1px solid rgba(36, 78, 56, 0.22);
+  background: #fff;
+}
+.inventory-admin-table.table-card{
+  border: 1px solid rgba(44, 93, 67, 0.18);
+  box-shadow: 0 14px 28px rgba(18, 36, 27, 0.08);
+}
+.inventory-admin-table thead th{
+  font-size: .8rem;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: #355443;
+}
+.inventory-admin-table tbody tr{
+  transition: background .15s ease, transform .15s ease;
+}
+.inventory-admin-table tbody tr:hover{
+  background: #f4f9f6;
+}
+.inventory-admin-table .request-id{
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #edf7f1;
+  border: 1px solid #c8e5d6;
+  font-weight: 700;
+  color: #1f5f40;
+}
+.inventory-admin-table .user-email{
+  font-weight: 700;
+  color: #1f2e25;
+}
+.inventory-admin-table .motivo{
+  color: #26362d;
+}
+.inventory-admin-table .items-pill{
+  display: inline-block;
+  font-weight: 700;
+  color: #365745;
+  background: #eef6f1;
+  border: 1px solid #cbe0d4;
+  border-radius: 8px;
+  padding: 3px 9px;
+}
+.inventory-admin-table .status-badge{
+  font-weight: 700;
+  letter-spacing: .02em;
+  border: 1px solid transparent;
+}
+.inventory-admin-table .status-badge.status-warn{
+  background: #fff4cf;
+  border-color: #efc24e;
+  color: #7f5b00;
+}
+.inventory-admin-table .status-badge.status-ok{
+  background: #e6f6ee;
+  border-color: #8bc8a7;
+  color: #216746;
+}
+.inventory-admin-table .status-badge.status-bad{
+  background: #fdeaea;
+  border-color: #e8a4a4;
+  color: #9a2727;
+}
 @media (max-width: 768px){
   .inventory-admin-list-actions .btn{
     width: 100%;
   }
 }
 </style>
+<div class="inventory-admin-shell">
 <header class="topbar">
   <div class="topbar-left">
     <p class="page-kicker">Inventario</p>
@@ -36,7 +115,7 @@
       <p>No hay solicitudes Abiertas o Listas para recoger.</p>
 </section>
 {% else %}
-<section class="table-card">
+<section class="table-card inventory-admin-table">
   <div class="table-wrap">
     <table class="inventory-table" style="min-width: 1000px;">
       <thead>
@@ -53,14 +132,14 @@
       <tbody>
       {% for t in tickets %}
         <tr class="inventory-request-admin-row">
-          <td>#{{ t.id }}</td>
-          <td>{{ t.user.email if t.user else '-' }}</td>
+          <td><span class="request-id">#{{ t.id }}</span></td>
+          <td><span class="user-email">{{ t.user.email if t.user else '-' }}</span></td>
           <td>{{ t.request_date }}</td>
           <td>
             <span class="status-badge {% if t.status == 'OPEN' %}status-warn{% elif t.status == 'READY' %}status-ok{% else %}status-bad{% endif %}">{{ t.status|status_label }}</span>
           </td>
-          <td>{{ t.notes or '-' }}</td>
-          <td>{{ t.items|length }}</td>
+          <td class="motivo">{{ t.notes or '-' }}</td>
+          <td><span class="items-pill">{{ t.items|length }} item(s)</span></td>
           <td>
             <div style="display:flex; flex-wrap:wrap; gap:6px;">
               <a href="{{ url_for('inventory_requests.admin_ticket_detail', ticket_id=t.id) }}" class="btn btn-ghost">Ver solicitud</a>
@@ -88,4 +167,5 @@
   input.addEventListener("input", applyFilter);
 })();
 </script>
+</div>
 {% endblock %}

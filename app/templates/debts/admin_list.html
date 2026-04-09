@@ -76,6 +76,7 @@
             <th>Cant. original</th>
             <th>Cant. pendiente</th>
             <th>Razón</th>
+            <th>Flujo</th>
             <th>Acción</th>
           </tr>
         </thead>
@@ -107,28 +108,39 @@
             <td>{{ ((d.remaining_amount if d.remaining_amount is not none else d.amount) or 0)|int }}</td>
 
             <td>{{ d.reason or '-' }}</td>
+            <td>
+              {% if d.case_code %}
+                <span class="status-badge status-neutral">Compuesto</span>
+              {% else %}
+                <span class="status-badge status-neutral">Legacy</span>
+              {% endif %}
+            </td>
 
             <td>
-              {% if d.status == "PENDING" %}
-                <form method="post" action="{{ url_for('debts.admin_close', debt_id=d.id) }}">
-                  <div style="display:flex; gap:6px; align-items:center;">
-                    <input
-                      type="number"
-                      name="payment_amount"
-                      min="1"
-                      step="1"
-                      max="{{ ((d.remaining_amount if d.remaining_amount is not none else d.amount) or 0)|int }}"
-                      value="{{ ((d.remaining_amount if d.remaining_amount is not none else d.amount) or 0)|int }}"
-                      class="form-control"
-                      style="max-width:120px;"
-                      required
-                    >
-                    <button type="submit" class="btn btn-gold">Registrar abono</button>
-                  </div>
-                </form>
-              {% else %}
-                <span class="status-badge status-neutral">Pagado</span>
-              {% endif %}
+              <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                <a href="{{ url_for('debts.admin_detail', debt_id=d.id) }}" class="btn btn-ghost">Ver detalle</a>
+                {% if d.status == "PENDING" %}
+                  <form method="post" action="{{ url_for('debts.admin_close', debt_id=d.id) }}">
+                    <input type="hidden" name="return_to" value="list">
+                    <div style="display:flex; gap:6px; align-items:center;">
+                      <input
+                        type="number"
+                        name="payment_amount"
+                        min="1"
+                        step="1"
+                        max="{{ ((d.remaining_amount if d.remaining_amount is not none else d.amount) or 0)|int }}"
+                        value="{{ ((d.remaining_amount if d.remaining_amount is not none else d.amount) or 0)|int }}"
+                        class="form-control"
+                        style="max-width:110px;"
+                        required
+                      >
+                      <button type="submit" class="btn btn-gold">Abonar</button>
+                    </div>
+                  </form>
+                {% else %}
+                  <span class="status-badge status-neutral">Pagado</span>
+                {% endif %}
+              </div>
             </td>
           </tr>
         {% endfor %}

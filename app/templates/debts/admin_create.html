@@ -3,6 +3,22 @@
 {% block title %}Crear adeudo{% endblock %}
 
 {% block content %}
+<style>
+.debt-items-grid { display:grid; gap:10px; margin-top:10px; }
+.debt-item-row {
+  display:grid;
+  grid-template-columns: minmax(240px, 1fr) 130px auto;
+  gap:10px;
+  align-items:end;
+  border:1px solid rgba(0,0,0,.08);
+  border-radius:10px;
+  padding:10px;
+  background:#fff;
+}
+@media (max-width: 900px){
+  .debt-item-row{ grid-template-columns: 1fr; }
+}
+</style>
 <header class="topbar">
   <div class="topbar-left">
     <p class="page-kicker">Adeudos</p>
@@ -29,6 +45,13 @@
     </div>
 
     <div class="toolbar-group" style="grid-column: 1 / -1;">
+      <label>Adeudo multi-material (opcional, recomendado)</label>
+      <p class="page-subtitle" style="margin:0 0 6px 0;">Si agregas ítems aquí, se ignorará el par material/cantidad legacy y se creará un adeudo compuesto.</p>
+      <div id="debtItemsGrid" class="debt-items-grid"></div>
+      <button type="button" id="addDebtItemBtn" class="btn btn-ghost" style="margin-top:8px;">Agregar material</button>
+    </div>
+
+    <div class="toolbar-group" style="grid-column: 1 / -1;">
       <label for="reason">Razón / comentario</label>
       <textarea class="form-control" id="reason" name="reason" rows="4" placeholder="Describe el motivo del adeudo"></textarea>
     </div>
@@ -39,4 +62,38 @@
     </div>
   </form>
 </section>
+<template id="debtItemRowTpl">
+  <div class="debt-item-row">
+    <div class="toolbar-group" style="margin:0;">
+      <label>Material</label>
+      <select name="item_material_id" class="form-control">
+        <option value="">Selecciona material</option>
+        {% for m in materials %}
+          <option value="{{ m.id }}">{{ m.name }} (ID {{ m.id }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="toolbar-group" style="margin:0;">
+      <label>Cantidad</label>
+      <input type="number" name="item_amount" min="1" step="1" value="1" class="form-control">
+    </div>
+    <button type="button" class="btn btn-ghost debt-item-remove">Quitar</button>
+  </div>
+</template>
+<script>
+(() => {
+  const grid = document.getElementById("debtItemsGrid");
+  const addBtn = document.getElementById("addDebtItemBtn");
+  const tpl = document.getElementById("debtItemRowTpl");
+  if (!grid || !addBtn || !tpl) return;
+  const addRow = () => {
+    const node = tpl.content.firstElementChild.cloneNode(true);
+    const removeBtn = node.querySelector(".debt-item-remove");
+    if (removeBtn) removeBtn.addEventListener("click", () => node.remove());
+    grid.appendChild(node);
+  };
+  addBtn.addEventListener("click", addRow);
+  addRow();
+})();
+</script>
 {% endblock %}
