@@ -752,58 +752,6 @@
 
 <div id="toast" class="toast">Material agregado</div>
 
-<script>
-document.addEventListener("DOMContentLoaded", () => {
-  const occupancySection = document.getElementById("occupancySection");
-  const reservationFormSection = document.getElementById("reservationFormSection");
-  const toggleBtn = document.getElementById("toggleOccupancyBtn");
-  const occupancyBody = document.getElementById("occupancyBody");
-  if (occupancySection && reservationFormSection) {
-    reservationFormSection.parentNode.insertBefore(occupancySection, reservationFormSection);
-  }
-
-  if (toggleBtn && occupancyBody) {
-    toggleBtn.addEventListener("click", () => {
-      const isHidden = occupancyBody.style.display === "none";
-      occupancyBody.style.display = isHidden ? "" : "none";
-      toggleBtn.textContent = isHidden ? "Ocultar ocupación de salones" : "Mostrar ocupación de salones";
-      toggleBtn.setAttribute("aria-expanded", isHidden ? "true" : "false");
-    });
-  }
-});
-</script>
-<script>
-(() => {
-  const buildingSelect = document.querySelector('select[name="calendar_building"]');
-  const roomSelect = document.getElementById("calendarRoomFilter");
-  const roomsByBuilding = {{ calendar_rooms_by_building | tojson }};
-  if (!buildingSelect || !roomSelect) return;
-
-  const fillRooms = () => {
-    const currentRoom = roomSelect.value;
-    const building = buildingSelect.value || "";
-    const rooms = roomsByBuilding[building] || [];
-
-    roomSelect.innerHTML = '<option value="">Todos</option>';
-    rooms.forEach((room) => {
-      const option = document.createElement("option");
-      option.value = room;
-      option.textContent = room;
-      roomSelect.appendChild(option);
-    });
-
-    if (currentRoom && rooms.includes(currentRoom)) {
-      roomSelect.value = currentRoom;
-    } else {
-      roomSelect.value = "";
-    }
-  };
-
-  buildingSelect.addEventListener("change", fillRooms);
-  fillRooms();
-})();
-</script>
-
 <div id="clockPickerModal" class="clock-picker-modal" aria-hidden="true">
   <div class="clock-picker-backdrop" data-clock-close="1"></div>
   <div class="clock-picker-dialog" role="dialog" aria-modal="true" aria-labelledby="clockPickerTitle">
