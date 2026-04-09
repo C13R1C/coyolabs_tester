@@ -1,0 +1,9 @@
+{% set calendar_title = "Ocupación semanal de laboratorios" %}
+{% set calendar_subtitle = "Semana del " ~ week_start.strftime('%d/%m/%Y') ~ " al " ~ week_end.strftime('%d/%m/%Y') %}
+{% set filter_action = url_for('reservations.admin_queue') %}
+{% set clear_url = url_for('reservations.admin_queue') %}
+{% set prev_url = url_for('reservations.admin_queue', week_start=prev_week.isoformat(), calendar_building=selected_calendar_building, calendar_room=selected_calendar_room) %}
+{% set next_url = url_for('reservations.admin_queue', week_start=next_week.isoformat(), calendar_building=selected_calendar_building, calendar_room=selected_calendar_room) %}
+{% set include_day_filter = false %}
+{% set interactive_slots = true %}
+{% include "components/reservation_weekly_grid.html" %}

@@ -4,73 +4,215 @@
 
 {% block content %}
 <style>
-  .notifications-row-btn {
-    width: 100%;
-    text-align: left;
+  .notifications-shell {
+    display: flex;
+    justify-content: flex-end;
+    padding: 8px 0 0;
   }
 
-  .notifications-topbar-actions {
+  .notifications-drawer {
+    width: 390px;
+    min-width: 360px;
+    max-width: min(92vw, 420px);
+    height: calc(100vh - 140px);
+    min-height: 560px;
+    background: #f8fbfc;
+    border: 1px solid rgba(82, 99, 107, 0.18);
+    border-radius: 18px;
+    box-shadow: 0 18px 34px rgba(62, 79, 90, 0.14);
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr);
+    overflow: hidden;
+  }
+
+  .notifications-drawer__header {
+    padding: 14px 16px;
+    background: linear-gradient(135deg, #d7e3e8, #cfdde3);
+    border-bottom: 1px solid rgba(82, 99, 107, 0.2);
     display: flex;
-    gap: 12px;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .notifications-drawer__title {
+    margin: 0;
+    color: #2f3e46;
+    font-size: 1.16rem;
+  }
+
+  .notifications-drawer__subtitle {
+    margin: 4px 0 0;
+    color: #52636b;
+    font-size: .84rem;
+  }
+
+  .notifications-count {
+    margin-left: 8px;
+    background: rgba(199, 154, 43, 0.16);
+    color: #7e6214;
+    border: 1px solid rgba(199, 154, 43, 0.24);
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: .76rem;
+    font-weight: 700;
+  }
+
+  .notifications-drawer__actions {
+    padding: 10px 12px;
+    background: #f5f9fb;
+    border-bottom: 1px solid rgba(82, 99, 107, 0.14);
+    display: flex;
+    gap: 8px;
     flex-wrap: wrap;
+  }
+
+  .notifications-drawer__actions .btn {
+    border-radius: 10px;
+    min-height: 38px;
+    padding: 8px 12px;
+  }
+
+  .notifications-drawer__body {
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .notification-card {
+    border: 1px solid rgba(82, 99, 107, 0.18);
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.05);
+    padding: 11px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: start;
+  }
+
+  .notification-card.is-unread {
+    border-color: rgba(199, 154, 43, 0.42);
+    background: #fffcf4;
+  }
+
+  .notification-card__title-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 5px;
+    flex-wrap: wrap;
+  }
+
+  .notification-card__title {
+    font-weight: 700;
+    color: #2f3e46;
+    font-size: .95rem;
+    margin: 0;
+  }
+
+  .notification-card__message {
+    margin: 0;
+    color: #465961;
+    font-size: .86rem;
+    line-height: 1.34;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .notification-card__meta {
+    margin-top: 7px;
+    font-size: .74rem;
+    color: #6a7b83;
+  }
+
+  .notification-card__action {
+    white-space: nowrap;
+    min-width: 76px;
+  }
+
+  .notifications-empty {
+    margin: auto 0;
+  }
+
+  @media (max-width: 920px) {
+    .notifications-shell {
+      justify-content: center;
+    }
+
+    .notifications-drawer {
+      width: min(92vw, 420px);
+      min-width: 0;
+      height: calc(100vh - 170px);
+      min-height: 500px;
+    }
   }
 </style>
 
-<header class="topbar">
-  <div class="topbar-left">
-    <p class="page-kicker">Sistema</p>
-    <h1>Notificaciones</h1>
-    <p class="page-subtitle">Eventos recientes y avisos del sistema.</p>
-  </div>
+<section class="notifications-shell">
+  <div class="notifications-drawer" role="region" aria-label="Panel de notificaciones">
+    <div class="notifications-drawer__header">
+      <div>
+        <h1 class="notifications-drawer__title">
+          Notificaciones
+          <span class="notifications-count">{{ notifications|length }}</span>
+        </h1>
+        <p class="notifications-drawer__subtitle">Eventos recientes y avisos del sistema.</p>
+      </div>
+      <a href="{{ url_for('root_home') }}" class="btn btn-ghost" aria-label="Cerrar panel de notificaciones">
+        <i class="ph ph-x"></i>
+      </a>
+    </div>
 
-  <div class="notifications-topbar-actions">
-    <button type="button" class="btn btn-gold" id="markAllReadPageBtn">
-      <i class="ph ph-check-circle"></i>
-      <span>Marcar todo leído</span>
-    </button>
+    <div class="notifications-drawer__actions">
+      <button type="button" class="btn btn-gold" id="markAllReadPageBtn">
+        <i class="ph ph-check-circle"></i>
+        <span>Marcar todo leído</span>
+      </button>
+      <button type="button" class="btn btn-danger" id="clearReadPageBtn">
+        <i class="ph ph-trash"></i>
+        <span>Limpiar leídas</span>
+      </button>
+      <a href="{{ url_for('notifications.list_notifications') }}" class="btn btn-ghost">
+        <i class="ph ph-list"></i>
+        <span>Ver todo</span>
+      </a>
+    </div>
 
-    <button type="button" class="btn btn-danger" id="clearReadPageBtn">
-      <i class="ph ph-trash"></i>
-      <span>Limpiar leídas</span>
-    </button>
-  </div>
-</header>
-
-{% if notifications %}
-<section class="table-card">
-  <div style="display:flex; flex-direction:column; gap:12px;">
-    {% for n in notifications %}
-    <form method="post"
-      action="{{ url_for('notifications.mark_read', notif_id=n.id) }}"
-      class="toolbar-card"
-      style="margin-bottom:0; {% if not n.is_read %}border:1px solid rgba(199,159,51,0.35);{% endif %}">
-      <button type="submit" class="btn btn-ghost notifications-row-btn">
-        <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap; width:100%;">
+    <div class="notifications-drawer__body" id="notificationsDrawerBody">
+      {% if notifications %}
+        {% for n in notifications %}
+        <form method="post" action="{{ url_for('notifications.mark_read', notif_id=n.id) }}" class="notification-card {% if not n.is_read %}is-unread{% endif %}">
           <div>
-            <div style="display:flex; gap:10px; align-items:center; margin-bottom:6px;">
-              <strong>{{ n.title }}</strong>
+            <div class="notification-card__title-row">
+              <p class="notification-card__title">{{ n.title }}</p>
               {% if not n.is_read %}
                 <span class="status-badge status-warn">NUEVA</span>
               {% else %}
                 <span class="status-badge status-neutral">LEÍDA</span>
               {% endif %}
             </div>
-            <div class="text-dim">{{ n.message }}</div>
+            <p class="notification-card__message">{{ n.message }}</p>
+            <p class="notification-card__meta">{{ n.created_at }}</p>
           </div>
-          <div class="text-dim">{{ n.created_at }}</div>
-        </div>
-      </button>
-    </form>
-    {% endfor %}
+          <button type="submit" class="btn btn-ghost notification-card__action">Abrir</button>
+        </form>
+        {% endfor %}
+      {% else %}
+      <section class="empty-state notifications-empty">
+        <i class="ph ph-bell empty-icon"></i>
+        <h3>Sin notificaciones</h3>
+        <p>No tienes avisos pendientes.</p>
+      </section>
+      {% endif %}
+    </div>
   </div>
 </section>
-{% else %}
-<section class="empty-state">
-  <i class="ph ph-bell empty-icon"></i>
-  <h3>Sin notificaciones</h3>
-  <p>No tienes avisos pendientes.</p>
-</section>
-{% endif %}
 
 <script>
 document.getElementById("markAllReadPageBtn")?.addEventListener("click", async () => {
