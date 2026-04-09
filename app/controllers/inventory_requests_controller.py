@@ -198,6 +198,7 @@ def my_daily_request():
         history=history,
         materials=materials,
         materials_json=materials_json,
+        clear_cart_on_load=request.args.get("saved") == "1",
         active_page="inventory_requests",
     )
 
@@ -286,7 +287,39 @@ def add_to_daily_request():
 
     flash(f"Solicitud de material creada (#{ticket.id}).", "success")
 
-    return redirect(url_for("inventory_requests.my_daily_request"))
+    return redirect(url_for("inventory_requests.my_daily_request", saved="1"))
+
+
+@inventory_requests_bp.route("/<int:ticket_id>", methods=["GET"], endpoint="my_ticket_detail")
+@min_role_required("STUDENT")
+def my_ticket_detail(ticket_id: int):
+    ticket = (
+        InventoryRequestTicket.query
+        .options(joinedload(InventoryRequestTicket.items).joinedload(InventoryRequestItem.material))
+        .filter(InventoryRequestTicket.id == ticket_id, InventoryRequestTicket.user_id == current_user.id)
+        .first()
+    )
+    if not ticket:
+        flash("Solicitud no encontrada.", "error")
+        return redirect(url_for("inventory_requests.my_daily_request"))
+
+    related_debts = (
+        Debt.query
+        .options(joinedload(Debt.material))
+        .filter(
+            Debt.user_id == current_user.id,
+            Debt.reason.ilike(f"%Solicitud #{ticket.id}%"),
+        )
+        .order_by(Debt.created_at.desc())
+        .all()
+    )
+
+    return render_template(
+        "inventory_requests/my_request_detail.html",
+        ticket=ticket,
+        related_debts=related_debts,
+        active_page="inventory_requests",
+    )
 
 
 @inventory_requests_bp.route("/admin", methods=["GET"], endpoint="admin_daily_requests")
@@ -447,4 +480,3 @@ def admin_register_return(ticket_id: int):
     db.session.commit()
     flash("Devolución guardada y solicitud cerrada.", "success")
     return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
-
