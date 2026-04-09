@@ -339,8 +339,15 @@ def admin_close_ticket(ticket_id: int):
         flash("La solicitud ya está cerrada.", "warning")
         return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
 
+    cancel_reason = (request.form.get("cancel_reason") or "").strip()
+    if not cancel_reason:
+        flash("Debes capturar el motivo para cerrar/cancelar la solicitud.", "error")
+        return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
+
     ticket.status = STATUS_CLOSED
     ticket.closed_at = datetime.now()
+    previous_notes = (ticket.notes or "").strip()
+    ticket.notes = f"{previous_notes}\n[Cierre admin] {cancel_reason}".strip() if previous_notes else f"[Cierre admin] {cancel_reason}"
     log_event(
         module="INVENTORY_REQUESTS",
         action="INVENTORY_DAILY_REQUEST_CLOSED",

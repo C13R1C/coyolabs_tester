@@ -22,6 +22,10 @@
   <div class="toolbar-actions inventory-admin-list-actions">
     <a href="{{ url_for('inventory_requests.my_daily_request') }}" class="btn btn-ghost">Volver</a>
     <a href="{{ url_for('inventory_requests.admin_daily_requests') }}" class="btn btn-ghost">Limpiar</a>
+    <div class="search-box" style="min-width:260px;">
+      <i class="ph ph-magnifying-glass search-icon"></i>
+      <input type="text" id="inventoryRequestsAdminSearch" placeholder="Buscar por ticket, usuario o motivo" autocomplete="off">
+    </div>
   </div>
 </section>
 
@@ -29,7 +33,7 @@
 <section class="empty-state">
   <i class="ph ph-check-circle empty-icon"></i>
   <h3>Sin solicitudes pendientes</h3>
-      <p>No hay solicitudes OPEN o READY_FOR_PICKUP.</p>
+      <p>No hay solicitudes Abiertas o Listas para recoger.</p>
 </section>
 {% else %}
 <section class="table-card">
@@ -48,7 +52,7 @@
       </thead>
       <tbody>
       {% for t in tickets %}
-        <tr>
+        <tr class="inventory-request-admin-row">
           <td>#{{ t.id }}</td>
           <td>{{ t.user.email if t.user else '-' }}</td>
           <td>{{ t.request_date }}</td>
@@ -74,4 +78,19 @@
   </div>
 </section>
 {% endif %}
+<script>
+(() => {
+  const input = document.getElementById("inventoryRequestsAdminSearch");
+  const rows = Array.from(document.querySelectorAll(".inventory-request-admin-row"));
+  if (!input || !rows.length) return;
+  const applyFilter = () => {
+    const query = (input.value || "").trim().toLowerCase();
+    rows.forEach((row) => {
+      const text = (row.textContent || "").toLowerCase();
+      row.style.display = !query || text.includes(query) ? "" : "none";
+    });
+  };
+  input.addEventListener("input", applyFilter);
+})();
+</script>
 {% endblock %}
