@@ -3,6 +3,37 @@
 {% block title %}Mis reservas{% endblock %}
 
 {% block content %}
+<style>
+.signature-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  align-items: center;
+  justify-content: center;
+}
+.signature-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+}
+.signature-modal-content {
+  position: relative;
+  width: min(880px, 92vw);
+  max-height: 92vh;
+  border-radius: 14px;
+  background: #fff;
+  padding: 14px;
+  box-shadow: 0 24px 50px rgba(0,0,0,.28);
+}
+.signature-preview {
+  width: 100%;
+  max-height: 76vh;
+  object-fit: contain;
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,.08);
+  background: #fafafa;
+}
+</style>
 <header class="topbar">
   <div class="topbar-left">
     <p class="page-kicker">Reservaciones</p>
@@ -55,7 +86,7 @@
             <td>{{ r.group_name }}</td>
             <td>
               {% if r.signature_ref %}
-                <a href="{{ url_for('static', filename=r.signature_ref) }}" target="_blank" rel="noopener noreferrer" class="btn btn-ghost">Ver firma</a>
+                <button type="button" class="btn btn-ghost" onclick="openSignature('{{ url_for('static', filename=r.signature_ref) }}')">Ver firma</button>
               {% elif r.signed %}
                 <span class="status-badge status-ok">Registrada (legacy)</span>
               {% else %}
@@ -78,6 +109,39 @@
   </section>
   {% endif %}
 </div>
+
+<div id="signatureModal" class="signature-modal" style="display:none;" aria-hidden="true">
+  <div class="signature-modal-backdrop" onclick="closeSignature()"></div>
+  <div class="signature-modal-content" role="dialog" aria-modal="true" aria-label="Firma digital">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;">
+      <h3 style="margin:0;">Firma digital</h3>
+      <button type="button" class="btn btn-ghost" onclick="closeSignature()">Cerrar</button>
+    </div>
+    <img id="signaturePreview" class="signature-preview" src="" alt="Firma digital">
+  </div>
+</div>
+
+<script>
+function openSignature(url) {
+  const modal = document.getElementById("signatureModal");
+  const img = document.getElementById("signaturePreview");
+  if (!modal || !img) return;
+  img.src = url || "";
+  modal.style.display = "flex";
+  modal.setAttribute("aria-hidden", "false");
+  document.body.classList.add("modal-open");
+}
+
+function closeSignature() {
+  const modal = document.getElementById("signatureModal");
+  const img = document.getElementById("signaturePreview");
+  if (!modal || !img) return;
+  modal.style.display = "none";
+  modal.setAttribute("aria-hidden", "true");
+  img.src = "";
+  document.body.classList.remove("modal-open");
+}
+</script>
 <section class="toolbar-card" style="margin-top:18px;">
   <div class="toolbar-actions">
     <a class="btn btn-ghost" href="{{ url_for('inventory_requests.my_daily_request') }}">Ir a Solicitud de material</a>

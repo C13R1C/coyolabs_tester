@@ -38,7 +38,6 @@
         <table class="inventory-table" style="min-width: 900px;">
           <thead>
             <tr>
-              <th>ID</th>
               <th>Estado</th>
               <th>Material</th>
               <th>Razón</th>
@@ -48,7 +47,6 @@
           <tbody>
             {% for d in debts %}
               <tr>
-                <td>{{ d.id }}</td>
                 <td>
                   <span class="status-badge {% if d.status == 'PENDING' %}status-bad{% else %}status-ok{% endif %}">
                     {{ d.status|status_label }}
@@ -62,7 +60,7 @@
                   {% endif %}
                 </td>
                 <td>{{ d.reason or 'Sin comentario' }}</td>
-                <td>{{ d.created_at }}</td>
+                <td>{{ d.created_at.strftime('%Y-%m-%d') if d.created_at else '-' }}</td>
               </tr>
             {% endfor %}
           </tbody>
