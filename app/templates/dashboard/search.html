@@ -1,11 +1,11 @@
 {% extends "layouts/student_base.html" %}
-{% set crumbs = [("Inicio", url_for('root_home')), ("Dashboard", url_for('dashboard.dashboard_home')), ("Búsqueda rápida", url_for('dashboard.dashboard_quick_search'))] %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Panel", url_for('dashboard.dashboard_home')), ("Búsqueda rápida", url_for('dashboard.dashboard_quick_search'))] %}
 {% block title %}Búsqueda rápida{% endblock %}
 
 {% block content %}
 <header class="topbar">
   <div class="topbar-left">
-    <p class="page-kicker">Dashboard · Admin</p>
+    <p class="page-kicker">Panel · Administración</p>
     <h1>Búsqueda rápida</h1>
     <p class="page-subtitle">Filtra en vivo Inventario, Reportes y Software desde un solo lugar.</p>
   </div>
