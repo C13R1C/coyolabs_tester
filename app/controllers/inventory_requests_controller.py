@@ -9,6 +9,7 @@ from sqlalchemy.orm import joinedload
 from app.extensions import db
 from app.models.inventory_request_item import InventoryRequestItem
 from app.models.inventory_request_ticket import InventoryRequestTicket
+from app.models.debt import Debt
 from app.models.material import Material
 from app.models.notification import Notification
 from app.models.user import User
@@ -16,7 +17,7 @@ from app.services.audit_service import log_event
 from app.services.notification_realtime_service import publish_notification_created
 from app.utils.authz import min_role_required
 from app.utils.roles import ROLE_STUDENT, normalize_role
-from app.utils.statuses import InventoryRequestStatus
+from app.utils.statuses import DebtStatus, InventoryRequestStatus
 
 
 inventory_requests_bp = Blueprint("inventory_requests", __name__, url_prefix="/inventory-requests")
@@ -61,15 +62,17 @@ def _apply_stock_delivery_for_request(ticket: InventoryRequestTicket) -> tuple[b
         material = item.material
         if not material:
             return False, "Uno de los materiales de la solicitud ya no existe."
+        if item.quantity_delivered < 0 or item.quantity_delivered > item.quantity_requested:
+            return False, f"{material.name}: la cantidad entregada debe estar entre 0 y la solicitada."
         if material.pieces_qty is None:
             continue
-        if item.quantity_requested > material.pieces_qty:
-            return False, f"{material.name}: stock insuficiente para entregar {item.quantity_requested} unidad(es)."
+        if item.quantity_delivered > material.pieces_qty:
+            return False, f"{material.name}: stock insuficiente para entregar {item.quantity_delivered} unidad(es)."
 
     for item in items:
         material = item.material
         if material and material.pieces_qty is not None:
-            material.pieces_qty -= item.quantity_requested
+            material.pieces_qty -= item.quantity_delivered
 
     return True, None
 
@@ -179,6 +182,8 @@ def add_to_daily_request():
                 ticket_id=ticket.id,
                 material_id=material.id,
                 quantity_requested=qty,
+                quantity_delivered=qty,
+                quantity_returned=0,
             )
         )
 
@@ -271,6 +276,28 @@ def admin_mark_ready(ticket_id: int):
         flash("La solicitud ya está marcada como lista para recoger.", "warning")
         return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
 
+    for item in (ticket.items or []):
+        delivered_raw = (request.form.get(f"delivered_{item.id}") or "").strip()
+        if delivered_raw == "":
+            delivered = item.quantity_requested
+        else:
+            try:
+                delivered = int(delivered_raw)
+            except ValueError:
+                flash("Cantidad entregada inválida.", "error")
+                return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
+
+        if delivered < 0 or delivered > item.quantity_requested:
+            material_name = item.material.name if item.material else f"ID {item.material_id}"
+            flash(f"{material_name}: la cantidad entregada debe estar entre 0 y {item.quantity_requested}.", "error")
+            return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
+        if item.quantity_returned > delivered:
+            material_name = item.material.name if item.material else f"ID {item.material_id}"
+            flash(f"{material_name}: la devolución no puede superar lo entregado.", "error")
+            return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
+
+        item.quantity_delivered = delivered
+
     ok, stock_error = _apply_stock_delivery_for_request(ticket)
     if not ok:
         db.session.rollback()
@@ -303,6 +330,45 @@ def admin_mark_ready(ticket_id: int):
     return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
 
 
+@inventory_requests_bp.route("/admin/<int:ticket_id>/return", methods=["POST"])
+@min_role_required("ADMIN")
+def admin_register_return(ticket_id: int):
+    ticket = InventoryRequestTicket.query.get(ticket_id)
+    if not ticket:
+        flash("Solicitud no encontrada.", "error")
+        return redirect(url_for("inventory_requests.admin_daily_requests"))
+    if ticket.status != STATUS_READY:
+        flash("Solo puedes registrar devolución en solicitudes listas para recoger.", "error")
+        return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
+
+    for item in (ticket.items or []):
+        returned_raw = (request.form.get(f"returned_{item.id}") or "").strip()
+        if returned_raw == "":
+            flash("Debes capturar la cantidad devuelta para cada material.", "error")
+            return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
+        try:
+            returned = int(returned_raw)
+        except ValueError:
+            flash("Cantidad devuelta inválida.", "error")
+            return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
+
+        if returned < 0 or returned > item.quantity_delivered:
+            material_name = item.material.name if item.material else f"ID {item.material_id}"
+            flash(f"{material_name}: la devolución debe estar entre 0 y {item.quantity_delivered}.", "error")
+            return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
+
+        item.quantity_returned = returned
+
+    previous_notes = (ticket.notes or "").strip()
+    marker = "[DEVOLUCION_REGISTRADA]"
+    if marker not in previous_notes:
+        ticket.notes = f"{previous_notes}\n{marker}".strip() if previous_notes else marker
+
+    db.session.commit()
+    flash("Devolución registrada.", "success")
+    return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
+
+
 @inventory_requests_bp.route("/admin/<int:ticket_id>/close", methods=["POST"])
 @min_role_required("ADMIN")
 def admin_close_ticket(ticket_id: int):
@@ -316,11 +382,35 @@ def admin_close_ticket(ticket_id: int):
     if ticket.status == STATUS_CLOSED:
         flash("La solicitud ya está cerrada.", "warning")
         return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
+    if ticket.status != STATUS_READY:
+        flash("La solicitud debe pasar por estado LISTA antes de cerrarse.", "error")
+        return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
+
+    has_delivered_items = any((item.quantity_delivered or 0) > 0 for item in (ticket.items or []))
+    if has_delivered_items and "[DEVOLUCION_REGISTRADA]" not in (ticket.notes or ""):
+        flash("Debes registrar la devolución antes de cerrar la solicitud.", "error")
+        return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
 
     cancel_reason = (request.form.get("cancel_reason") or "").strip()
     if not cancel_reason:
         flash("Debes capturar el motivo para cerrar/cancelar la solicitud.", "error")
         return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
+
+    for item in (ticket.items or []):
+        delivered = max(0, item.quantity_delivered or 0)
+        returned = max(0, item.quantity_returned or 0)
+        missing = max(0, delivered - returned)
+        if missing <= 0:
+            continue
+        material_name = item.material.name if item.material else f"Material ID {item.material_id}"
+        debt = Debt(
+            user_id=ticket.user_id,
+            material_id=item.material_id,
+            status=DebtStatus.PENDING,
+            reason=f"Faltante en devolución (Solicitud #{ticket.id}) - {material_name}",
+            amount=missing,
+        )
+        db.session.add(debt)
 
     ticket.status = STATUS_CLOSED
     ticket.closed_at = datetime.now()
