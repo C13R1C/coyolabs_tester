@@ -677,16 +677,27 @@ textarea.form-control{
 .search-icon{
   color: var(--gold);
   font-size: 1rem;
+  width: 20px;
+  min-width: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 20px;
 }
 
 .search-box input{
-  width: 100%;
+  flex: 1;
+  width: auto;
   height: 100%;
+  min-width: 0;
   border: none;
+  border-radius: 0;
   background: transparent;
+  box-shadow: none;
   outline: none;
   color: var(--text);
   font-size: 0.96rem;
+  padding: 0;
 }
 
 .search-box input::placeholder{
@@ -1581,4 +1592,23 @@ textarea.form-control{
   box-shadow: 0 4px 10px rgba(0,0,0,.2);
 
   z-index: 10;
+}
+
+/* --- FIX QA: Estilos para campos readonly y prevención de overflow en Flexbox --- */
+.search-box input[readonly],
+.form-control[readonly] {
+  background: rgba(245, 245, 245, 0.9);
+  color: var(--text-soft, #6b7280);
+  cursor: default;
+  border-style: dashed;
+}
+
+.search-box input {
+  min-width: 0; /* Fix clásico de overflow en Flexbox */
+}
+
+.search-box input[readonly] {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
