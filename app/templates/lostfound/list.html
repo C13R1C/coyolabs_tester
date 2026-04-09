@@ -144,9 +144,7 @@
   {% if current_user.is_authenticated and is_admin_role(current_user.role) %}
     <a class="btn btn-gold" href="{{ url_for('lostfound.admin_new') }}">Registrar objeto perdido</a>
   {% else %}
-    <button type="button" class="btn btn-ghost" title="Solo administración puede registrar hallazgos en esta fase de demo." disabled>
-      Publicación vía administración
-    </button>
+    
   {% endif %}
 </section>
 
