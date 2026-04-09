@@ -419,37 +419,35 @@
 </section>
 
 <section class="table-card activity-block">
-  <h3 style="margin:0 0 12px 0;">Tickets y solicitudes</h3>
-  {% if tickets|length == 0 %}
-    <p>No tienes tickets registrados.</p>
+  <h3 style="margin:0 0 12px 0;">Solicitudes de material</h3>
+  {% if material_requests|length == 0 %}
+    <p>No tienes solicitudes de material registradas.</p>
   {% else %}
   <div class="table-wrap">
     <table class="inventory-table" style="min-width: 1000px;">
       <thead>
         <tr>
-          <th>ID de ticket</th>
-          <th>Reserva asociada</th>
-          <th>Salón/Laboratorio</th>
-          <th>Fecha</th>
+          <th>ID de solicitud</th>
+          <th>Fecha de solicitud</th>
           <th>Estado</th>
-          <th>Apertura</th>
+          <th>Creación</th>
           <th>Cierre</th>
+          <th>Motivo</th>
         </tr>
       </thead>
       <tbody>
-        {% for t in tickets %}
+        {% for request_item in material_requests %}
         <tr>
-          <td>{{ t.id }}</td>
-          <td>{{ t.reservation_id or '-' }}</td>
-          <td>{{ t.room or (t.reservation.room if t.reservation else '-') }}</td>
-          <td>{{ t.date or (t.reservation.date if t.reservation else '-') }}</td>
+          <td>{{ request_item.id }}</td>
+          <td>{{ request_item.request_date }}</td>
           <td>
-            <span class="status-badge {% if t.status == 'OPEN' %}status-warn{% elif t.status == 'CLOSED' %}status-ok{% else %}status-bad{% endif %}">
-              {{ t.status|status_label }}
+            <span class="status-badge {% if request_item.status == 'OPEN' %}status-warn{% elif request_item.status == 'READY' %}status-ok{% else %}status-bad{% endif %}">
+              {{ request_item.status|status_label }}
             </span>
           </td>
-          <td>{{ t.opened_at }}</td>
-          <td>{{ t.closed_at or '-' }}</td>
+          <td>{{ request_item.created_at }}</td>
+          <td>{{ request_item.closed_at or '-' }}</td>
+          <td>{{ request_item.notes or '-' }}</td>
         </tr>
         {% endfor %}
       </tbody>

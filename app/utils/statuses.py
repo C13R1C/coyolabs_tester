@@ -46,6 +46,7 @@ class Print3DJobStatus:
     QUOTED = "QUOTED"
     IN_PROGRESS = "IN_PROGRESS"
     READY = "READY"
+    READY_FOR_PICKUP = "READY_FOR_PICKUP"
     DELIVERED = "DELIVERED"
     CANCELED = "CANCELED"
 
@@ -55,6 +56,7 @@ PRINT3D_ALLOWED_STATUSES = {
     Print3DJobStatus.QUOTED,
     Print3DJobStatus.IN_PROGRESS,
     Print3DJobStatus.READY,
+    Print3DJobStatus.READY_FOR_PICKUP,
     Print3DJobStatus.DELIVERED,
     Print3DJobStatus.CANCELED,
 }
@@ -64,7 +66,8 @@ PRINT3D_ALLOWED_TRANSITIONS = {
     Print3DJobStatus.REQUESTED: {Print3DJobStatus.QUOTED, Print3DJobStatus.CANCELED},
     Print3DJobStatus.QUOTED: {Print3DJobStatus.IN_PROGRESS, Print3DJobStatus.CANCELED},
     Print3DJobStatus.IN_PROGRESS: {Print3DJobStatus.READY, Print3DJobStatus.CANCELED},
-    Print3DJobStatus.READY: {Print3DJobStatus.DELIVERED, Print3DJobStatus.CANCELED},
+    Print3DJobStatus.READY: {Print3DJobStatus.READY_FOR_PICKUP, Print3DJobStatus.CANCELED},
+    Print3DJobStatus.READY_FOR_PICKUP: {Print3DJobStatus.DELIVERED, Print3DJobStatus.CANCELED},
     Print3DJobStatus.DELIVERED: set(),
     Print3DJobStatus.CANCELED: set(),
 }
