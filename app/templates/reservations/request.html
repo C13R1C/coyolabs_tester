@@ -375,6 +375,15 @@
     {% include "reservations/_weekly_calendar_content.html" %}
   </div>
 </div>
+{% set calendar_subtitle = "Semana del " ~ week_start.strftime('%d/%m/%Y') ~ " al " ~ week_end.strftime('%d/%m/%Y') %}
+{% set filter_action = url_for('reservations.request_reservation') %}
+{% set clear_url = url_for('reservations.request_reservation') %}
+{% set prev_url = url_for('reservations.request_reservation', week_start=prev_week.isoformat(), calendar_building=selected_calendar_building, calendar_room=selected_calendar_room, calendar_day=selected_calendar_day.isoformat()) %}
+{% set next_url = url_for('reservations.request_reservation', week_start=next_week.isoformat(), calendar_building=selected_calendar_building, calendar_room=selected_calendar_room, calendar_day=selected_calendar_day.isoformat()) %}
+{% set include_day_filter = true %}
+{% set interactive_slots = false %}
+{% include "components/reservation_weekly_grid.html" %}
+</div>
 
 <section class="toolbar-card" id="reservationFormSection">
   <form method="post" class="toolbar reservation-request-form" style="grid-template-columns: repeat(2, minmax(280px, 1fr));" data-form-mode="create">
@@ -645,6 +654,7 @@ function bindCalendarAsyncFilters() {
     const html = await resp.text();
     content.innerHTML = html;
     bindCalendarAsyncFilters();
+    rebindCalendarEvents();
     if (container?.classList.contains("open")) {
       container.style.setProperty("--calendar-max-height", `${container.scrollHeight + 120}px`);
     }
