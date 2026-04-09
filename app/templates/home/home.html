@@ -86,7 +86,7 @@
     <div class="list" style="margin-top:10px;">
       <div class="list-item"><strong>{{ upcoming_reservations|length }}</strong> próximas reservas</div>
       <div class="list-item"><strong>{{ my_open_debts|length }}</strong> adeudos activos</div>
-      <div class="list-item"><strong>{{ recent_tickets|length }}</strong> solicitudes recientes</div>
+      <div class="list-item"><strong>{{ recent_material_requests|length }}</strong> solicitudes recientes</div>
     </div>
   </div>
 </section>
@@ -238,19 +238,19 @@
     </article>
 
     <article class="card section">
-      <div class="card-title">Solicitudes / tickets</div>
+      <div class="card-title">Solicitudes de material</div>
       <div class="card-subtitle">Solicitudes de material recientes del usuario.</div>
-      {% if recent_tickets %}
+      {% if recent_material_requests %}
       <div class="list">
-        {% for ticket in recent_tickets %}
+        {% for request_item in recent_material_requests %}
         <div class="list-item">
           <div class="list-head">
-            <strong>Ticket #{{ ticket.id }}</strong>
-            <span class="chip chip-{{ ticket.status }}">{{ ticket.status|status_label }}</span>
+            <strong>Solicitud #{{ request_item.id }}</strong>
+            <span class="chip chip-{{ request_item.status }}">{{ request_item.status|status_label }}</span>
           </div>
           <div class="meta">
-            <span><i class="ph ph-calendar"></i> {{ ticket.request_date.strftime('%d/%m/%Y') }}</span>
-            <span><i class="ph ph-clock"></i> {{ ticket.created_at.strftime('%d/%m/%Y %H:%M') }}</span>
+            <span><i class="ph ph-calendar"></i> {{ request_item.request_date.strftime('%d/%m/%Y') }}</span>
+            <span><i class="ph ph-clock"></i> {{ request_item.created_at.strftime('%d/%m/%Y %H:%M') }}</span>
           </div>
         </div>
         {% endfor %}

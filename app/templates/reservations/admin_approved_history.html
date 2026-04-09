@@ -43,12 +43,10 @@
           <th>Fin</th>
           <th>Motivo</th>
           <th>Materiales</th>
-          <th>Ticket</th>
         </tr>
       </thead>
       <tbody>
         {% for r in reservations %}
-        {% set latest_ticket = (r.lab_tickets|sort(attribute='opened_at', reverse=True)|first) if r.lab_tickets else None %}
         <tr>
           <td>{{ r.id }}</td>
           <td>{{ r.user.email if r.user else '-' }}</td>
@@ -76,20 +74,6 @@
             {% endif %}
           </td>
 
-          <td>
-            {% if latest_ticket %}
-              <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                <span class="status-badge {% if latest_ticket.status in ['OPEN', 'READY_FOR_PICKUP', 'CLOSURE_REQUESTED'] %}status-warn{% elif latest_ticket.status == 'CLOSED' %}status-ok{% else %}status-bad{% endif %}">
-                  {{ latest_ticket.status|status_label }}
-                </span>
-                <a href="{{ url_for('reservations.admin_ticket_detail', ticket_id=latest_ticket.id) }}" class="btn btn-ghost">
-                  Ver ticket
-                </a>
-              </div>
-            {% else %}
-              -
-            {% endif %}
-          </td>
         </tr>
         {% endfor %}
       </tbody>

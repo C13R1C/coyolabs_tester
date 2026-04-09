@@ -288,7 +288,7 @@
       <div class="ops-list" id="opsPendingList"></div>
     </article>
 
-    <article class="ops-card">
+    <article class="ops-card" style="display:none;">
       <div class="ops-head">
         <strong>Tickets activos</strong>
         <span class="ops-count" id="opsActiveTicketsCount">{{ ops_snapshot.counts.active_tickets }}</span>
@@ -296,7 +296,7 @@
       <div class="ops-list" id="opsActiveTicketsList"></div>
     </article>
 
-    <article class="ops-card">
+    <article class="ops-card" style="display:none;">
       <div class="ops-head">
         <strong>Material listo para recoger</strong>
         <span class="ops-count" id="opsReadyItemsCount">{{ ops_snapshot.counts.ready_items }}</span>
@@ -304,7 +304,7 @@
       <div class="ops-list" id="opsReadyItemsList"></div>
     </article>
 
-    <article class="ops-card">
+    <article class="ops-card" style="display:none;">
       <div class="ops-head">
         <strong>Cierre solicitado</strong>
         <span class="ops-count" id="opsClosureCount">{{ ops_snapshot.counts.closure_requested_tickets }}</span>
@@ -434,7 +434,7 @@
     <div class="kpi-sub" id="kpiReservationsSub">{{ approved_today }} aprobadas · {{ pending_today }} pendientes</div>
   </article>
 
-  <article class="kpi-card">
+  <article class="kpi-card" style="display:none;">
     <div class="kpi-head">
       <span class="kpi-label">Tickets abiertos</span>
       <div class="kpi-icon gold"><i class="ph ph-ticket"></i></div>
@@ -474,7 +474,7 @@
       <div class="quick-card">
         <i class="ph ph-calendar-check nav-icon"></i>
         <strong>Reservaciones</strong>
-        <span>Solicitudes y tickets</span>
+        <span>Calendario y seguimiento</span>
       </div>
     </a>
 
@@ -581,7 +581,7 @@
   </section>
 
   <section class="stack">
-    <section class="table-card">
+    <section class="table-card" style="display:none;">
       <div class="topbar" style="margin-bottom:14px;">
         <div class="topbar-left">
           <p class="page-kicker">Tickets</p>
