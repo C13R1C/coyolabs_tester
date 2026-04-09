@@ -57,7 +57,7 @@
           <td>{{ t.user.email if t.user else '-' }}</td>
           <td>{{ t.request_date }}</td>
           <td>
-            <span class="status-badge {% if t.status == 'OPEN' %}status-warn{% elif t.status == 'READY_FOR_PICKUP' %}status-ok{% else %}status-bad{% endif %}">{{ t.status|status_label }}</span>
+            <span class="status-badge {% if t.status == 'OPEN' %}status-warn{% elif t.status == 'READY' %}status-ok{% else %}status-bad{% endif %}">{{ t.status|status_label }}</span>
           </td>
           <td>{{ t.notes or '-' }}</td>
           <td>{{ t.items|length }}</td>

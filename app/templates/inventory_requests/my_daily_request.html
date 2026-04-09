@@ -215,7 +215,7 @@
   {% if not today_ticket %}
     <p>No tienes solicitudes activas por el momento.</p>
   {% else %}
-    <p><strong>Solicitud #{{ today_ticket.id }}</strong> · Estado: <span class="status-badge {% if today_ticket.status == 'OPEN' %}status-warn{% elif today_ticket.status == 'READY_FOR_PICKUP' %}status-ok{% else %}status-bad{% endif %}">{{ today_ticket.status|status_label }}</span></p>
+    <p><strong>Solicitud #{{ today_ticket.id }}</strong> · Estado: <span class="status-badge {% if today_ticket.status == 'OPEN' %}status-warn{% elif today_ticket.status == 'READY' %}status-ok{% else %}status-bad{% endif %}">{{ today_ticket.status|status_label }}</span></p>
     <p><strong>Motivo:</strong> {{ today_ticket.notes or '-' }}</p>
     <div class="table-wrap">
       <table class="inventory-table" style="min-width:700px;">

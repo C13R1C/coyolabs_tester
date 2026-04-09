@@ -36,9 +36,9 @@
 
 <section class="toolbar-card">
   <div class="inventory-admin-detail-actions" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-    <span class="status-badge {% if ticket.status == 'OPEN' %}status-warn{% elif ticket.status == 'READY_FOR_PICKUP' %}status-ok{% else %}status-bad{% endif %}">{{ ticket.status|status_label }}</span>
+    <span class="status-badge {% if ticket.status == 'OPEN' %}status-warn{% elif ticket.status == 'READY' %}status-ok{% else %}status-bad{% endif %}">{{ ticket.status|status_label }}</span>
 
-    {% if ticket.status != 'READY_FOR_PICKUP' and ticket.status != 'CLOSED' %}
+    {% if ticket.status != 'READY' and ticket.status != 'CLOSED' %}
     <form method="post" action="{{ url_for('inventory_requests.admin_mark_ready', ticket_id=ticket.id) }}">
       <button type="submit" class="btn btn-gold">Entregar material y marcar listo para recoger</button>
     </form>

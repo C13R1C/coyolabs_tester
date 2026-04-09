@@ -23,7 +23,7 @@ inventory_requests_bp = Blueprint("inventory_requests", __name__, url_prefix="/i
 
 
 STATUS_OPEN = InventoryRequestStatus.OPEN
-STATUS_READY = InventoryRequestStatus.READY_FOR_PICKUP
+STATUS_READY = InventoryRequestStatus.READY
 STATUS_CLOSED = InventoryRequestStatus.CLOSED
 
 
