@@ -52,19 +52,10 @@
 
 .lostfound-card-image{
   width: 100%;
-  aspect-ratio: 16 / 10;
+  height: 180px;
+  display: block;
   object-fit: cover;
   background: rgba(255,255,255,.3);
-}
-
-.lostfound-card-image--empty{
-  width: 100%;
-  aspect-ratio: 16 / 10;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  color: var(--text-dim);
-  background: linear-gradient(145deg, rgba(255,255,255,.6), rgba(241,235,224,.7));
 }
 
 .lostfound-card-body{
@@ -174,18 +165,36 @@
   <section class="lostfound-feed">
     {% for it in items %}
       {% set is_found = it.status in ['IN_STORAGE', 'RETURNED'] %}
+      {% set fallback_image = url_for('static', filename='uploads/lostfound/not_found.jpg') %}
+      {% set raw_image = (it.evidence_ref or '')|replace('\\', '/')|trim %}
+      {% if raw_image.startswith('http://') or raw_image.startswith('https://') %}
+        {% set image_src = raw_image %}
+      {% elif raw_image.startswith('/static/') %}
+        {% set image_src = raw_image %}
+      {% elif raw_image.startswith('static/') %}
+        {% set image_src = url_for('static', filename=raw_image|replace('static/', '', 1)) %}
+      {% elif raw_image %}
+        {% if raw_image.startswith('uploads/') %}
+          {% set static_rel = raw_image %}
+        {% elif 'lostfound/' in raw_image %}
+          {% set static_rel = 'uploads/' ~ (raw_image.split('lostfound/', 1)[1] if 'lostfound/' in raw_image else raw_image) %}
+          {% set static_rel = 'uploads/lostfound/' ~ static_rel.split('uploads/', 1)[1] if static_rel.startswith('uploads/') else static_rel %}
+        {% else %}
+          {% set static_rel = raw_image %}
+        {% endif %}
+        {% set image_src = url_for('static', filename=static_rel) %}
+      {% else %}
+        {% set image_src = fallback_image %}
+      {% endif %}
       <article class="lostfound-card">
         <a href="{{ url_for('lostfound.detail', item_id=it.id) }}">
-          {% if it.evidence_ref and ('lostfound/' in it.evidence_ref or 'lostfound\\' in it.evidence_ref) %}
-            <img
-              class="lostfound-card-image"
-              src="{{ url_for('upload_file', filename=it.evidence_ref|replace('uploads\\\\', '')|replace('uploads/', '')|replace('\\', '/')) }}"
-              alt="Foto de {{ it.title }}"
-              loading="lazy"
-            >
-          {% else %}
-            <div class="lostfound-card-image--empty">Sin imagen</div>
-          {% endif %}
+          <img
+            class="lostfound-card-image"
+            src="{{ image_src }}"
+            onerror="this.onerror=null; this.src='{{ fallback_image }}';"
+            alt="Foto de {{ it.title }}"
+            loading="lazy"
+          >
         </a>
         <div class="lostfound-card-body">
           <div class="lostfound-meta">
