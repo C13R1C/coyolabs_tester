@@ -28,6 +28,27 @@ STATUS_READY = InventoryRequestStatus.READY
 STATUS_CLOSED = InventoryRequestStatus.CLOSED
 DEBT_CLOSED_MARKER = "[CERRADO_CON_ADEUDO]"
 RETURN_REGISTERED_MARKER = "[DEVOLUCION_REGISTRADA]"
+REJECTED_MARKER = "[RECHAZADA]"
+PARTIAL_DELIVERY_NOTE_MARKER = "[NOTA_ENTREGA_PARCIAL]"
+
+
+def _extract_ticket_base_reason(notes: str | None) -> str:
+    if not notes:
+        return ""
+    for line in [line.strip() for line in notes.splitlines()]:
+        if line and not line.startswith("["):
+            return line
+    return ""
+
+
+def _extract_ticket_marker_text(notes: str | None, marker: str) -> str:
+    if not notes:
+        return ""
+    for raw_line in notes.splitlines():
+        line = raw_line.strip()
+        if line.startswith(marker):
+            return line[len(marker):].strip(" :-")
+    return ""
 
 
 def _is_student_role(role: str | None) -> bool:
@@ -374,6 +395,9 @@ def admin_ticket_detail(ticket_id: int):
     return render_template(
         "inventory_requests/admin_detail.html",
         ticket=ticket,
+        ticket_base_reason=_extract_ticket_base_reason(ticket.notes),
+        rejected_reason=_extract_ticket_marker_text(ticket.notes, REJECTED_MARKER),
+        partial_delivery_note=_extract_ticket_marker_text(ticket.notes, PARTIAL_DELIVERY_NOTE_MARKER),
         active_page="inventory_requests",
     )
 
@@ -395,6 +419,8 @@ def admin_mark_ready(ticket_id: int):
         flash("La solicitud ya está marcada como lista para recoger.", "warning")
         return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
 
+    has_partial_delivery = False
+
     for item in (ticket.items or []):
         delivered_raw = (request.form.get(f"delivered_{item.id}") or "").strip()
         if delivered_raw == "":
@@ -415,7 +441,14 @@ def admin_mark_ready(ticket_id: int):
             flash(f"{material_name}: la devolución no puede superar lo entregado.", "error")
             return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
 
+        if delivered < item.quantity_requested:
+            has_partial_delivery = True
         item.quantity_delivered = delivered
+
+    partial_delivery_note = (request.form.get("partial_delivery_note") or "").strip()
+    if has_partial_delivery and not partial_delivery_note:
+        flash("Debes registrar una nota administrativa cuando entregas menos material del solicitado.", "error")
+        return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
 
     ok, stock_error = _apply_stock_delivery_for_request(ticket)
     if not ok:
@@ -425,6 +458,14 @@ def admin_mark_ready(ticket_id: int):
 
     ticket.status = STATUS_READY
     ticket.ready_at = datetime.now()
+    if has_partial_delivery:
+        previous_notes = (ticket.notes or "").strip()
+        partial_note_line = f"{PARTIAL_DELIVERY_NOTE_MARKER} {partial_delivery_note}"
+        ticket.notes = (
+            f"{previous_notes}\n{partial_note_line}".strip()
+            if previous_notes
+            else partial_note_line
+        )
 
     notification = Notification(
         user_id=ticket.user_id,
@@ -446,6 +487,50 @@ def admin_mark_ready(ticket_id: int):
     publish_notification_created(notification)
 
     flash("Solicitud marcada como lista y usuario notificado.", "success")
+    return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
+
+
+@inventory_requests_bp.route("/admin/<int:ticket_id>/reject", methods=["POST"], endpoint="admin_reject_ticket")
+@min_role_required("ADMIN")
+def admin_reject_ticket(ticket_id: int):
+    ticket = InventoryRequestTicket.query.get(ticket_id)
+    if not ticket:
+        flash("Solicitud no encontrada.", "error")
+        return redirect(url_for("inventory_requests.admin_daily_requests"))
+    if ticket.status != STATUS_OPEN:
+        flash("Solo puedes rechazar solicitudes abiertas.", "error")
+        return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
+
+    reject_reason = (request.form.get("reject_reason") or "").strip()
+    if not reject_reason:
+        flash("Debes capturar un motivo de rechazo.", "error")
+        return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
+
+    base_reason = _extract_ticket_base_reason(ticket.notes)
+    rejection_line = f"{REJECTED_MARKER} {reject_reason}"
+    ticket.notes = f"{base_reason}\n{rejection_line}".strip() if base_reason else rejection_line
+    ticket.status = STATUS_CLOSED
+    ticket.closed_at = datetime.now()
+
+    notification = Notification(
+        user_id=ticket.user_id,
+        title="Solicitud de material rechazada",
+        message=f"Tu solicitud de material #{ticket.id} fue rechazada. Motivo: {reject_reason}",
+        link=url_for("inventory_requests.my_ticket_detail", ticket_id=ticket.id),
+    )
+    db.session.add(notification)
+    log_event(
+        module="INVENTORY_REQUESTS",
+        action="INVENTORY_DAILY_REQUEST_REJECTED",
+        user_id=current_user.id,
+        entity_label=f"InventoryRequestTicket #{ticket.id}",
+        description=f"Solicitud de material #{ticket.id} rechazada",
+        metadata={"ticket_id": ticket.id, "target_user_id": ticket.user_id},
+    )
+
+    db.session.commit()
+    publish_notification_created(notification)
+    flash("Solicitud rechazada correctamente.", "success")
     return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
 
 

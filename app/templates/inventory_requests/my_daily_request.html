@@ -222,7 +222,8 @@
     <p>No tienes solicitudes activas por el momento.</p>
   {% else %}
     {% set today_closed_with_debt = today_ticket.status == 'CLOSED' and today_ticket.notes and '[CERRADO_CON_ADEUDO]' in today_ticket.notes %}
-    <p><strong>Solicitud #{{ today_ticket.id }}</strong> · Estado: <span class="status-badge {% if today_ticket.status == 'OPEN' %}status-warn{% elif today_ticket.status == 'READY' %}status-ok{% elif today_closed_with_debt %}status-bad{% else %}status-neutral{% endif %}">{{ 'Cerrado con adeudo' if today_closed_with_debt else today_ticket.status|status_label }}</span></p>
+    {% set today_rejected = today_ticket.status == 'CLOSED' and today_ticket.notes and '[RECHAZADA]' in today_ticket.notes %}
+    <p><strong>Solicitud #{{ today_ticket.id }}</strong> · Estado: <span class="status-badge {% if today_ticket.status == 'OPEN' %}status-warn{% elif today_ticket.status == 'READY' %}status-ok{% elif today_closed_with_debt or today_rejected %}status-bad{% else %}status-neutral{% endif %}">{{ 'Rechazada' if today_rejected else ('Cerrado con adeudo' if today_closed_with_debt else today_ticket.status|status_label) }}</span></p>
     <p><strong>Motivo:</strong> {{ today_ticket.notes or '-' }}</p>
     <div class="table-wrap">
       <table class="inventory-table" style="min-width:700px;">
@@ -268,7 +269,8 @@
             <td>#{{ t.id }}</td>
             <td>{{ t.request_date }}</td>
             {% set row_closed_with_debt = t.status == 'CLOSED' and t.notes and '[CERRADO_CON_ADEUDO]' in t.notes %}
-            <td>{{ 'Cerrado con adeudo' if row_closed_with_debt else t.status|status_label }}</td>
+            {% set row_rejected = t.status == 'CLOSED' and t.notes and '[RECHAZADA]' in t.notes %}
+            <td>{{ 'Rechazada' if row_rejected else ('Cerrado con adeudo' if row_closed_with_debt else t.status|status_label) }}</td>
             <td>{{ t.notes or '-' }}</td>
             <td>{{ t.items|length }}</td>
             <td>

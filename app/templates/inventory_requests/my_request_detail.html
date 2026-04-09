@@ -16,9 +16,22 @@
 
 <section class="table-card">
   {% set closed_with_debt = ticket.status == 'CLOSED' and ticket.notes and '[CERRADO_CON_ADEUDO]' in ticket.notes %}
+  {% set rejected = ticket.status == 'CLOSED' and ticket.notes and '[RECHAZADA]' in ticket.notes %}
   {% set return_registered = ticket.notes and '[DEVOLUCION_REGISTRADA]' in ticket.notes %}
-  <p><strong>Estado:</strong> <span class="status-badge {% if ticket.status == 'OPEN' %}status-warn{% elif ticket.status == 'READY' %}status-ok{% elif closed_with_debt %}status-bad{% else %}status-neutral{% endif %}">{{ 'Cerrado con adeudo' if closed_with_debt else ticket.status|status_label }}</span></p>
+  {% set reject_ns = namespace(reason='') %}
+  {% if ticket.notes %}
+    {% for raw_line in ticket.notes.splitlines() %}
+      {% set line = raw_line.strip() %}
+      {% if line.startswith('[RECHAZADA]') %}
+        {% set reject_ns.reason = line.replace('[RECHAZADA]', '', 1).strip(' :-') %}
+      {% endif %}
+    {% endfor %}
+  {% endif %}
+  <p><strong>Estado:</strong> <span class="status-badge {% if ticket.status == 'OPEN' %}status-warn{% elif ticket.status == 'READY' %}status-ok{% elif closed_with_debt or rejected %}status-bad{% else %}status-neutral{% endif %}">{{ 'Rechazada' if rejected else ('Cerrado con adeudo' if closed_with_debt else ticket.status|status_label) }}</span></p>
   <p><strong>Motivo:</strong> {{ ticket.notes or '-' }}</p>
+  {% if rejected %}
+  <p><strong>Motivo de rechazo:</strong> {{ reject_ns.reason or '-' }}</p>
+  {% endif %}
   <p><strong>Fecha de solicitud:</strong> {{ ticket.request_date }}</p>
   <p><strong>Cierre / devolución:</strong>
     {% if ticket.closed_at %}
