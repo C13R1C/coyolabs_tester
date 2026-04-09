@@ -6,8 +6,8 @@
 <header class="topbar">
   <div class="topbar-left">
     <p class="page-kicker">Inventario</p>
-    <h1>Mi solicitud de material</h1>
-    <p class="page-subtitle">Un solo ticket por día. Puedes agregar o quitar materiales antes de enviar.</p>
+    <h1>Nueva solicitud de material</h1>
+    <p class="page-subtitle">Crea una solicitud independiente con varios materiales por envío.</p>
   </div>
   {% if is_admin_role(current_user.role) %}
   <div class="topbar-actions">
@@ -177,7 +177,7 @@
 </style>
 
 <section class="table-card">
-  <h3 style="margin:0 0 12px 0;">Agregar materiales a la solicitud de hoy</h3>
+  <h3 style="margin:0 0 12px 0;">Agregar materiales a la solicitud</h3>
   <form method="post" action="{{ url_for('inventory_requests.add_to_daily_request') }}" data-form-mode="create">
     <div class="material-search">
       <div class="search-box">
@@ -203,7 +203,7 @@
 
     <div style="display:flex; justify-content:flex-end; margin-top:10px; gap:8px;">
       <button type="button" id="clearCartBtn" class="btn btn-ghost">Vaciar carrito</button>
-      <button type="submit" class="btn btn-gold">Guardar solicitud de hoy</button>
+      <button type="submit" class="btn btn-gold">Guardar solicitud</button>
     </div>
 
     <div id="cartHiddenInputs"></div>
@@ -211,9 +211,9 @@
 </section>
 
 <section class="table-card" style="margin-top:16px;">
-  <h3 style="margin:0 0 12px 0;">Solicitud de hoy</h3>
+  <h3 style="margin:0 0 12px 0;">Última solicitud activa</h3>
   {% if not today_ticket %}
-    <p>Aún no tienes solicitud de material para hoy.</p>
+    <p>No tienes solicitudes activas por el momento.</p>
   {% else %}
     <p><strong>Solicitud #{{ today_ticket.id }}</strong> · Estado: <span class="status-badge {% if today_ticket.status == 'OPEN' %}status-warn{% elif today_ticket.status == 'READY_FOR_PICKUP' %}status-ok{% else %}status-bad{% endif %}">{{ today_ticket.status|status_label }}</span></p>
     <p><strong>Motivo:</strong> {{ today_ticket.notes or '-' }}</p>

@@ -180,7 +180,7 @@ def build_week_days(week_start):
 
 
 def _format_ampm(time_value) -> str:
-    return datetime.combine(datetime.today(), time_value).strftime("%I:%M%p").lstrip("0")
+    return datetime.combine(datetime.today(), time_value).strftime("%I:%M %p").lstrip("0")
 
 
 def _build_time_slots() -> list[tuple[str, str, object, object]]:
