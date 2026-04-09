@@ -49,6 +49,12 @@
   background: #f1ede4;
 }
 
+.autocomplete-empty {
+  padding: 10px 12px;
+  color: var(--text-dim, #728078);
+  font-size: 13px;
+}
+
 .autocomplete-item.out-of-stock {
   cursor: not-allowed;
   background: rgba(207, 77, 77, 0.06);
@@ -193,7 +199,7 @@
 
     <div class="toolbar-group" style="margin:10px 0 12px;">
       <label for="request_reason">Materia o motivo de la solicitud *</label>
-      <textarea id="request_reason" name="request_reason" class="form-control" rows="3" required placeholder="Ejemplo: Práctica de laboratorio de química orgánica">{{ today_ticket.notes if today_ticket else '' }}</textarea>
+      <textarea id="request_reason" name="request_reason" class="form-control" rows="3" required placeholder="Ejemplo: Práctica de laboratorio de química orgánica">{{ reason_draft }}</textarea>
     </div>
 
     <div class="cart-summary">
@@ -216,7 +222,8 @@
     <p>No tienes solicitudes activas por el momento.</p>
   {% else %}
     {% set today_closed_with_debt = today_ticket.status == 'CLOSED' and today_ticket.notes and '[CERRADO_CON_ADEUDO]' in today_ticket.notes %}
-    <p><strong>Solicitud #{{ today_ticket.id }}</strong> · Estado: <span class="status-badge {% if today_ticket.status == 'OPEN' %}status-warn{% elif today_ticket.status == 'READY' %}status-ok{% elif today_closed_with_debt %}status-bad{% else %}status-neutral{% endif %}">{{ 'Cerrado con adeudo' if today_closed_with_debt else today_ticket.status|status_label }}</span></p>
+    {% set today_rejected = today_ticket.status == 'CLOSED' and today_ticket.notes and '[RECHAZADA]' in today_ticket.notes %}
+    <p><strong>Solicitud #{{ today_ticket.id }}</strong> · Estado: <span class="status-badge {% if today_ticket.status == 'OPEN' %}status-warn{% elif today_ticket.status == 'READY' %}status-ok{% elif today_closed_with_debt or today_rejected %}status-bad{% else %}status-neutral{% endif %}">{{ 'Rechazada' if today_rejected else ('Cerrado con adeudo' if today_closed_with_debt else today_ticket.status|status_label) }}</span></p>
     <p><strong>Motivo:</strong> {{ today_ticket.notes or '-' }}</p>
     <div class="table-wrap">
       <table class="inventory-table" style="min-width:700px;">
@@ -253,6 +260,7 @@
             <th>Estado</th>
             <th>Motivo</th>
             <th>Items</th>
+            <th>Acción</th>
           </tr>
         </thead>
         <tbody>
@@ -261,9 +269,13 @@
             <td>#{{ t.id }}</td>
             <td>{{ t.request_date }}</td>
             {% set row_closed_with_debt = t.status == 'CLOSED' and t.notes and '[CERRADO_CON_ADEUDO]' in t.notes %}
-            <td>{{ 'Cerrado con adeudo' if row_closed_with_debt else t.status|status_label }}</td>
+            {% set row_rejected = t.status == 'CLOSED' and t.notes and '[RECHAZADA]' in t.notes %}
+            <td>{{ 'Rechazada' if row_rejected else ('Cerrado con adeudo' if row_closed_with_debt else t.status|status_label) }}</td>
             <td>{{ t.notes or '-' }}</td>
             <td>{{ t.items|length }}</td>
+            <td>
+              <a href="{{ url_for('inventory_requests.my_ticket_detail', ticket_id=t.id) }}" class="btn btn-ghost" style="min-height:34px; padding:6px 10px;">Consultar</a>
+            </td>
           </tr>
           {% endfor %}
         </tbody>
@@ -276,7 +288,8 @@
 
 <script>
 const materials = {{ materials_json | safe }};
-let cart = JSON.parse(localStorage.getItem("daily_request_cart") || "{}");
+const clearCartOnLoad = {{ "true" if clear_cart_on_load else "false" }};
+let cart = {};
 
 const search = document.getElementById("materialSearch");
 const list = document.getElementById("autocompleteList");
@@ -285,51 +298,64 @@ const cartHiddenInputs = document.getElementById("cartHiddenInputs");
 const cartTotal = document.getElementById("cartTotal");
 const cartKinds = document.getElementById("cartKinds");
 const clearCartBtn = document.getElementById("clearCartBtn");
+const requestReason = document.getElementById("request_reason");
 
 function persistCart() {
   localStorage.setItem("daily_request_cart", JSON.stringify(cart));
 }
 
-search.addEventListener("input", () => {
-  const value = search.value.trim().toLowerCase();
+function renderSuggestions(query = "") {
+  const value = query.trim().toLowerCase();
   list.innerHTML = "";
 
-  if (!value) return;
-
-  materials
+  const matches = materials
     .filter(m => m.name.toLowerCase().includes(value))
-    .slice(0, 8)
-    .forEach(m => {
-      const item = document.createElement("div");
-      const available = parseInt(m.pieces_qty || 0, 10);
-      const inCart = cart[m.id]?.qty || 0;
-      const isOut = available <= 0;
+    .slice(0, value ? 8 : 5);
 
-      item.className = "autocomplete-item";
-      if (isOut) item.classList.add("out-of-stock");
+  if (!matches.length) {
+    list.innerHTML = '<div class="autocomplete-empty">Sin resultados para tu búsqueda.</div>';
+    return;
+  }
 
-      item.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
-          <div style="${isOut ? 'opacity:.5;' : ''}">
-            <div>${m.name}</div>
-            <div style="font-size:12px; opacity:.7;">
-              ${available} disponibles${inCart > 0 ? ` · en carrito: ${inCart}` : ""}
-            </div>
-          </div>
-          <div style="font-size:12px; font-weight:600; ${isOut ? 'color:#cf4d4d;' : 'opacity:.7;'}">
-            ${isOut ? 'Sin stock' : 'Agregar'}
+  matches.forEach(m => {
+    const item = document.createElement("div");
+    const available = parseInt(m.pieces_qty || 0, 10);
+    const inCart = cart[m.id]?.qty || 0;
+    const isOut = available <= 0;
+
+    item.className = "autocomplete-item";
+    if (isOut) item.classList.add("out-of-stock");
+
+    item.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+        <div style="${isOut ? 'opacity:.5;' : ''}">
+          <div>${m.name}</div>
+          <div style="font-size:12px; opacity:.7;">
+            ${available} disponibles${inCart > 0 ? ` · en carrito: ${inCart}` : ""}
           </div>
         </div>
-      `;
+        <div style="font-size:12px; font-weight:600; ${isOut ? 'color:#cf4d4d;' : 'opacity:.7;'}">
+          ${isOut ? 'Sin stock' : 'Agregar'}
+        </div>
+      </div>
+    `;
 
-      if (!isOut) {
-        item.onclick = () => addToCart(m);
-      } else {
-        item.onclick = () => showToast("Material sin stock");
-      }
+    if (!isOut) {
+      item.onclick = () => addToCart(m);
+    } else {
+      item.onclick = () => showToast("Material sin stock");
+    }
 
-      list.appendChild(item);
-    });
+    list.appendChild(item);
+  });
+}
+
+search.addEventListener("focus", () => {
+  renderSuggestions(search.value);
+});
+
+search.addEventListener("input", () => {
+  renderSuggestions(search.value);
 });
 
 document.addEventListener("click", (e) => {
@@ -362,7 +388,7 @@ function addToCart(material) {
   renderCart();
 
   search.value = "";
-  list.innerHTML = "";
+  renderSuggestions("");
 }
 
 function updateQty(id, delta) {
@@ -467,6 +493,11 @@ function showToast(msg) {
   setTimeout(() => toast.classList.remove("show"), 1500);
 }
 
+if (clearCartOnLoad) {
+  localStorage.removeItem("daily_request_cart");
+  requestReason.value = "";
+}
+cart = JSON.parse(localStorage.getItem("daily_request_cart") || "{}");
 renderCart();
 </script>
 {% endblock %}
