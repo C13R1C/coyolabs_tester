@@ -361,7 +361,7 @@ function bindCalendarAsyncFilters() {
   if (!content) return;
   const form = content.querySelector("form.reservation-calendar-filter");
   if (!form) return;
-  const clearBtn = form.querySelector('a.btn.btn-ghost:last-of-type');
+
   const buildingSelect = form.querySelector("#buildingSelect");
   const roomSelect = form.querySelector("#roomSelect");
 
@@ -380,32 +380,9 @@ function bindCalendarAsyncFilters() {
       }
     });
   };
+
   buildingSelect?.addEventListener("change", syncRoomOptionsByBuilding);
   syncRoomOptionsByBuilding();
-
-  const refreshCalendar = async (params) => {
-    const container = document.getElementById("calendarContainer");
-    const url = `${form.action}?${params.toString()}&calendar_partial=1`;
-    const resp = await fetch(url, { headers: { "X-Requested-With": "XMLHttpRequest" } });
-    if (!resp.ok) return;
-    const html = await resp.text();
-    content.innerHTML = html;
-    bindCalendarAsyncFilters();
-    if (container?.classList.contains("open")) {
-      container.style.setProperty("--calendar-max-height", `${container.scrollHeight + 120}px`);
-    }
-  };
-
-  form.addEventListener("submit", (evt) => {
-    evt.preventDefault();
-    const params = new URLSearchParams(new FormData(form));
-    refreshCalendar(params);
-  });
-
-  clearBtn?.addEventListener("click", (evt) => {
-    evt.preventDefault();
-    refreshCalendar(new URLSearchParams());
-  });
 }
 
 function validateAndSerializeSignature() {

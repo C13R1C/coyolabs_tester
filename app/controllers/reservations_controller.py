@@ -217,6 +217,35 @@ def apply_stock_delta(material: Material, old_delivered: int, old_returned: int,
 
     material.pieces_qty = new_available
 
+def _compute_slot_state(day, slot_end, overlapping, now_dt):
+    slot_end_dt = datetime.combine(day, slot_end)
+    if slot_end_dt <= now_dt:
+        return "past"
+
+    approved_overlapping = [
+        item for item in overlapping
+        if (item.status or "").upper() == ReservationStatus.APPROVED
+    ]
+    pending_overlapping = [
+        item for item in overlapping
+        if (item.status or "").upper() == ReservationStatus.PENDING
+    ]
+
+    if approved_overlapping and any(
+        datetime.combine(day, item.start_time) <= now_dt < datetime.combine(day, item.end_time)
+        for item in approved_overlapping
+    ):
+        return "in_progress"
+
+    if pending_overlapping:
+        return "pending"
+
+    if approved_overlapping:
+        return "occupied"
+
+    return "available"
+
+
 def build_week_schedule(week_days, selected_room=None, rooms_scope: list[str] | None = None):
     week_start = week_days[0]
     week_end = week_days[-1]
@@ -262,9 +291,7 @@ def build_week_schedule(week_days, selected_room=None, rooms_scope: list[str] | 
         if normalized_room in schedule and r.date in schedule[normalized_room]:
             schedule[normalized_room][r.date]["items"].append(r)
 
-    now = datetime.now()
-    today = now.date()
-    now_time = now.time()
+    now_dt = datetime.now()
     base_slots = _build_time_slots()
 
     for room in room_list:
@@ -278,17 +305,12 @@ def build_week_schedule(week_days, selected_room=None, rooms_scope: list[str] | 
                     if item.start_time < slot_end and item.end_time > slot_start
                 ]
 
-                if not overlapping:
-                    state = "available"
-                elif any((item.status or "").upper() == ReservationStatus.PENDING for item in overlapping):
-                    state = "pending"
-                elif day == today and any(
-                    (item.status or "").upper() == ReservationStatus.APPROVED and item.start_time <= now_time < item.end_time
-                    for item in overlapping
-                ):
-                    state = "in_progress"
-                else:
-                    state = "occupied"
+                state = _compute_slot_state(
+                    day=day,
+                    slot_end=slot_end,
+                    overlapping=overlapping,
+                    now_dt=now_dt,
+                )
 
                 slot_rows.append({
                     "start": start_label,
