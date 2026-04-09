@@ -40,6 +40,7 @@ STATUS_LABELS = {
     Print3DJobStatus.QUOTED: "Cotizado",
     Print3DJobStatus.IN_PROGRESS: "En proceso",
     Print3DJobStatus.READY: "Listo",
+    Print3DJobStatus.READY_FOR_PICKUP: "Listo para recoger",
     Print3DJobStatus.DELIVERED: "Entregado",
     Print3DJobStatus.CANCELED: "Cancelado",
 }
