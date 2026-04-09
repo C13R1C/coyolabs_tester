@@ -365,16 +365,12 @@
 }
 </style>
 
-<<<<<<< codex/conduct-full-system-audit-for-coyolabs-h4p2fk
 <div class="calendar-toggle" onclick="toggleCalendar()">
   <i class="ph ph-calendar-blank"></i>
   <span>Ver ocupación semanal de laboratorios</span>
 </div>
 <div id="calendarContainer" class="collapsed">
 {% set calendar_title = "Disponibilidad semanal de laboratorios" %}
-=======
-{% set calendar_title = "Disponibilidad semanal de salones" %}
->>>>>>> main
 {% set calendar_subtitle = "Semana del " ~ week_start.strftime('%d/%m/%Y') ~ " al " ~ week_end.strftime('%d/%m/%Y') %}
 {% set filter_action = url_for('reservations.request_reservation') %}
 {% set clear_url = url_for('reservations.request_reservation') %}
@@ -383,11 +379,7 @@
 {% set include_day_filter = true %}
 {% set interactive_slots = false %}
 {% include "components/reservation_weekly_grid.html" %}
-<<<<<<< codex/conduct-full-system-audit-for-coyolabs-h4p2fk
 </div>
-=======
-
->>>>>>> main
 
 <section class="toolbar-card" id="reservationFormSection">
   <form method="post" class="toolbar reservation-request-form" style="grid-template-columns: repeat(2, minmax(280px, 1fr));" data-form-mode="create">
