@@ -112,6 +112,8 @@ def _process_close_after_return(ticket: InventoryRequestTicket, cancel_reason: s
             status=DebtStatus.PENDING,
             reason=f"Faltante en devolución (Solicitud #{ticket.id}) - {material_name}",
             amount=missing,
+            original_amount=missing,
+            remaining_amount=missing,
         )
         db.session.add(debt)
 

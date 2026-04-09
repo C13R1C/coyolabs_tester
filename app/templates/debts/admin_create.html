@@ -23,6 +23,11 @@
       <div class="search-box"><i class="ph ph-hash search-icon"></i><input type="number" id="material_id" name="material_id" placeholder="Ej. 152"></div>
     </div>
 
+    <div class="toolbar-group">
+      <label for="amount">Cantidad adeudada</label>
+      <div class="search-box"><i class="ph ph-number-circle-one search-icon"></i><input type="number" id="amount" name="amount" min="0.01" step="0.01" value="1"></div>
+    </div>
+
     <div class="toolbar-group" style="grid-column: 1 / -1;">
       <label for="reason">Razón / comentario</label>
       <textarea class="form-control" id="reason" name="reason" rows="4" placeholder="Describe el motivo del adeudo"></textarea>
