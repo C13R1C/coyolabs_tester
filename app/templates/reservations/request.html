@@ -41,12 +41,13 @@
   max-height: 0;
   overflow: hidden;
   opacity: 0;
-  transition: max-height 0.3s ease, opacity 0.3s ease;
+  transition: max-height 0.32s ease, opacity 0.25s ease;
 }
 
 #calendarContainer.open {
-  max-height: 2000px;
+  max-height: var(--calendar-max-height, 0px);
   opacity: 1;
+  overflow: visible;
 }
 
 .time-range-row {
@@ -371,6 +372,10 @@
 </div>
 <div id="calendarContainer" class="collapsed">
 {% set calendar_title = "Disponibilidad semanal de laboratorios" %}
+  <div id="calendarContent">
+    {% include "reservations/_weekly_calendar_content.html" %}
+  </div>
+</div>
 {% set calendar_subtitle = "Semana del " ~ week_start.strftime('%d/%m/%Y') ~ " al " ~ week_end.strftime('%d/%m/%Y') %}
 {% set filter_action = url_for('reservations.request_reservation') %}
 {% set clear_url = url_for('reservations.request_reservation') %}
@@ -628,7 +633,44 @@ function initSignaturePad() {
 function toggleCalendar(){
   const el = document.getElementById("calendarContainer");
   if (!el) return;
-  el.classList.toggle("open");
+  const shouldOpen = !el.classList.contains("open");
+  if (shouldOpen) {
+    el.style.setProperty("--calendar-max-height", `${el.scrollHeight + 120}px`);
+  }
+  el.classList.toggle("open", shouldOpen);
+}
+
+function bindCalendarAsyncFilters() {
+  const content = document.getElementById("calendarContent");
+  if (!content) return;
+  const form = content.querySelector("form.reservation-calendar-filter");
+  if (!form) return;
+  const clearBtn = form.querySelector('a.btn.btn-ghost:last-of-type');
+
+  const refreshCalendar = async (params) => {
+    const container = document.getElementById("calendarContainer");
+    const url = `${form.action}?${params.toString()}&calendar_partial=1`;
+    const resp = await fetch(url, { headers: { "X-Requested-With": "XMLHttpRequest" } });
+    if (!resp.ok) return;
+    const html = await resp.text();
+    content.innerHTML = html;
+    bindCalendarAsyncFilters();
+    rebindCalendarEvents();
+    if (container?.classList.contains("open")) {
+      container.style.setProperty("--calendar-max-height", `${container.scrollHeight + 120}px`);
+    }
+  };
+
+  form.addEventListener("submit", (evt) => {
+    evt.preventDefault();
+    const params = new URLSearchParams(new FormData(form));
+    refreshCalendar(params);
+  });
+
+  clearBtn?.addEventListener("click", (evt) => {
+    evt.preventDefault();
+    refreshCalendar(new URLSearchParams());
+  });
 }
 
 function validateAndSerializeSignature() {
@@ -886,6 +928,7 @@ if (reservationDateInput) {
 }
 
 initSignaturePad();
+bindCalendarAsyncFilters();
 
 reservationForm?.addEventListener("submit", (event) => {
   if (!validateAndSerializeSignature()) {

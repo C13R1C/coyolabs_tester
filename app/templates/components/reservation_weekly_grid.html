@@ -1,5 +1,15 @@
 {% set nombres_dia = {0:'Lunes',1:'Martes',2:'Miércoles',3:'Jueves',4:'Viernes',5:'Sábado',6:'Domingo'} %}
 {% set interactive_slots = interactive_slots if interactive_slots is defined else False %}
+{% set days_to_render = [] %}
+{% if include_day_filter and day_filter_active is defined and day_filter_active and selected_calendar_day is defined %}
+  {% set days_to_render = [selected_calendar_day] %}
+{% else %}
+  {% for d in week_days %}
+    {% if d.weekday() != 6 %}
+      {% set _ = days_to_render.append(d) %}
+    {% endif %}
+  {% endfor %}
+{% endif %}
 
 <style>
 .res-week-card{margin-top:16px}
@@ -100,16 +110,13 @@
   <div class="res-week-grid-wrap">
     <div class="res-week-grid">
       <div class="res-room-col-head">Laboratorio</div>
-      {% for day in week_days %}
-      {% if day.weekday() != 6 %}
+      {% for day in days_to_render %}
       <div class="res-day-col-head">{{ nombres_dia[day.weekday()] }}<small>{{ day.strftime('%d/%m') }}</small></div>
-      {% endif %}
       {% endfor %}
 
       {% for room in calendar_rooms %}
       <div class="res-room-label-card"><strong>{{ room }}</strong></div>
-      {% for day in week_days %}
-      {% if day.weekday() != 6 %}
+      {% for day in days_to_render %}
       {% set cell = week_schedule[room][day] %}
       {% set cell_slots = cell.get('slots', []) if cell is mapping else [] %}
       {% set cell_items = cell.get('items', []) if cell is mapping else [] %}
@@ -159,7 +166,6 @@
           {% endif %}
         {% endfor %}
       </div>
-      {% endif %}
       {% endfor %}
       {% endfor %}
     </div>
