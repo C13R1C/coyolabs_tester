@@ -36,7 +36,8 @@ class DebtStatus:
 
 class InventoryRequestStatus:
     OPEN = "OPEN"
-    READY_FOR_PICKUP = "READY_FOR_PICKUP"
+    READY = "READY"
+    READY_FOR_PICKUP = READY  # alias legacy para compatibilidad de código
     CLOSED = "CLOSED"
 
 
