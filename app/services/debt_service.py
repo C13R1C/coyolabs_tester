@@ -173,10 +173,17 @@ def resolve_debt(debt: Debt, actor_user: User, payment_amount: str | int | float
     if payment > remaining:
         _log_debt_rejected("DEBT_CLOSE_REJECTED", actor_user, debt, "El abono no puede exceder el pendiente.")
         return ServiceResult.failure("El abono no puede exceder el pendiente.")
+    if payment != payment.to_integral_value():
+        _log_debt_rejected("DEBT_CLOSE_REJECTED", actor_user, debt, "El abono debe ser una cantidad entera de piezas.")
+        return ServiceResult.failure("El abono debe ser una cantidad entera de piezas.")
 
     previous_status = debt.status
     new_remaining = (remaining - payment).quantize(Decimal("0.01"))
     paid_in_full = new_remaining == Decimal("0.00")
+
+    should_restock = bool(debt.material_id) and "faltante" in (debt.reason or "").lower()
+    if should_restock and debt.material and debt.material.pieces_qty is not None:
+        debt.material.pieces_qty += int(payment)
 
     debt.original_amount = original
     debt.remaining_amount = new_remaining

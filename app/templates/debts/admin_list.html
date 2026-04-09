@@ -76,7 +76,6 @@
             <th>Cant. original</th>
             <th>Cant. pendiente</th>
             <th>Razón</th>
-            <th>Fecha</th>
             <th>Acción</th>
           </tr>
         </thead>
@@ -104,12 +103,10 @@
               {% endif %}
             </td>
 
-            <td>{{ d.original_amount if d.original_amount is not none else d.amount }}</td>
-            <td>{{ d.remaining_amount if d.remaining_amount is not none else d.amount }}</td>
+            <td>{{ ((d.original_amount if d.original_amount is not none else d.amount) or 0)|int }}</td>
+            <td>{{ ((d.remaining_amount if d.remaining_amount is not none else d.amount) or 0)|int }}</td>
 
             <td>{{ d.reason or '-' }}</td>
-
-            <td>{{ d.created_at }}</td>
 
             <td>
               {% if d.status == "PENDING" %}
@@ -118,10 +115,10 @@
                     <input
                       type="number"
                       name="payment_amount"
-                      min="0.01"
-                      step="0.01"
-                      max="{{ d.remaining_amount if d.remaining_amount is not none else d.amount }}"
-                      value="{{ d.remaining_amount if d.remaining_amount is not none else d.amount }}"
+                      min="1"
+                      step="1"
+                      max="{{ ((d.remaining_amount if d.remaining_amount is not none else d.amount) or 0)|int }}"
+                      value="{{ ((d.remaining_amount if d.remaining_amount is not none else d.amount) or 0)|int }}"
                       class="form-control"
                       style="max-width:120px;"
                       required
