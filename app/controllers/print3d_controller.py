@@ -1,6 +1,7 @@
 import logging
 import os
 from datetime import datetime
+from decimal import Decimal, InvalidOperation
 from uuid import uuid4
 
 from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, send_from_directory, url_for
@@ -342,6 +343,7 @@ def admin_list():
         jobs=jobs,
         active_page="prints3d",
         status_badge_class=_status_badge_class,
+        print3d_transitions=PRINT3D_ALLOWED_TRANSITIONS,
         print3d_statuses=[
             Print3DJobStatus.REQUESTED,
             Print3DJobStatus.QUOTED,
@@ -360,12 +362,33 @@ def admin_set_status(job_id: int):
 
     target_status = _normalize_print3d_status(request.form.get("status"))
     current_status = _normalize_print3d_status(job.status)
+    admin_note = (request.form.get("admin_note") or "").strip()
+    total_estimated_raw = (request.form.get("total_estimated") or "").strip()
+
+    if total_estimated_raw:
+        try:
+            total_estimated_value = Decimal(total_estimated_raw)
+        except InvalidOperation:
+            flash("El total estimado debe ser un número válido.", "error")
+            return redirect(url_for("print3d.admin_list"))
+        if total_estimated_value < 0:
+            flash("El total estimado no puede ser negativo.", "error")
+            return redirect(url_for("print3d.admin_list"))
+        job.total_estimated = total_estimated_value
 
     if target_status not in PRINT3D_ALLOWED_STATUSES:
         flash("Estado de impresión 3D no válido.", "error")
         return redirect(url_for("print3d.admin_list"))
 
+    if target_status == Print3DJobStatus.CANCELED and not admin_note:
+        flash("Debes capturar el motivo para rechazar/cancelar la solicitud.", "error")
+        return redirect(url_for("print3d.admin_list"))
+
+    if target_status == Print3DJobStatus.CANCELED:
+        job.admin_note = admin_note
+
     if current_status == target_status:
+        db.session.commit()
         flash("El trabajo ya se encuentra en ese estado.", "info")
         return redirect(url_for("print3d.admin_list"))
 

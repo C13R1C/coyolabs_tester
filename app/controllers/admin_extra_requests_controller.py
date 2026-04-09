@@ -99,7 +99,7 @@ def _inventory_request_records() -> list[dict]:
     records: list[dict] = []
     for row in rows:
         requester = row.user.email if row.user else f"user:{row.user_id}"
-        summary = f"Pedido diario ({row.request_date})"
+        summary = f"Solicitud de material ({row.request_date})"
         records.append(_to_record(
             req_type="INVENTORY_DAILY",
             req_id=row.id,
