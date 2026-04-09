@@ -442,6 +442,13 @@ def request_reservation():
         for subject_name, groups in professor_groups_by_subject.items()
     }
     if request.method == "POST":
+        legacy_material_fields = {"request_materials", "material_id[]", "quantity[]"}
+        if any(field in request.form for field in legacy_material_fields):
+            logger.info(
+                "Ignoring legacy material fields in reservation request submit",
+                extra={"user_id": current_user.id, "legacy_fields": sorted(legacy_material_fields)},
+            )
+
         room = (request.form.get("room") or "").strip()
         date_s = (request.form.get("date") or "").strip()
         start_s = (request.form.get("start_time") or "").strip()
