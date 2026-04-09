@@ -34,7 +34,9 @@ ACTIVE_PRINT3D_STATUSES = {
     Print3DJobStatus.QUOTED,
     Print3DJobStatus.IN_PROGRESS,
     Print3DJobStatus.READY,
+    Print3DJobStatus.READY_FOR_PICKUP,
 }
+PRINT3D_PRICE_PER_GRAM = Decimal("3.00")
 
 
 def _normalize_print3d_status(raw_status: str | None) -> str:
@@ -48,7 +50,7 @@ def _can_transition_status(current_status: str, next_status: str) -> bool:
 
 def _status_badge_class(status: str | None) -> str:
     normalized = _normalize_print3d_status(status)
-    if normalized in {Print3DJobStatus.READY, Print3DJobStatus.DELIVERED}:
+    if normalized in {Print3DJobStatus.READY, Print3DJobStatus.READY_FOR_PICKUP, Print3DJobStatus.DELIVERED}:
         return "status-ok"
     if normalized == Print3DJobStatus.CANCELED:
         return "status-bad"
@@ -343,15 +345,21 @@ def admin_list():
         jobs=jobs,
         active_page="prints3d",
         status_badge_class=_status_badge_class,
-        print3d_transitions=PRINT3D_ALLOWED_TRANSITIONS,
-        print3d_statuses=[
-            Print3DJobStatus.REQUESTED,
-            Print3DJobStatus.QUOTED,
-            Print3DJobStatus.IN_PROGRESS,
-            Print3DJobStatus.READY,
-            Print3DJobStatus.DELIVERED,
-            Print3DJobStatus.CANCELED,
-        ],
+    )
+
+
+@print3d_bp.route("/admin/<int:job_id>", methods=["GET"])
+@min_role_required("ADMIN")
+def admin_detail(job_id: int):
+    job = Print3DJob.query.get_or_404(job_id)
+    allowed_next = PRINT3D_ALLOWED_TRANSITIONS.get(_normalize_print3d_status(job.status), set())
+    return render_template(
+        "prints3d/admin_detail.html",
+        job=job,
+        active_page="prints3d",
+        status_badge_class=_status_badge_class,
+        allowed_next=allowed_next,
+        price_per_gram=PRINT3D_PRICE_PER_GRAM,
     )
 
 
@@ -363,26 +371,38 @@ def admin_set_status(job_id: int):
     target_status = _normalize_print3d_status(request.form.get("status"))
     current_status = _normalize_print3d_status(job.status)
     admin_note = (request.form.get("admin_note") or "").strip()
-    total_estimated_raw = (request.form.get("total_estimated") or "").strip()
-
-    if total_estimated_raw:
+    estimated_grams_raw = (request.form.get("estimated_grams") or "").strip()
+    if estimated_grams_raw:
         try:
-            total_estimated_value = Decimal(total_estimated_raw)
+            grams_estimated_value = Decimal(estimated_grams_raw)
         except InvalidOperation:
-            flash("El total estimado debe ser un número válido.", "error")
-            return redirect(url_for("print3d.admin_list"))
-        if total_estimated_value < 0:
-            flash("El total estimado no puede ser negativo.", "error")
-            return redirect(url_for("print3d.admin_list"))
-        job.total_estimated = total_estimated_value
+            flash("Los gramos estimados deben ser un número válido.", "error")
+            return redirect(url_for("print3d.admin_detail", job_id=job.id))
+        if grams_estimated_value < 0:
+            flash("Los gramos estimados no pueden ser negativos.", "error")
+            return redirect(url_for("print3d.admin_detail", job_id=job.id))
+        job.grams_estimated = grams_estimated_value
+        job.price_per_gram = PRINT3D_PRICE_PER_GRAM
+        job.total_estimated = (grams_estimated_value * PRINT3D_PRICE_PER_GRAM).quantize(Decimal("0.01"))
 
     if target_status not in PRINT3D_ALLOWED_STATUSES:
         flash("Estado de impresión 3D no válido.", "error")
-        return redirect(url_for("print3d.admin_list"))
+        return redirect(url_for("print3d.admin_detail", job_id=job.id))
 
     if target_status == Print3DJobStatus.CANCELED and not admin_note:
         flash("Debes capturar el motivo para rechazar/cancelar la solicitud.", "error")
-        return redirect(url_for("print3d.admin_list"))
+        return redirect(url_for("print3d.admin_detail", job_id=job.id))
+
+    statuses_requiring_estimate = {
+        Print3DJobStatus.QUOTED,
+        Print3DJobStatus.IN_PROGRESS,
+        Print3DJobStatus.READY,
+        Print3DJobStatus.READY_FOR_PICKUP,
+        Print3DJobStatus.DELIVERED,
+    }
+    if target_status in statuses_requiring_estimate and job.grams_estimated is None:
+        flash("Debes capturar primero los gramos estimados para calcular el total estimado.", "error")
+        return redirect(url_for("print3d.admin_detail", job_id=job.id))
 
     if target_status == Print3DJobStatus.CANCELED:
         job.admin_note = admin_note
@@ -390,11 +410,11 @@ def admin_set_status(job_id: int):
     if current_status == target_status:
         db.session.commit()
         flash("El trabajo ya se encuentra en ese estado.", "info")
-        return redirect(url_for("print3d.admin_list"))
+        return redirect(url_for("print3d.admin_detail", job_id=job.id))
 
     if not _can_transition_status(current_status, target_status):
         flash("Transición de estado no permitida para este trabajo.", "error")
-        return redirect(url_for("print3d.admin_list"))
+        return redirect(url_for("print3d.admin_detail", job_id=job.id))
 
     job.status = target_status
 
@@ -407,7 +427,8 @@ def admin_set_status(job_id: int):
         metadata={"job_id": job.id, "from": current_status, "to": target_status},
     )
 
-    if target_status == Print3DJobStatus.READY:
+    if target_status == Print3DJobStatus.READY_FOR_PICKUP:
+        # Punto preparado para reforzar notificación al usuario cuando quede disponible para recoger.
         notified = _notify_ready_once(job)
         if not notified:
             log_event(
@@ -426,4 +447,4 @@ def admin_set_status(job_id: int):
     db.session.commit()
 
     flash("Estado actualizado correctamente.", "success")
-    return redirect(url_for("print3d.admin_list"))
+    return redirect(url_for("print3d.admin_detail", job_id=job.id))
