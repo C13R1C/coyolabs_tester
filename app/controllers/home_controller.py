@@ -118,7 +118,7 @@ def home_dashboard():
         .all()
     )
 
-    recent_tickets = (
+    recent_material_requests = (
         InventoryRequestTicket.query.filter(InventoryRequestTicket.user_id == user.id)
         .order_by(InventoryRequestTicket.created_at.desc())
         .limit(5)
@@ -149,7 +149,7 @@ def home_dashboard():
         is_profile_complete=bool(user.profile_completed),
         upcoming_reservations=upcoming_reservations,
         recent_reservations=recent_reservations,
-        recent_tickets=recent_tickets,
+        recent_material_requests=recent_material_requests,
         my_open_debts=my_open_debts,
         selected_date=selected_date,
         selected_time=selected_time.strftime("%H:%M"),

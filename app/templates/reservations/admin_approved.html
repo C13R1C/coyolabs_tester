@@ -6,7 +6,7 @@
   <div class="topbar-left">
     <p class="page-kicker">Reservaciones</p>
     <h1>Reservas en curso de hoy</h1>
-<p class="page-subtitle">Desde aquí puedes abrir tickets de laboratorio para reservas en curso del día actual.</p>
+<p class="page-subtitle">Vista operativa de reservas del día. La gestión de materiales se atiende en Solicitudes de material.</p>
   </div>
 </header>
 
@@ -26,8 +26,8 @@
     <a class="btn btn-ghost" href="{{ url_for('reservations.admin_approved_history') }}">
       Ver historial
     </a>
-    <a class="btn btn-ghost" href="{{ url_for('reservations.admin_ticket_closure_requests') }}">
-      Cierres solicitados
+    <a class="btn btn-ghost" href="{{ url_for('inventory_requests.admin_daily_requests') }}">
+      Solicitudes de material
     </a>
   </div>
 </section>
@@ -89,28 +89,9 @@
             </td>
 
             <td>
-    {% if r.open_ticket %}
-      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-        <span class="status-badge {% if r.open_ticket.status == 'READY_FOR_PICKUP' %}status-ok{% elif r.open_ticket.status == 'CLOSURE_REQUESTED' %}status-warn{% else %}status-warn{% endif %}">
-          {{ r.open_ticket.status|status_label }}
-        </span>
-        <a href="{{ url_for('reservations.admin_ticket_detail', ticket_id=r.open_ticket.id) }}" class="btn btn-ghost">
-          Ver ticket
-        </a>
-      </div>
-    {% elif r.can_open_ticket %}
-      <form method="post" action="{{ url_for('reservations.admin_open_ticket', res_id=r.id) }}">
-        <button type="submit" class="btn btn-gold">
-          Abrir ticket
-        </button>
-      </form>
-    {% elif r.open_ticket_reason == "too_early" %}
-      <span class="status-badge status-warn">Aún no disponible</span>
-    {% elif r.open_ticket_reason == "expired" %}
-      <span class="status-badge status-bad">Fuera de horario</span>
-    {% else %}
-      <span class="status-badge status-bad">No disponible</span>
-    {% endif %}
+              <a class="btn btn-ghost" href="{{ url_for('inventory_requests.admin_daily_requests') }}">
+                Ver solicitudes de material
+              </a>
   </td>
           </tr>
           {% endfor %}
