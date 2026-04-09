@@ -144,7 +144,6 @@
   {% if current_user.is_authenticated and is_admin_role(current_user.role) %}
     <a class="btn btn-gold" href="{{ url_for('lostfound.admin_new') }}">Registrar objeto perdido</a>
   {% else %}
-    
   {% endif %}
 </section>
 
