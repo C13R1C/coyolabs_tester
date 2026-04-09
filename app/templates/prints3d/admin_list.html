@@ -51,7 +51,14 @@
           <td><span class="status-badge {{ status_badge_class(job.status) }}">{{ job.status|status_label }}</span></td>
           <td>{{ ('$' ~ ('%.2f'|format(job.total_estimated))) if job.total_estimated is not none else 'Pendiente' }}</td>
           <td>
+            {% set is_terminal = job.status in ['DELIVERED', 'CANCELED'] %}
+            {% if not is_terminal %}
             <a href="{{ url_for('print3d.admin_detail', job_id=job.id) }}" class="btn btn-gold">Gestionar</a>
+            {% elif job.status == 'DELIVERED' %}
+            <span class="status-badge status-ok">Entregado</span>
+            {% else %}
+            <span class="status-badge status-warn">Cancelado</span>
+            {% endif %}
           </td>
         </tr>
       {% endfor %}
