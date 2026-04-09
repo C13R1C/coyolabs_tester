@@ -1,5 +1,5 @@
 {% extends "layouts/student_base.html" %}
-{% set crumbs = [("Inicio", url_for('root_home')), ("Solicitudes de material admin", url_for('inventory_requests.admin_daily_requests')), ("Solicitud #" ~ ticket.id, url_for('inventory_requests.admin_ticket_detail', ticket_id=ticket.id))] %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Solicitudes de material", url_for('inventory_requests.admin_daily_requests')), ("Solicitud #" ~ ticket.id, url_for('inventory_requests.admin_ticket_detail', ticket_id=ticket.id))] %}
 {% block title %}Solicitud #{{ ticket.id }}{% endblock %}
 
 {% block content %}
@@ -24,7 +24,7 @@
   <div class="topbar-left">
     <p class="page-kicker">Inventario</p>
     <h1>Solicitud de material #{{ ticket.id }}</h1>
-    <p class="page-subtitle">Usuario: {{ ticket.user.email if ticket.user else '-' }} · Fecha: {{ ticket.request_date }} · Aquí ejecutas la entrega y marcas atención.</p>
+    <p class="page-subtitle">Usuario: {{ ticket.user.email if ticket.user else '-' }} · Fecha: {{ ticket.request_date }} · Gestiona esta solicitud independiente y su entrega.</p>
   </div>
 </header>
 
