@@ -394,6 +394,14 @@ def admin_register_return(ticket_id: int):
     if ticket.status != STATUS_READY:
         flash("Solo puedes registrar devolución en solicitudes listas para recoger.", "error")
         return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
+    if ticket.status != STATUS_READY:
+        flash("La solicitud debe pasar por estado LISTA antes de cerrarse.", "error")
+        return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
+
+    has_delivered_items = any((item.quantity_delivered or 0) > 0 for item in (ticket.items or []))
+    if has_delivered_items and RETURN_REGISTERED_MARKER not in (ticket.notes or ""):
+        flash("Debes registrar la devolución antes de cerrar la solicitud.", "error")
+        return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
 
     for item in (ticket.items or []):
         returned_raw = (request.form.get(f"returned_{item.id}") or "").strip()
@@ -432,33 +440,10 @@ def admin_register_return(ticket_id: int):
 @inventory_requests_bp.route("/admin/<int:ticket_id>/close", methods=["POST"])
 @min_role_required("ADMIN")
 def admin_close_ticket(ticket_id: int):
-    _close_stale_open_tickets()
-
     ticket = InventoryRequestTicket.query.get(ticket_id)
     if not ticket:
         flash("Solicitud no encontrada.", "error")
         return redirect(url_for("inventory_requests.admin_daily_requests"))
 
-    if ticket.status == STATUS_CLOSED:
-        flash("La solicitud ya está cerrada.", "warning")
-        return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
-    if ticket.status != STATUS_READY:
-        flash("La solicitud debe pasar por estado LISTA antes de cerrarse.", "error")
-        return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
-
-    has_delivered_items = any((item.quantity_delivered or 0) > 0 for item in (ticket.items or []))
-    if has_delivered_items and RETURN_REGISTERED_MARKER not in (ticket.notes or ""):
-        flash("Debes registrar la devolución antes de cerrar la solicitud.", "error")
-        return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
-
-    cancel_reason = (request.form.get("cancel_reason") or "").strip()
-    if not cancel_reason:
-        flash("Debes capturar el motivo para cerrar/cancelar la solicitud.", "error")
-        return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
-
-    _process_close_after_return(ticket=ticket, cancel_reason=cancel_reason)
-
-    db.session.commit()
-
-    flash("Solicitud cerrada correctamente.", "success")
+    flash("El cierre final se realiza desde 'Guardar devolución (Cerrar)' en el detalle de la solicitud.", "info")
     return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
