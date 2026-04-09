@@ -388,12 +388,7 @@ def request_reservation():
 
     calendar_buildings = sorted({room[:1] for room in ROOMS})
     calendar_rooms_by_building = {building: _rooms_by_building(building) for building in calendar_buildings}
-    default_calendar_building = "B" if "B" in calendar_buildings else ""
-    selected_calendar_building = (
-        calendar_building
-        if calendar_building in calendar_buildings
-        else default_calendar_building
-    )
+    selected_calendar_building = calendar_building if calendar_building in calendar_buildings else ""
     available_calendar_rooms = _rooms_by_building(selected_calendar_building)
     selected_calendar_room = calendar_room if calendar_room in available_calendar_rooms else ""
     week_schedule, calendar_rooms = build_week_schedule(
@@ -402,12 +397,15 @@ def request_reservation():
         rooms_scope=available_calendar_rooms,
     )
     calendar_day_s = (request.args.get("calendar_day") or "").strip()
+    day_filter_active = False
     try:
         selected_calendar_day = parse_date(calendar_day_s) if calendar_day_s else base_date
+        day_filter_active = bool(calendar_day_s)
     except ValueError:
         selected_calendar_day = base_date
     if selected_calendar_day not in week_days:
         selected_calendar_day = week_start
+        day_filter_active = False
 
     daily_schedule = []
     for room in calendar_rooms:
@@ -593,30 +591,38 @@ def request_reservation():
         flash("Solicitud enviada. Queda pendiente de aprobación.", "success")
         return redirect(url_for("reservations.my_reservations"))
 
+    base_context = dict(
+        calendar_buildings=calendar_buildings,
+        calendar_rooms_by_building=calendar_rooms_by_building,
+        calendar_filter_rooms=available_calendar_rooms,
+        week_days=week_days,
+        week_start=week_start,
+        week_end=week_end,
+        week_schedule=week_schedule,
+        calendar_rooms=calendar_rooms,
+        selected_calendar_building=selected_calendar_building,
+        selected_calendar_room=selected_calendar_room,
+        selected_calendar_day=selected_calendar_day,
+        day_filter_active=day_filter_active,
+        daily_schedule=daily_schedule,
+        today=datetime.today().date(),
+        calendar_now=datetime.now(),
+        prev_week=prev_week,
+        next_week=next_week,
+    )
+
+    if request.args.get("calendar_partial") == "1" or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return render_template("reservations/_weekly_calendar_content.html", **base_context)
+
     return render_template(
         "reservations/request.html",
-    rooms=ROOMS,
-    calendar_buildings=calendar_buildings,
-    calendar_rooms_by_building=calendar_rooms_by_building,
-    calendar_filter_rooms=available_calendar_rooms,
-    week_days=week_days,
-    week_start=week_start,
-    week_end=week_end,
-    week_schedule=week_schedule,
-    calendar_rooms=calendar_rooms,
-    selected_calendar_building=selected_calendar_building,
-    selected_calendar_room=selected_calendar_room,
-    selected_calendar_day=selected_calendar_day,
-    daily_schedule=daily_schedule,
-    today=datetime.today().date(),
-    calendar_now=datetime.now(),
-    prev_week=prev_week,
-    next_week=next_week,
-    is_professor=is_professor,
-    professor_subjects=professor_subjects,
-    professor_groups_by_subject=professor_groups_by_subject,
-    active_page="reservations"
-)
+        rooms=ROOMS,
+        is_professor=is_professor,
+        professor_subjects=professor_subjects,
+        professor_groups_by_subject=professor_groups_by_subject,
+        active_page="reservations",
+        **base_context,
+    )
 
 @reservations_bp.route("/admin", methods=["GET"])
 @min_role_required("ADMIN")
