@@ -99,67 +99,34 @@ def _active_print3d_jobs_count(user_id: int) -> int:
     )
 
 
-def _notify_ready_once(job: Print3DJob) -> bool:
-    """Notify requester when job becomes READY. Returns True if a new notification was sent."""
+def _build_ready_notification(job: Print3DJob) -> Notification | None:
+    """Build requester notification for READY_FOR_PICKUP once."""
     if job.ready_notified_at is not None:
-        return False
+        return None
 
     requester = job.requester_user
     if not requester or not requester.email:
-        return False
+        return None
 
-    user_notification = Notification(
+    return Notification(
         user_id=job.requester_user_id,
         title="Tu impresión 3D está lista",
-        message=f"Tu solicitud #{job.id} ({job.title}) está lista para entrega.",
+        message=f"Tu solicitud #{job.id} ({job.title}) está lista para recoger.",
         link=url_for("print3d.my_jobs"),
     )
-    db.session.add(user_notification)
 
-    email_sent = False
-    jobs_url = url_for("print3d.my_jobs", _external=True)
-    try:
-        send_print3d_ready_email(
-            requester.email,
-            job_id=job.id,
-            job_title=job.title,
-            jobs_url=jobs_url,
-        )
-        email_sent = True
-    except Exception:
-        logger.warning(
-            "Failed to send print3d READY email",
-            exc_info=True,
-            extra={"job_id": job.id, "target_user_id": job.requester_user_id},
-        )
 
-    job.ready_notified_at = datetime.utcnow()
-
-    log_event(
-        module="PRINT3D",
-        action="PRINT3D_READY_NOTIFIED",
-        user_id=current_user.id,
-        entity_label=f"Print3DJob #{job.id}",
-        description="Notificación de trabajo listo enviada al solicitante",
-        metadata={
-            "job_id": job.id,
-            "target_user_id": job.requester_user_id,
-            "email_sent": email_sent,
-            "notification_channel": ["in_app", "email"],
-        },
+def _build_canceled_notification(job: Print3DJob) -> Notification | None:
+    if not job.requester_user_id:
+        return None
+    reason = (job.admin_note or "").strip()
+    reason_text = f" Motivo: {reason}." if reason else ""
+    return Notification(
+        user_id=job.requester_user_id,
+        title="Tu solicitud 3D fue cancelada",
+        message=f"La solicitud #{job.id} ({job.title}) fue cancelada.{reason_text}",
+        link=url_for("print3d.my_jobs"),
     )
-
-    db.session.flush()
-    try:
-        publish_notification_created(user_notification)
-    except Exception:
-        logger.warning(
-            "SSE publish failed after print3d READY notification",
-            exc_info=True,
-            extra={"job_id": job.id, "notification_id": user_notification.id, "target_user_id": user_notification.user_id},
-        )
-
-    return True
 
 
 def _notify_admins_for_new_job(job: Print3DJob) -> list[Notification]:
@@ -417,6 +384,8 @@ def admin_set_status(job_id: int):
         return redirect(url_for("print3d.admin_detail", job_id=job.id))
 
     job.status = target_status
+    should_notify_ready = False
+    should_notify_canceled = False
 
     log_event(
         module="PRINT3D",
@@ -428,9 +397,8 @@ def admin_set_status(job_id: int):
     )
 
     if target_status == Print3DJobStatus.READY_FOR_PICKUP:
-        # Punto preparado para reforzar notificación al usuario cuando quede disponible para recoger.
-        notified = _notify_ready_once(job)
-        if not notified:
+        ready_candidate = _build_ready_notification(job)
+        if ready_candidate is None:
             log_event(
                 module="PRINT3D",
                 action="PRINT3D_READY_NOTIFY_SKIPPED",
@@ -443,8 +411,71 @@ def admin_set_status(job_id: int):
                     "reason": "already_notified_or_missing_user",
                 },
             )
+        else:
+            should_notify_ready = True
+    elif target_status == Print3DJobStatus.CANCELED:
+        should_notify_canceled = True
 
     db.session.commit()
+    created_user_notification: Notification | None = None
+    if should_notify_ready:
+        created_user_notification = _build_ready_notification(job)
+        if created_user_notification is not None:
+            db.session.add(created_user_notification)
+            job.ready_notified_at = datetime.utcnow()
+            db.session.commit()
+    elif should_notify_canceled:
+        created_user_notification = _build_canceled_notification(job)
+        if created_user_notification is not None:
+            db.session.add(created_user_notification)
+            db.session.commit()
+
+    if created_user_notification is not None:
+        try:
+            publish_notification_created(created_user_notification)
+        except Exception:
+            logger.warning(
+                "SSE publish failed after print3d user notification",
+                exc_info=True,
+                extra={
+                    "job_id": job.id,
+                    "notification_id": created_user_notification.id,
+                    "target_user_id": created_user_notification.user_id,
+                    "target_status": target_status,
+                },
+            )
+
+        if target_status == Print3DJobStatus.READY_FOR_PICKUP and job.requester_user and job.requester_user.email:
+            jobs_url = url_for("print3d.my_jobs", _external=True)
+            email_sent = False
+            try:
+                send_print3d_ready_email(
+                    job.requester_user.email,
+                    job_id=job.id,
+                    job_title=job.title,
+                    jobs_url=jobs_url,
+                )
+                email_sent = True
+            except Exception:
+                logger.warning(
+                    "Failed to send print3d READY email",
+                    exc_info=True,
+                    extra={"job_id": job.id, "target_user_id": job.requester_user_id},
+                )
+            log_event(
+                module="PRINT3D",
+                action="PRINT3D_READY_NOTIFIED",
+                user_id=current_user.id,
+                entity_label=f"Print3DJob #{job.id}",
+                description="Notificación de trabajo listo enviada al solicitante",
+                metadata={
+                    "job_id": job.id,
+                    "target_user_id": job.requester_user_id,
+                    "email_sent": email_sent,
+                    "notification_channel": ["in_app", "email"],
+                },
+            )
+            db.session.commit()
 
     flash("Estado actualizado correctamente.", "success")
     return redirect(url_for("print3d.admin_detail", job_id=job.id))

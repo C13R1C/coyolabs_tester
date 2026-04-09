@@ -79,8 +79,9 @@ def _apply_stock_delivery_for_request(ticket: InventoryRequestTicket) -> tuple[b
     return True, None
 
 
-def _process_close_after_return(ticket: InventoryRequestTicket, cancel_reason: str) -> None:
+def _process_close_after_return(ticket: InventoryRequestTicket, cancel_reason: str) -> list[Debt]:
     has_missing = False
+    created_debts: list[Debt] = []
     for item in (ticket.items or []):
         delivered = max(0, item.quantity_delivered or 0)
         returned = max(0, item.quantity_returned or 0)
@@ -116,6 +117,7 @@ def _process_close_after_return(ticket: InventoryRequestTicket, cancel_reason: s
             remaining_amount=missing,
         )
         db.session.add(debt)
+        created_debts.append(debt)
 
     ticket.status = STATUS_CLOSED
     ticket.closed_at = datetime.now()
@@ -134,6 +136,23 @@ def _process_close_after_return(ticket: InventoryRequestTicket, cancel_reason: s
         entity_label=f"InventoryRequestTicket #{ticket.id}",
         description=f"Solicitud de material #{ticket.id} cerrada",
         metadata={"ticket_id": ticket.id, "target_user_id": ticket.user_id},
+    )
+    return created_debts
+
+
+def _build_debt_created_notification(debt: Debt) -> Notification:
+    material_name = debt.material.name if debt.material else "material"
+    pending_amount = int(debt.remaining_amount or debt.amount or 0)
+    reason = (debt.reason or "").strip()
+    reason_text = f" Motivo: {reason}." if reason else ""
+    return Notification(
+        user_id=debt.user_id,
+        title="Se generó un adeudo",
+        message=(
+            f"Tienes un adeudo por faltante de material: {material_name} "
+            f"({pending_amount} pendiente).{reason_text}"
+        ),
+        link=url_for("debts.my_debts"),
     )
 
 
@@ -424,8 +443,52 @@ def admin_register_return(ticket_id: int):
         flash("Debes capturar el motivo para cerrar/cancelar la solicitud.", "error")
         return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
 
-    _process_close_after_return(ticket=ticket, cancel_reason=cancel_reason)
+    created_debts = _process_close_after_return(ticket=ticket, cancel_reason=cancel_reason)
     db.session.commit()
+    flash("Devolución guardada y solicitud cerrada.", "success")
+    return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
+
+
+@inventory_requests_bp.route("/admin/<int:ticket_id>/close", methods=["POST"])
+@min_role_required("ADMIN")
+def admin_close_ticket(ticket_id: int):
+    ticket = InventoryRequestTicket.query.get(ticket_id)
+    if not ticket:
+        flash("Solicitud no encontrada.", "error")
+        return redirect(url_for("inventory_requests.admin_daily_requests"))
+
+    debt_notifications: list[Notification] = []
+    if created_debts:
+        for debt in created_debts:
+            notif = _build_debt_created_notification(debt)
+            db.session.add(notif)
+            debt_notifications.append(notif)
+        db.session.commit()
+        for notif in debt_notifications:
+            publish_notification_created(notif)
+
+    flash("Devolución guardada y solicitud cerrada.", "success")
+    return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
+
+
+@inventory_requests_bp.route("/admin/<int:ticket_id>/close", methods=["POST"])
+@min_role_required("ADMIN")
+def admin_close_ticket(ticket_id: int):
+    ticket = InventoryRequestTicket.query.get(ticket_id)
+    if not ticket:
+        flash("Solicitud no encontrada.", "error")
+        return redirect(url_for("inventory_requests.admin_daily_requests"))
+
+    debt_notifications: list[Notification] = []
+    if created_debts:
+        for debt in created_debts:
+            notif = _build_debt_created_notification(debt)
+            db.session.add(notif)
+            debt_notifications.append(notif)
+        db.session.commit()
+        for notif in debt_notifications:
+            publish_notification_created(notif)
+
     flash("Devolución guardada y solicitud cerrada.", "success")
     return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
 

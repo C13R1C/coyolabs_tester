@@ -148,8 +148,13 @@ def admin_create():
         )
         user_notification = Notification(
             user_id=user.id,
-            title="Nuevo adeudo registrado",
-            message="Se registró un adeudo en tu cuenta. Revisa el detalle en el módulo de adeudos.",
+            title="Se generó un adeudo",
+            message=(
+                f"Se registró un adeudo de "
+                f"{material.name if material else 'material no especificado'} "
+                f"({int(debt.remaining_amount or debt.amount or 0)} pendiente)."
+                f"{f' Motivo: {debt.reason}.' if debt.reason else ''}"
+            ),
             link=url_for("debts.my_debts"),
         )
         db.session.add(user_notification)
