@@ -10,8 +10,8 @@ from sqlalchemy.orm import joinedload
 from app.extensions import db
 from app.models.material import Material
 from app.models.reservation import Reservation
-from app.models.lab_ticket import LabTicket
-from app.models.ticket_item import TicketItem
+from app.models.inventory_request_ticket import InventoryRequestTicket
+from app.models.inventory_request_item import InventoryRequestItem
 from app.models.debt import Debt
 from app.models.notification import Notification
 from app.models.print3d_job import Print3DJob
@@ -19,7 +19,7 @@ from app.models.software import Software
 from app.models.user import User
 from app.utils.authz import min_role_required
 from app.constants import ROLE_PENDING
-from app.utils.statuses import DebtStatus, LabTicketStatus, Print3DJobStatus, ReservationStatus, TicketItemStatus
+from app.utils.statuses import DebtStatus, InventoryRequestStatus, Print3DJobStatus, ReservationStatus
 
 dashboard_bp = Blueprint("dashboard", __name__, url_prefix="/dashboard")
 
@@ -75,18 +75,14 @@ def _build_operational_snapshot(activity_limit: int = 8) -> dict:
         .where(Reservation.status == ReservationStatus.PENDING)
         .scalar_subquery()
         .label("pending_reservations"),
-        db.select(func.count(LabTicket.id))
-        .where(LabTicket.status.in_([LabTicketStatus.OPEN, LabTicketStatus.READY_FOR_PICKUP]))
+        db.select(func.count(InventoryRequestTicket.id))
+        .where(InventoryRequestTicket.status.in_([InventoryRequestStatus.OPEN, InventoryRequestStatus.READY]))
         .scalar_subquery()
-        .label("active_tickets"),
-        db.select(func.count(TicketItem.id))
-        .where(TicketItem.status == TicketItemStatus.READY_FOR_PICKUP)
+        .label("active_material_requests"),
+        db.select(func.count(InventoryRequestTicket.id))
+        .where(InventoryRequestTicket.status == InventoryRequestStatus.READY)
         .scalar_subquery()
-        .label("ready_items"),
-        db.select(func.count(LabTicket.id))
-        .where(LabTicket.status == LabTicketStatus.CLOSURE_REQUESTED)
-        .scalar_subquery()
-        .label("closure_requested_tickets"),
+        .label("ready_material_requests"),
         db.select(func.count(Debt.id))
         .where(Debt.status == DebtStatus.PENDING)
         .scalar_subquery()
@@ -103,15 +99,15 @@ def _build_operational_snapshot(activity_limit: int = 8) -> dict:
         func.sum(db.case((Reservation.status == ReservationStatus.PENDING, 1), else_=0)).label("pending_today"),
     ).filter(Reservation.date == today).first()
 
-    ticket_debt_counts = db.session.query(
-        db.select(func.count(LabTicket.id))
-        .where(LabTicket.status == LabTicketStatus.OPEN)
+    material_request_debt_counts = db.session.query(
+        db.select(func.count(InventoryRequestTicket.id))
+        .where(InventoryRequestTicket.status == InventoryRequestStatus.OPEN)
         .scalar_subquery()
-        .label("open_tickets"),
-        db.select(func.count(LabTicket.id))
-        .where(LabTicket.status == LabTicketStatus.CLOSED_WITH_DEBT)
+        .label("open_material_requests"),
+        db.select(func.count(InventoryRequestTicket.id))
+        .where(InventoryRequestTicket.status == InventoryRequestStatus.READY)
         .scalar_subquery()
-        .label("closed_with_debt"),
+        .label("ready_material_requests"),
         db.select(func.count(Debt.id))
         .where(Debt.status == DebtStatus.PENDING)
         .scalar_subquery()
@@ -138,32 +134,24 @@ def _build_operational_snapshot(activity_limit: int = 8) -> dict:
         .all()
     )
 
-    active_tickets = (
-        LabTicket.query
-        .options(joinedload(LabTicket.owner_user), joinedload(LabTicket.reservation))
-        .filter(LabTicket.status.in_([LabTicketStatus.OPEN, LabTicketStatus.READY_FOR_PICKUP]))
-        .order_by(LabTicket.opened_at.asc())
+    active_material_requests = (
+        InventoryRequestTicket.query
+        .options(joinedload(InventoryRequestTicket.user))
+        .filter(InventoryRequestTicket.status.in_([InventoryRequestStatus.OPEN, InventoryRequestStatus.READY]))
+        .order_by(InventoryRequestTicket.created_at.asc())
         .limit(activity_limit)
         .all()
     )
 
-    ready_items = (
-        TicketItem.query
+    ready_request_items = (
+        InventoryRequestItem.query
         .options(
-            joinedload(TicketItem.ticket).joinedload(LabTicket.owner_user),
-            joinedload(TicketItem.material),
+            joinedload(InventoryRequestItem.ticket).joinedload(InventoryRequestTicket.user),
+            joinedload(InventoryRequestItem.material),
         )
-        .filter(TicketItem.status == TicketItemStatus.READY_FOR_PICKUP)
-        .order_by(TicketItem.id.desc())
-        .limit(activity_limit)
-        .all()
-    )
-
-    closure_requested = (
-        LabTicket.query
-        .options(joinedload(LabTicket.owner_user), joinedload(LabTicket.reservation))
-        .filter(LabTicket.status == LabTicketStatus.CLOSURE_REQUESTED)
-        .order_by(LabTicket.opened_at.asc())
+        .join(InventoryRequestTicket, InventoryRequestItem.ticket_id == InventoryRequestTicket.id)
+        .filter(InventoryRequestTicket.status == InventoryRequestStatus.READY)
+        .order_by(InventoryRequestItem.id.desc())
         .limit(activity_limit)
         .all()
     )
@@ -196,9 +184,8 @@ def _build_operational_snapshot(activity_limit: int = 8) -> dict:
     return {
         "counts": {
             "pending_reservations": int(counts_row.pending_reservations or 0),
-            "active_tickets": int(counts_row.active_tickets or 0),
-            "ready_items": int(counts_row.ready_items or 0),
-            "closure_requested_tickets": int(counts_row.closure_requested_tickets or 0),
+            "active_material_requests": int(counts_row.active_material_requests or 0),
+            "ready_material_requests": int(counts_row.ready_material_requests or 0),
             "open_debts": int(counts_row.open_debts or 0),
             "pending_print3d_jobs": int(counts_row.pending_print3d_jobs or 0),
         },
@@ -213,37 +200,25 @@ def _build_operational_snapshot(activity_limit: int = 8) -> dict:
             }
             for r in pending_reservations
         ],
-        "active_tickets": [
+        "active_material_requests": [
             {
                 "id": t.id,
                 "status": t.status,
-                "user": t.owner_user.email if t.owner_user else "-",
-                "reservation_id": t.reservation_id,
-                "room": t.room or "-",
-                "link": f"/reservations/admin/tickets/{t.id}",
+                "user": t.user.email if t.user else "-",
+                "request_date": str(t.request_date),
+                "link": f"/inventory-requests/admin/{t.id}",
             }
-            for t in active_tickets
+            for t in active_material_requests
         ],
-        "ready_items": [
+        "ready_material_requests": [
             {
                 "ticket_id": item.ticket_id,
                 "material": item.material.name if item.material else f"ID {item.material_id}",
                 "quantity_requested": item.quantity_requested,
-                "quantity_delivered": item.quantity_delivered,
-                "user": item.ticket.owner_user.email if item.ticket and item.ticket.owner_user else "-",
-                "link": f"/reservations/admin/tickets/{item.ticket_id}",
+                "user": item.ticket.user.email if item.ticket and item.ticket.user else "-",
+                "link": f"/inventory-requests/admin/{item.ticket_id}",
             }
-            for item in ready_items
-        ],
-        "closure_requested_tickets": [
-            {
-                "id": t.id,
-                "user": t.owner_user.email if t.owner_user else "-",
-                "reservation_id": t.reservation_id,
-                "room": t.room or "-",
-                "link": f"/reservations/admin/tickets/{t.id}",
-            }
-            for t in closure_requested
+            for item in ready_request_items
         ],
         "open_debts_recent": [
             {
@@ -279,9 +254,9 @@ def _build_operational_snapshot(activity_limit: int = 8) -> dict:
             "reservations_today": int(reservation_counts.reservations_today or 0),
             "approved_today": int(reservation_counts.approved_today or 0),
             "pending_today": int(reservation_counts.pending_today or 0),
-            "open_tickets": int(ticket_debt_counts.open_tickets or 0),
-            "closed_with_debt": int(ticket_debt_counts.closed_with_debt or 0),
-            "open_debts": int(ticket_debt_counts.open_debts or 0),
+            "open_material_requests": int(material_request_debt_counts.open_material_requests or 0),
+            "ready_material_requests": int(material_request_debt_counts.ready_material_requests or 0),
+            "open_debts": int(material_request_debt_counts.open_debts or 0),
             "low_stock_count": int(low_stock_count or 0),
             "pending_users_count": int(pending_users_count or 0),
             "weekly_reservations": int(weekly_reservations or 0),
@@ -303,15 +278,15 @@ def dashboard_home():
         func.sum(db.case((Reservation.status == ReservationStatus.PENDING, 1), else_=0)).label("pending_today"),
     ).filter(Reservation.date == today).first()
 
-    ticket_debt_counts = db.session.query(
-        db.select(func.count(LabTicket.id))
-        .where(LabTicket.status == LabTicketStatus.OPEN)
+    material_request_debt_counts = db.session.query(
+        db.select(func.count(InventoryRequestTicket.id))
+        .where(InventoryRequestTicket.status == InventoryRequestStatus.OPEN)
         .scalar_subquery()
-        .label("open_tickets"),
-        db.select(func.count(LabTicket.id))
-        .where(LabTicket.status == LabTicketStatus.CLOSED_WITH_DEBT)
+        .label("open_material_requests"),
+        db.select(func.count(InventoryRequestTicket.id))
+        .where(InventoryRequestTicket.status == InventoryRequestStatus.READY)
         .scalar_subquery()
-        .label("closed_with_debt"),
+        .label("ready_material_requests"),
         db.select(func.count(Debt.id))
         .where(Debt.status == DebtStatus.PENDING)
         .scalar_subquery()
@@ -323,9 +298,9 @@ def dashboard_home():
     reservations_today = int(reservation_counts.reservations_today or 0)
     approved_today = int(reservation_counts.approved_today or 0)
     pending_today = int(reservation_counts.pending_today or 0)
-    open_tickets = int(ticket_debt_counts.open_tickets or 0)
-    closed_with_debt = int(ticket_debt_counts.closed_with_debt or 0)
-    open_debts = int(ticket_debt_counts.open_debts or 0)
+    open_material_requests = int(material_request_debt_counts.open_material_requests or 0)
+    ready_material_requests = int(material_request_debt_counts.ready_material_requests or 0)
+    open_debts = int(material_request_debt_counts.open_debts or 0)
 
     low_stock_count = Material.query.filter(
         Material.pieces_qty.isnot(None),
@@ -346,10 +321,10 @@ def dashboard_home():
         .all()
     )
 
-    recent_tickets = (
-        LabTicket.query
-        .options(joinedload(LabTicket.owner_user), joinedload(LabTicket.reservation))
-        .order_by(LabTicket.opened_at.desc())
+    recent_material_requests = (
+        InventoryRequestTicket.query
+        .options(joinedload(InventoryRequestTicket.user))
+        .order_by(InventoryRequestTicket.created_at.desc())
         .limit(5)
         .all()
     )
@@ -365,11 +340,11 @@ def dashboard_home():
     top_materials = (
         db.session.query(
             Material.name,
-            func.coalesce(func.sum(TicketItem.quantity_requested), 0).label("total")
+            func.coalesce(func.sum(InventoryRequestItem.quantity_requested), 0).label("total")
         )
-        .join(TicketItem, TicketItem.material_id == Material.id)
+        .join(InventoryRequestItem, InventoryRequestItem.material_id == Material.id)
         .group_by(Material.id, Material.name)
-        .order_by(func.sum(TicketItem.quantity_requested).desc())
+        .order_by(func.sum(InventoryRequestItem.quantity_requested).desc())
         .limit(5)
         .all()
     )
@@ -405,14 +380,14 @@ def dashboard_home():
         reservations_today=reservations_today,
         approved_today=approved_today,
         pending_today=pending_today,
-        open_tickets=open_tickets,
-        closed_with_debt=closed_with_debt,
+        open_material_requests=open_material_requests,
+        ready_material_requests=ready_material_requests,
         open_debts=open_debts,
         low_stock_count=low_stock_count,
         pending_users_count=pending_users_count,
         weekly_reservations=weekly_reservations,
         recent_reservations=recent_reservations,
-        recent_tickets=recent_tickets,
+        recent_material_requests=recent_material_requests,
         recent_debts=recent_debts,
         top_materials=top_materials,
         top_debtors=top_debtors,
