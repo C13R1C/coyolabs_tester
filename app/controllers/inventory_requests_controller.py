@@ -394,6 +394,14 @@ def admin_register_return(ticket_id: int):
     if ticket.status != STATUS_READY:
         flash("Solo puedes registrar devolución en solicitudes listas para recoger.", "error")
         return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
+    if ticket.status != STATUS_READY:
+        flash("La solicitud debe pasar por estado LISTA antes de cerrarse.", "error")
+        return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
+
+    has_delivered_items = any((item.quantity_delivered or 0) > 0 for item in (ticket.items or []))
+    if has_delivered_items and RETURN_REGISTERED_MARKER not in (ticket.notes or ""):
+        flash("Debes registrar la devolución antes de cerrar la solicitud.", "error")
+        return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
 
     for item in (ticket.items or []):
         returned_raw = (request.form.get(f"returned_{item.id}") or "").strip()
