@@ -19,6 +19,11 @@
   .list-item{border:1px solid var(--stroke);border-radius:12px;padding:12px;background:rgba(255,255,255,.48)}
   .list-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
   .meta{margin-top:6px;color:var(--text-soft);font-size:.9rem;display:flex;gap:12px;flex-wrap:wrap}
+  .status-badge{display:inline-flex;align-items:center;padding:6px 12px;border-radius:999px;font-size:12px;font-weight:700;line-height:1}
+  .status-ok{background:rgba(76,175,80,.15);color:#2e7d32}
+  .status-warn{background:rgba(255,152,0,.15);color:#ef6c00}
+  .status-bad{background:rgba(211,47,47,.15);color:#c62828}
+  .status-neutral{background:rgba(120,120,120,.12);color:#455a64}
   .chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;font-size:.8rem;font-weight:700;border:1px solid}
   .chip-APPROVED,.chip-CLOSED,.chip-PAID{background:rgba(91,165,111,.15);border-color:rgba(91,165,111,.35);color:#2f6b44}
   .chip-PENDING,.chip-OPEN{background:rgba(212,166,61,.16);border-color:rgba(212,166,61,.35);color:#7d5f13}
@@ -39,12 +44,22 @@
   .labs-filter-input input:disabled,.labs-filter-input select:disabled{opacity:.72;cursor:not-allowed}
   .labs-filter-btn{min-height:44px;padding:0 18px;border-radius:12px}
   .labs-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:12px}
-  .lab-card{border-radius:12px;padding:14px;border:1px solid var(--stroke);background:rgba(255,255,255,.55)}
+  .lab-card{background:linear-gradient(145deg,#f1f8f4,#e8f5e9);border:1px solid rgba(76,175,80,.25);border-radius:14px;padding:14px;transition:all .25s ease;position:relative;overflow:hidden}
+  .lab-card:hover{transform:translateY(-4px);box-shadow:0 10px 25px rgba(0,0,0,.08)}
+  .lab-card::before{content:\"\";position:absolute;left:0;top:0;height:100%;width:5px;background:#4caf50;border-radius:14px 0 0 14px}
   .lab-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
   .lab-free{border-color:rgba(91,165,111,.35);background:rgba(91,165,111,.09)}
   .lab-busy{border-color:rgba(200,91,91,.35);background:rgba(200,91,91,.09)}
   .lab-pending{border-color:rgba(212,166,61,.35);background:rgba(212,166,61,.09)}
+  .lab-free::before{background:#4caf50}
+  .lab-busy::before{background:#d32f2f}
+  .lab-pending::before{background:#f9a825}
   .lab-meta{margin-top:8px;font-size:.85rem;color:var(--text-soft);line-height:1.35}
+  .lab-slot{background:linear-gradient(145deg,#c8e6c9,#a5d6a7);color:#1b5e20;font-size:11px;padding:6px;border-radius:8px;text-align:center;margin-bottom:6px;transition:all .2s ease;font-weight:700}
+  .lab-slot:hover{background:#81c784;color:#fff}
+  .slot-available{background:#c8e6c9}
+  .slot-busy{background:#ffcdd2;color:#b71c1c}
+  .slot-pending{background:#fff9c4;color:#7d6500}
   .section{margin-top:16px}
 
   @media (max-width: 1140px){
@@ -94,7 +109,10 @@
         <div class="list-item">
           <div class="list-head">
             <strong>{{ r.room }}</strong>
-            <span class="chip chip-{{ r.status }}">{{ r.status|status_label }}</span>
+            {% set s = (r.status or '')|upper %}
+            <span class="status-badge {% if 'RECHAZ' in s %}status-bad{% elif 'ADEUDO' in s %}status-warn{% elif 'CERRADO' in s %}status-ok{% elif 'READY' in s %}status-ok{% elif s in ['APPROVED', 'CLOSED', 'PAID', 'DELIVERED'] %}status-ok{% elif s in ['PENDING', 'OPEN', 'REQUESTED', 'QUOTED', 'IN_PROGRESS'] %}status-warn{% elif s in ['REJECTED', 'CANCELED'] %}status-bad{% else %}status-neutral{% endif %}">
+              {{ r.status|status_label }}
+            </span>
           </div>
           <div class="meta">
             <span><i class="ph ph-calendar"></i> {{ r.date.strftime('%d/%m/%Y') }}</span>
@@ -121,7 +139,10 @@
         <div class="list-item">
           <div class="list-head">
             <strong>{{ r.room }}</strong>
-            <span class="chip chip-{{ r.status }}">{{ r.status|status_label }}</span>
+            {% set s = (r.status or '')|upper %}
+            <span class="status-badge {% if 'RECHAZ' in s %}status-bad{% elif 'ADEUDO' in s %}status-warn{% elif 'CERRADO' in s %}status-ok{% elif 'READY' in s %}status-ok{% elif s in ['APPROVED', 'CLOSED', 'PAID', 'DELIVERED'] %}status-ok{% elif s in ['PENDING', 'OPEN', 'REQUESTED', 'QUOTED', 'IN_PROGRESS'] %}status-warn{% elif s in ['REJECTED', 'CANCELED'] %}status-bad{% else %}status-neutral{% endif %}">
+              {{ r.status|status_label }}
+            </span>
           </div>
           <div class="meta">
             <span>{{ r.date.strftime('%d/%m/%Y') }}</span>
@@ -176,9 +197,18 @@
             </div>
             {% if res %}
             <div class="lab-meta">
+              <div class="lab-slot {% if item.status == 'free' %}slot-available{% elif item.status == 'busy' %}slot-busy{% else %}slot-pending{% endif %}">
+                {% if item.status == 'free' %}Disponible ahora{% elif item.status == 'busy' %}Actualmente ocupado{% else %}Pendiente de confirmación{% endif %}
+              </div>
               <div><strong>Materia:</strong> {{ res.subject_rel.name if res.subject_rel else res.subject }}</div>
               <div><strong>Grupo:</strong> {{ res.group_name }}</div>
               <div><strong>Responsable:</strong> {{ res.user.full_name if res.user and res.user.full_name else (res.user.email if res.user else res.teacher_name) }}</div>
+            </div>
+            {% else %}
+            <div class="lab-meta">
+              <div class="lab-slot {% if item.status == 'free' %}slot-available{% elif item.status == 'busy' %}slot-busy{% else %}slot-pending{% endif %}">
+                {% if item.status == 'free' %}Disponible ahora{% elif item.status == 'busy' %}Actualmente ocupado{% else %}Pendiente de confirmación{% endif %}
+              </div>
             </div>
             {% endif %}
           </div>
