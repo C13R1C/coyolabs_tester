@@ -17,6 +17,7 @@
       cursor: pointer;
       transition: transform .16s ease, box-shadow .16s ease;
       isolation: isolate;
+      overflow: visible !important;
     }
     .brand-logo-shell--button:hover { transform: translateY(-1px); }
     .brand-logo-shell--button:focus-visible {
@@ -24,6 +25,12 @@
       outline-offset: 2px;
     }
     .notification-badge.is-hidden { display: none; }
+    #logoNotificationToggle .notification-badge{
+      top: 2px;
+      right: 2px;
+      transform: translate(30%, -30%);
+      z-index: 35;
+    }
     .sidebar-nav .nav-item.active{
       position: relative;
       overflow: visible;
@@ -290,6 +297,18 @@
       background: rgba(255,255,255,.72);
       color: var(--text-soft);
       font-weight: 600;
+    }
+    @media (max-width: 768px){
+      #logoNotificationToggle .notification-badge{
+        top: -2px;
+        right: -2px;
+        min-width: 22px;
+        height: 22px;
+        padding: 0 6px;
+        font-size: 11px;
+        border-width: 2px;
+        z-index: 45;
+      }
     }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>

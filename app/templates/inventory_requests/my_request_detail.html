@@ -1,0 +1,97 @@
+{% extends "layouts/student_base.html" %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Solicitud de material", url_for('inventory_requests.my_daily_request')), ("Detalle", url_for('inventory_requests.my_ticket_detail', ticket_id=ticket.id))] %}
+{% block title %}Detalle de solicitud{% endblock %}
+
+{% block content %}
+<header class="topbar">
+  <div class="topbar-left">
+    <p class="page-kicker">Inventario</p>
+    <h1>Detalle de solicitud #{{ ticket.id }}</h1>
+    <p class="page-subtitle">Consulta los materiales solicitados y el resultado del cierre.</p>
+  </div>
+  <div class="topbar-actions">
+    <a href="{{ url_for('inventory_requests.my_daily_request') }}" class="btn btn-ghost">Volver</a>
+  </div>
+</header>
+
+<section class="table-card">
+  {% set return_registered = ticket.notes and '[DEVOLUCION_REGISTRADA]' in ticket.notes %}
+  <p><strong>Estado:</strong> <span class="status-badge {% if ticket_meta.rejected %}status-bad{% elif ticket_meta.closed_with_debt %}status-warn{% elif ticket.status == 'READY' %}status-ok{% elif ticket.status == 'OPEN' %}status-warn{% else %}status-neutral{% endif %}">{{ ticket_meta.status_label }}</span></p>
+  <p><strong>Motivo:</strong> {{ ticket_meta.base_reason }}</p>
+  {% if ticket_meta.rejected_reason %}
+  <p><strong>Motivo de rechazo:</strong> {{ ticket_meta.rejected_reason }}</p>
+  {% endif %}
+  {% if ticket_meta.partial_delivery_note %}
+  <p><strong>Nota administrativa:</strong> {{ ticket_meta.partial_delivery_note }}</p>
+  {% endif %}
+  <p><strong>Fecha de solicitud:</strong> {{ ticket.request_date }}</p>
+  <p><strong>Cierre / devolución:</strong>
+    {% if ticket.closed_at %}
+      Cerrada el {{ ticket.closed_at }}{% if return_registered %} con devolución registrada{% endif %}.
+    {% elif ticket.ready_at %}
+      Lista para recoger desde {{ ticket.ready_at }}.
+    {% else %}
+      Aún en proceso.
+    {% endif %}
+  </p>
+</section>
+
+<section class="table-card" style="margin-top:16px;">
+  <h3 style="margin:0 0 12px 0;">Materiales solicitados</h3>
+  <div class="table-wrap">
+    <table class="inventory-table" style="min-width:760px;">
+      <thead>
+        <tr>
+          <th>Material</th>
+          <th>Solicitado</th>
+          <th>Entregado</th>
+          <th>Devuelto</th>
+          <th>Adeudo</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in ticket.items %}
+        {% set missing_qty = (item.quantity_delivered or 0) - (item.quantity_returned or 0) %}
+        <tr>
+          <td>{{ item.material.name if item.material else ('ID ' ~ item.material_id) }}</td>
+          <td>{{ item.quantity_requested }}</td>
+          <td>{{ item.quantity_delivered }}</td>
+          <td>{{ item.quantity_returned }}</td>
+          <td>{{ missing_qty if missing_qty > 0 else 0 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="table-card" style="margin-top:16px;">
+  <h3 style="margin:0 0 12px 0;">Adeudos relacionados</h3>
+  {% if related_debts|length == 0 %}
+    <p>Sin adeudos relacionados a esta solicitud.</p>
+  {% else %}
+    <div class="table-wrap">
+      <table class="inventory-table" style="min-width:760px;">
+        <thead>
+          <tr>
+            <th>Material</th>
+            <th>Pendiente</th>
+            <th>Estado</th>
+            <th>Motivo</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for debt in related_debts %}
+          <tr>
+            <td>{{ debt.material.name if debt.material else '-' }}</td>
+            <td>{{ debt.remaining_amount or debt.amount or 0 }}</td>
+            <td>{{ debt.status|status_label if debt.status else '-' }}</td>
+            <td>{{ debt.reason or '-' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}
