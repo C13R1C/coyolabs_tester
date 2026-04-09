@@ -221,10 +221,14 @@
   {% if not today_ticket %}
     <p>No tienes solicitudes activas por el momento.</p>
   {% else %}
-    {% set today_closed_with_debt = today_ticket.status == 'CLOSED' and today_ticket.notes and '[CERRADO_CON_ADEUDO]' in today_ticket.notes %}
-    {% set today_rejected = today_ticket.status == 'CLOSED' and today_ticket.notes and '[RECHAZADA]' in today_ticket.notes %}
-    <p><strong>Solicitud #{{ today_ticket.id }}</strong> · Estado: <span class="status-badge {% if today_ticket.status == 'OPEN' %}status-warn{% elif today_ticket.status == 'READY' %}status-ok{% elif today_closed_with_debt or today_rejected %}status-bad{% else %}status-neutral{% endif %}">{{ 'Rechazada' if today_rejected else ('Cerrado con adeudo' if today_closed_with_debt else today_ticket.status|status_label) }}</span></p>
-    <p><strong>Motivo:</strong> {{ today_ticket.notes or '-' }}</p>
+    <p><strong>Solicitud #{{ today_ticket.id }}</strong> · Estado: <span class="status-badge {% if today_ticket_meta.rejected %}status-bad{% elif today_ticket_meta.closed_with_debt %}status-warn{% elif today_ticket.status == 'READY' %}status-ok{% elif today_ticket.status == 'OPEN' %}status-warn{% else %}status-neutral{% endif %}">{{ today_ticket_meta.status_label }}</span></p>
+    <p><strong>Motivo:</strong> {{ today_ticket_meta.base_reason }}</p>
+    {% if today_ticket_meta.rejected_reason %}
+    <p><strong>Motivo de rechazo:</strong> {{ today_ticket_meta.rejected_reason }}</p>
+    {% endif %}
+    {% if today_ticket_meta.partial_delivery_note %}
+    <p><strong>Nota administrativa:</strong> {{ today_ticket_meta.partial_delivery_note }}</p>
+    {% endif %}
     <div class="table-wrap">
       <table class="inventory-table" style="min-width:700px;">
         <thead>
@@ -268,10 +272,11 @@
           <tr>
             <td>#{{ t.id }}</td>
             <td>{{ t.request_date }}</td>
-            {% set row_closed_with_debt = t.status == 'CLOSED' and t.notes and '[CERRADO_CON_ADEUDO]' in t.notes %}
-            {% set row_rejected = t.status == 'CLOSED' and t.notes and '[RECHAZADA]' in t.notes %}
-            <td>{{ 'Rechazada' if row_rejected else ('Cerrado con adeudo' if row_closed_with_debt else t.status|status_label) }}</td>
-            <td>{{ t.notes or '-' }}</td>
+            {% set m = history_meta.get(t.id) %}
+            <td>
+              <span class="status-badge {% if m and m.rejected %}status-bad{% elif m and m.closed_with_debt %}status-warn{% elif t.status == 'READY' %}status-ok{% elif t.status == 'OPEN' %}status-warn{% else %}status-neutral{% endif %}">{{ m.status_label if m else (t.status|status_label) }}</span>
+            </td>
+            <td>{{ m.base_reason if m else '-' }}</td>
             <td>{{ t.items|length }}</td>
             <td>
               <a href="{{ url_for('inventory_requests.my_ticket_detail', ticket_id=t.id) }}" class="btn btn-ghost" style="min-height:34px; padding:6px 10px;">Consultar</a>

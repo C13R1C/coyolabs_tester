@@ -30,6 +30,7 @@ DEBT_CLOSED_MARKER = "[CERRADO_CON_ADEUDO]"
 RETURN_REGISTERED_MARKER = "[DEVOLUCION_REGISTRADA]"
 REJECTED_MARKER = "[RECHAZADA]"
 PARTIAL_DELIVERY_NOTE_MARKER = "[NOTA_ENTREGA_PARCIAL]"
+CLOSURE_ADMIN_PREFIX = "[Cierre admin]"
 
 
 def _extract_ticket_base_reason(notes: str | None) -> str:
@@ -49,6 +50,43 @@ def _extract_ticket_marker_text(notes: str | None, marker: str) -> str:
         if line.startswith(marker):
             return line[len(marker):].strip(" :-")
     return ""
+
+
+def _extract_ticket_prefixed_text(notes: str | None, prefix: str) -> str:
+    if not notes:
+        return ""
+    for raw_line in notes.splitlines():
+        line = raw_line.strip()
+        if line.startswith(prefix):
+            return line[len(prefix):].strip(" :-")
+    return ""
+
+
+def _build_user_ticket_meta(ticket: InventoryRequestTicket) -> dict[str, str | bool]:
+    notes = ticket.notes or ""
+    rejected_reason = _extract_ticket_marker_text(notes, REJECTED_MARKER)
+    partial_delivery_note = _extract_ticket_marker_text(notes, PARTIAL_DELIVERY_NOTE_MARKER)
+    close_note = _extract_ticket_prefixed_text(notes, CLOSURE_ADMIN_PREFIX)
+    closed_with_debt = ticket.status == STATUS_CLOSED and DEBT_CLOSED_MARKER in notes
+    rejected = ticket.status == STATUS_CLOSED and bool(rejected_reason or REJECTED_MARKER in notes)
+    status_label = "Abierta"
+    if ticket.status == STATUS_READY:
+        status_label = "Lista para recoger"
+    elif ticket.status == STATUS_CLOSED:
+        status_label = "Cerrada"
+    if closed_with_debt:
+        status_label = "Cerrado con adeudo"
+    if rejected:
+        status_label = "Rechazada"
+    return {
+        "base_reason": _extract_ticket_base_reason(notes) or "-",
+        "rejected_reason": rejected_reason,
+        "partial_delivery_note": partial_delivery_note,
+        "close_note": close_note,
+        "status_label": status_label,
+        "rejected": rejected,
+        "closed_with_debt": closed_with_debt,
+    }
 
 
 def _is_student_role(role: str | None) -> bool:
@@ -200,6 +238,8 @@ def my_daily_request():
         .limit(20)
         .all()
     )
+    history_meta = {ticket.id: _build_user_ticket_meta(ticket) for ticket in history}
+    active_ticket_meta = _build_user_ticket_meta(active_ticket) if active_ticket else None
 
     materials = (
         Material.query
@@ -220,7 +260,9 @@ def my_daily_request():
     return render_template(
         "inventory_requests/my_daily_request.html",
         today_ticket=active_ticket,
+        today_ticket_meta=active_ticket_meta,
         history=history,
+        history_meta=history_meta,
         materials=materials,
         materials_json=materials_json,
         reason_draft=session.pop("daily_request_reason_draft", "") if not clear_cart_on_load else "",
@@ -345,6 +387,7 @@ def my_ticket_detail(ticket_id: int):
     return render_template(
         "inventory_requests/my_request_detail.html",
         ticket=ticket,
+        ticket_meta=_build_user_ticket_meta(ticket),
         related_debts=related_debts,
         active_page="inventory_requests",
     )
