@@ -132,7 +132,7 @@
   {% endif %}
 </div>
 
-{% set calendar_title = "Ocupación semanal de salones" %}
+{% set calendar_title = "Ocupación semanal de laboratorios" %}
 {% set calendar_subtitle = "Semana del " ~ week_start.strftime('%d/%m/%Y') ~ " al " ~ week_end.strftime('%d/%m/%Y') %}
 {% set filter_action = url_for('reservations.admin_queue') %}
 {% set clear_url = url_for('reservations.admin_queue') %}

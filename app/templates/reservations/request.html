@@ -7,7 +7,7 @@
   <div class="topbar-left">
     <p class="page-kicker">Reservaciones</p>
     <h1>Solicitar reserva</h1>
-    <p class="page-subtitle">Completa todos los datos para enviar tu solicitud. Debajo puedes consultar la ocupación semanal de los salones.</p>
+    <p class="page-subtitle">Completa todos los datos para enviar tu solicitud. Debajo puedes consultar la ocupación semanal de los laboratorios.</p>
   </div>
   {% if current_user.role in ["ADMIN", "SUPERADMIN"] %}
   <div class="topbar-actions">
@@ -22,6 +22,31 @@
   margin-top: 6px;
   font-size: 0.82rem;
   color: var(--text-dim, #728078);
+}
+
+.calendar-toggle {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,.12);
+  background: #f6f8fa;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#calendarContainer {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height 0.3s ease, opacity 0.3s ease;
+}
+
+#calendarContainer.open {
+  max-height: 2000px;
+  opacity: 1;
 }
 
 .time-range-row {
@@ -340,7 +365,16 @@
 }
 </style>
 
+<<<<<<< codex/conduct-full-system-audit-for-coyolabs-h4p2fk
+<div class="calendar-toggle" onclick="toggleCalendar()">
+  <i class="ph ph-calendar-blank"></i>
+  <span>Ver ocupación semanal de laboratorios</span>
+</div>
+<div id="calendarContainer" class="collapsed">
+{% set calendar_title = "Disponibilidad semanal de laboratorios" %}
+=======
 {% set calendar_title = "Disponibilidad semanal de salones" %}
+>>>>>>> main
 {% set calendar_subtitle = "Semana del " ~ week_start.strftime('%d/%m/%Y') ~ " al " ~ week_end.strftime('%d/%m/%Y') %}
 {% set filter_action = url_for('reservations.request_reservation') %}
 {% set clear_url = url_for('reservations.request_reservation') %}
@@ -349,12 +383,16 @@
 {% set include_day_filter = true %}
 {% set interactive_slots = false %}
 {% include "components/reservation_weekly_grid.html" %}
+<<<<<<< codex/conduct-full-system-audit-for-coyolabs-h4p2fk
+</div>
+=======
 
+>>>>>>> main
 
 <section class="toolbar-card" id="reservationFormSection">
   <form method="post" class="toolbar reservation-request-form" style="grid-template-columns: repeat(2, minmax(280px, 1fr));" data-form-mode="create">
     <div class="toolbar-group">
-      <label>Salón/Laboratorio</label>
+      <label>Laboratorio</label>
       <div class="select-wrap">
         <select name="room" required>
           <option value="">-- Selecciona --</option>
@@ -436,7 +474,7 @@
       <label>Fecha de uso</label>
       <div class="search-box">
         <i class="ph ph-calendar search-icon"></i>
-        <input type="date" id="reservationDateInput" name="date" required aria-describedby="reservationDateHelp">
+        <input type="date" id="reservationDateInput" name="date" min="{{ today.isoformat() }}" required aria-describedby="reservationDateHelp">
       </div>
       <small id="reservationDateHelp" class="datetime-helper">Selecciona la fecha en formato local del navegador.</small>
     </div>
@@ -593,6 +631,12 @@ function initSignaturePad() {
     signatureHasStroke = false;
     signatureDataInput.value = "";
   });
+}
+
+function toggleCalendar(){
+  const el = document.getElementById("calendarContainer");
+  if (!el) return;
+  el.classList.toggle("open");
 }
 
 function validateAndSerializeSignature() {

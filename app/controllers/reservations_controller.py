@@ -395,8 +395,7 @@ def request_reservation():
         else default_calendar_building
     )
     available_calendar_rooms = _rooms_by_building(selected_calendar_building)
-    is_operational_calendar = is_admin_role(current_user.role)
-    selected_calendar_room = calendar_room if (is_operational_calendar and calendar_room in available_calendar_rooms) else ""
+    selected_calendar_room = calendar_room if calendar_room in available_calendar_rooms else ""
     week_schedule, calendar_rooms = build_week_schedule(
         week_days=week_days,
         selected_room=selected_calendar_room or None,
@@ -517,7 +516,7 @@ def request_reservation():
 
         today = datetime.today().date()
         if date_ < today:
-            flash("No puedes crear reservaciones en fechas pasadas.", "error")
+            flash("No puedes reservar en fechas pasadas.", "error")
             return redirect(url_for("reservations.request_reservation"))
 
         allowed_start_time = parse_time("08:00")
@@ -609,6 +608,8 @@ def request_reservation():
     selected_calendar_room=selected_calendar_room,
     selected_calendar_day=selected_calendar_day,
     daily_schedule=daily_schedule,
+    today=datetime.today().date(),
+    calendar_now=datetime.now(),
     prev_week=prev_week,
     next_week=next_week,
     is_professor=is_professor,
@@ -669,6 +670,7 @@ def admin_queue():
         calendar_filter_rooms=available_calendar_rooms,
         selected_calendar_building=selected_calendar_building,
         selected_calendar_room=selected_calendar_room,
+        calendar_now=datetime.now(),
         active_page="reservations"
     )
 
