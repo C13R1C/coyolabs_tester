@@ -691,8 +691,7 @@ def admin_queue():
         .order_by(Reservation.created_at.asc())
         .all()
     )
-    return render_template(
-        "reservations/admin_queue.html",
+    base_context = dict(
         reservations=pending,
         week_days=week_days,
         week_start=week_start,
@@ -707,6 +706,14 @@ def admin_queue():
         selected_calendar_room=selected_calendar_room,
         calendar_now=datetime.now(),
         active_page="reservations"
+    )
+
+    if request.args.get("calendar_partial") == "1" or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return render_template("reservations/_admin_weekly_calendar_content.html", **base_context)
+
+    return render_template(
+        "reservations/admin_queue.html",
+        **base_context,
     )
 
 
