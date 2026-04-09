@@ -1102,11 +1102,31 @@ textarea.form-control{
 }
 
 .sidebar.collapsed .nav-item{
+  display: flex;
   justify-content: center;
+  align-items: center;
   padding: 14px 10px;
+  margin: 12px 0;
 }
 
 .sidebar.collapsed .nav-submenu-static{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 0;
+}
+
+.sidebar.collapsed .nav-subitem{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 12px 0;
+  margin-left: 0;
+  padding: 10px;
+  border-radius: 12px;
+}
+
+.sidebar.collapsed .nav-subitem span{
   display: none;
 }
 
