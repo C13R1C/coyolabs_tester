@@ -41,6 +41,36 @@
 .time-slot.occupied{background:rgba(211,47,47,.23);color:#b71c1c}
 .time-slot.pending{background:rgba(251,192,45,.3);color:#8d6e00}
 .time-slot.in_progress{background:rgba(96,125,139,.26);color:#37474f}
+.time-slot[data-slot-tooltip]{position:relative}
+.time-slot[data-slot-tooltip]:hover::after{
+  content:attr(data-slot-tooltip);
+  position:absolute;
+  left:50%;
+  bottom:calc(100% + 8px);
+  transform:translateX(-50%);
+  width:min(240px,85vw);
+  white-space:pre-line;
+  text-align:left;
+  background:#263238;
+  color:#fff;
+  font-size:.72rem;
+  line-height:1.35;
+  padding:8px 10px;
+  border-radius:10px;
+  box-shadow:0 10px 26px rgba(0,0,0,.28);
+  z-index:35;
+  pointer-events:none;
+}
+.time-slot[data-slot-tooltip]:hover::before{
+  content:'';
+  position:absolute;
+  left:50%;
+  bottom:calc(100% + 2px);
+  transform:translateX(-50%);
+  border:6px solid transparent;
+  border-top-color:#263238;
+  z-index:34;
+}
 .time-slot:hover{transform:translateY(-1px) scale(1.02);box-shadow:0 6px 14px rgba(0,0,0,.12)}
 .time-slot.slot-clickable{cursor:pointer}
 .res-slot-btn{background:none;border:none;padding:0;font:inherit}
@@ -158,15 +188,18 @@
           {% endif %}
 
           {% set slot_classes = 'time-slot ' ~ slot.state ~ (' is-past' if is_past_slot else '') %}
+          {% set has_tooltip = slot_info.has_reservation and slot.state not in ['available', 'past'] %}
+          {% set tooltip_text = 'Solicitante: ' ~ slot_info.requester ~ '\nGrupo: ' ~ slot_info.group ~ '\nMateria: ' ~ slot_info.subject ~ '\nEstado: ' ~ slot_info.status %}
           {% if interactive_slots and slot_info.has_reservation and slot.state not in ['available', 'past'] and not is_past_slot %}
             <button
               type="button"
               class="res-slot-btn {{ slot_classes }} slot-clickable"
+              {% if has_tooltip %}data-requester="{{ slot_info.requester|e }}" data-group="{{ slot_info.group|e }}" data-subject="{{ slot_info.subject|e }}" data-status="{{ slot_info.status|e }}" data-slot-tooltip="{{ tooltip_text|e }}" title="{{ tooltip_text|e }}"{% endif %}
               onclick="openReservationSlotModal({ requester: {{ slot_info.requester|tojson }}, group: {{ slot_info.group|tojson }}, subject: {{ slot_info.subject|tojson }}, status: {{ slot_info.status|tojson }} })">
               {{ slot.start_label or slot.start }} - {{ slot.end_label or slot.end }}
             </button>
           {% else %}
-            <div class="{{ slot_classes }}">{{ slot.start_label or slot.start }} - {{ slot.end_label or slot.end }}</div>
+            <div class="{{ slot_classes }}" {% if has_tooltip %}data-requester="{{ slot_info.requester|e }}" data-group="{{ slot_info.group|e }}" data-subject="{{ slot_info.subject|e }}" data-status="{{ slot_info.status|e }}" data-slot-tooltip="{{ tooltip_text|e }}" title="{{ tooltip_text|e }}"{% endif %}>{{ slot.start_label or slot.start }} - {{ slot.end_label or slot.end }}</div>
           {% endif %}
         {% endfor %}
       </div>

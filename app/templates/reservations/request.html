@@ -25,16 +25,52 @@
 }
 
 .calendar-toggle {
-  margin-top: 14px;
-  padding: 12px 14px;
-  border-radius: 12px;
-  border: 1px solid rgba(0,0,0,.12);
-  background: #f6f8fa;
+  margin: 20px 0 24px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(55, 71, 79, 0.28);
+  background: linear-gradient(135deg, rgba(55, 71, 79, 0.12), rgba(96, 125, 139, 0.16));
+  color: #263238;
   font-weight: 700;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: 0 10px 22px rgba(55, 71, 79, 0.15);
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+
+.calendar-toggle:hover {
+  transform: translateY(-1px);
+  border-color: rgba(55, 71, 79, 0.4);
+  box-shadow: 0 14px 30px rgba(55, 71, 79, 0.2);
+}
+
+.calendar-toggle-main {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+}
+
+.calendar-toggle-main i {
+  font-size: 1.1rem;
+}
+
+.calendar-toggle-caret {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(55, 71, 79, 0.12);
+  transition: transform .2s ease, background .2s ease;
+}
+
+.calendar-toggle[aria-expanded="true"] .calendar-toggle-caret {
+  transform: rotate(180deg);
+  background: rgba(55, 71, 79, 0.2);
 }
 
 #calendarContainer {
@@ -92,9 +128,12 @@
 }
 </style>
 
-<div class="calendar-toggle" onclick="toggleCalendar()">
-  <i class="ph ph-calendar-blank"></i>
-  <span>Ver ocupación semanal de laboratorios</span>
+<div class="calendar-toggle" onclick="toggleCalendar()" role="button" tabindex="0" aria-expanded="false" aria-controls="calendarContainer">
+  <span class="calendar-toggle-main">
+    <i class="ph ph-calendar-blank"></i>
+    <span>Ver ocupación semanal de laboratorios</span>
+  </span>
+  <span class="calendar-toggle-caret" aria-hidden="true"><i class="ph ph-caret-down"></i></span>
 </div>
 <div id="calendarContainer" class="collapsed">
   <div id="calendarContent">
@@ -348,12 +387,16 @@ function initSignaturePad() {
 
 function toggleCalendar(){
   const el = document.getElementById("calendarContainer");
+  const toggle = document.querySelector(".calendar-toggle");
   if (!el) return;
   const shouldOpen = !el.classList.contains("open");
   if (shouldOpen) {
     el.style.setProperty("--calendar-max-height", `${el.scrollHeight + 120}px`);
   }
   el.classList.toggle("open", shouldOpen);
+  if (toggle) {
+    toggle.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
+  }
 }
 
 function bindCalendarAsyncFilters() {
@@ -364,6 +407,8 @@ function bindCalendarAsyncFilters() {
 
   const buildingSelect = form.querySelector("#buildingSelect");
   const roomSelect = form.querySelector("#roomSelect");
+  const clearBtn = form.querySelector('a.btn.btn-ghost:last-of-type');
+  const container = document.getElementById("calendarContainer");
 
   const syncRoomOptionsByBuilding = () => {
     if (!buildingSelect || !roomSelect) return;
@@ -383,6 +428,39 @@ function bindCalendarAsyncFilters() {
 
   buildingSelect?.addEventListener("change", syncRoomOptionsByBuilding);
   syncRoomOptionsByBuilding();
+
+  const refreshCalendar = async (params) => {
+    const query = new URLSearchParams(params);
+    query.set("calendar_partial", "1");
+    const url = `${form.action}?${query.toString()}`;
+    const resp = await fetch(url, { headers: { "X-Requested-With": "XMLHttpRequest" } });
+    if (!resp.ok) return;
+    const html = await resp.text();
+    content.innerHTML = html;
+    bindCalendarAsyncFilters();
+    if (container) {
+      container.classList.add("open");
+      container.style.setProperty("--calendar-max-height", `${container.scrollHeight + 120}px`);
+    }
+  };
+
+  form.addEventListener("submit", (evt) => {
+    evt.preventDefault();
+    const params = new URLSearchParams(new FormData(form));
+    refreshCalendar(params);
+  });
+
+  clearBtn?.addEventListener("click", (evt) => {
+    evt.preventDefault();
+    refreshCalendar(new URLSearchParams());
+  });
+
+  [buildingSelect, roomSelect, form.querySelector('input[name="calendar_day"]')].forEach((field) => {
+    field?.addEventListener("change", () => {
+      const params = new URLSearchParams(new FormData(form));
+      refreshCalendar(params);
+    });
+  });
 }
 
 function validateAndSerializeSignature() {
@@ -641,6 +719,11 @@ if (reservationDateInput) {
 
 initSignaturePad();
 bindCalendarAsyncFilters();
+document.querySelector(".calendar-toggle")?.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter" && event.key !== " ") return;
+  event.preventDefault();
+  toggleCalendar();
+});
 
 reservationForm?.addEventListener("submit", (event) => {
   if (!validateAndSerializeSignature()) {
