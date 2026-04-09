@@ -1,7 +1,7 @@
 from datetime import datetime
 import json
 
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 from flask_login import current_user
 from sqlalchemy import func
 from sqlalchemy.orm import joinedload
@@ -159,6 +159,10 @@ def _build_debt_created_notification(debt: Debt) -> Notification:
 @inventory_requests_bp.route("/", methods=["GET"], endpoint="my_daily_request")
 @min_role_required("STUDENT")
 def my_daily_request():
+    clear_cart_on_load = request.args.get("saved") == "1"
+    if clear_cart_on_load:
+        session.pop("daily_request_reason_draft", None)
+
     active_ticket = (
         InventoryRequestTicket.query
         .options(joinedload(InventoryRequestTicket.items).joinedload(InventoryRequestItem.material))
@@ -198,7 +202,8 @@ def my_daily_request():
         history=history,
         materials=materials,
         materials_json=materials_json,
-        clear_cart_on_load=request.args.get("saved") == "1",
+        reason_draft=session.pop("daily_request_reason_draft", "") if not clear_cart_on_load else "",
+        clear_cart_on_load=clear_cart_on_load,
         active_page="inventory_requests",
     )
 
@@ -209,6 +214,7 @@ def add_to_daily_request():
     material_ids = request.form.getlist("material_id[]")
     quantities = request.form.getlist("quantity[]")
     request_reason = (request.form.get("request_reason") or "").strip()
+    session["daily_request_reason_draft"] = request_reason
 
     if not request_reason:
         flash("Debes indicar la materia o motivo de la solicitud.", "error")
@@ -285,6 +291,7 @@ def add_to_daily_request():
     for notif in admin_notifications:
         publish_notification_created(notif)
 
+    session.pop("daily_request_reason_draft", None)
     flash(f"Solicitud de material creada (#{ticket.id}).", "success")
 
     return redirect(url_for("inventory_requests.my_daily_request", saved="1"))

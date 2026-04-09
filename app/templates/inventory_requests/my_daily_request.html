@@ -199,7 +199,7 @@
 
     <div class="toolbar-group" style="margin:10px 0 12px;">
       <label for="request_reason">Materia o motivo de la solicitud *</label>
-      <textarea id="request_reason" name="request_reason" class="form-control" rows="3" required placeholder="Ejemplo: Práctica de laboratorio de química orgánica"></textarea>
+      <textarea id="request_reason" name="request_reason" class="form-control" rows="3" required placeholder="Ejemplo: Práctica de laboratorio de química orgánica">{{ reason_draft }}</textarea>
     </div>
 
     <div class="cart-summary">
@@ -296,6 +296,7 @@ const cartHiddenInputs = document.getElementById("cartHiddenInputs");
 const cartTotal = document.getElementById("cartTotal");
 const cartKinds = document.getElementById("cartKinds");
 const clearCartBtn = document.getElementById("clearCartBtn");
+const requestReason = document.getElementById("request_reason");
 
 function persistCart() {
   localStorage.setItem("daily_request_cart", JSON.stringify(cart));
@@ -492,6 +493,7 @@ function showToast(msg) {
 
 if (clearCartOnLoad) {
   localStorage.removeItem("daily_request_cart");
+  requestReason.value = "";
 }
 cart = JSON.parse(localStorage.getItem("daily_request_cart") || "{}");
 renderCart();
