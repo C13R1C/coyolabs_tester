@@ -79,6 +79,58 @@ def _apply_stock_delivery_for_request(ticket: InventoryRequestTicket) -> tuple[b
     return True, None
 
 
+def _process_close_after_return(ticket: InventoryRequestTicket, cancel_reason: str) -> None:
+    has_missing = False
+    for item in (ticket.items or []):
+        delivered = max(0, item.quantity_delivered or 0)
+        returned = max(0, item.quantity_returned or 0)
+
+        material = item.material
+        if material and material.pieces_qty is not None and returned > 0:
+            material.pieces_qty += returned
+
+        missing = max(0, delivered - returned)
+        if missing <= 0:
+            continue
+        has_missing = True
+        material_name = item.material.name if item.material else f"Material ID {item.material_id}"
+        existing_debt = (
+            Debt.query
+            .filter(
+                Debt.user_id == ticket.user_id,
+                Debt.material_id == item.material_id,
+                Debt.status == DebtStatus.PENDING,
+                Debt.reason.ilike(f"%Solicitud #{ticket.id}%"),
+            )
+            .first()
+        )
+        if existing_debt:
+            continue
+        debt = Debt(
+            user_id=ticket.user_id,
+            material_id=item.material_id,
+            status=DebtStatus.PENDING,
+            reason=f"Faltante en devolución (Solicitud #{ticket.id}) - {material_name}",
+            amount=missing,
+        )
+        db.session.add(debt)
+
+    ticket.status = STATUS_CLOSED
+    ticket.closed_at = datetime.now()
+    previous_notes = (ticket.notes or "").strip()
+    status_note = DEBT_CLOSED_MARKER if has_missing else "[CERRADO]"
+    close_note = f"[Cierre admin] {cancel_reason}"
+    ticket.notes = f"{previous_notes}\n{status_note}\n{close_note}".strip() if previous_notes else f"{status_note}\n{close_note}"
+    log_event(
+        module="INVENTORY_REQUESTS",
+        action="INVENTORY_DAILY_REQUEST_CLOSED",
+        user_id=current_user.id,
+        entity_label=f"InventoryRequestTicket #{ticket.id}",
+        description=f"Solicitud de material #{ticket.id} cerrada",
+        metadata={"ticket_id": ticket.id, "target_user_id": ticket.user_id},
+    )
+
+
 @inventory_requests_bp.route("/", methods=["GET"])
 @min_role_required("STUDENT")
 def my_daily_request():
@@ -366,8 +418,14 @@ def admin_register_return(ticket_id: int):
     if marker not in previous_notes:
         ticket.notes = f"{previous_notes}\n{marker}".strip() if previous_notes else marker
 
+    cancel_reason = (request.form.get("cancel_reason") or "").strip()
+    if not cancel_reason:
+        flash("Debes capturar el motivo para cerrar/cancelar la solicitud.", "error")
+        return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
+
+    _process_close_after_return(ticket=ticket, cancel_reason=cancel_reason)
     db.session.commit()
-    flash("Devolución registrada.", "success")
+    flash("Devolución guardada y solicitud cerrada.", "success")
     return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
 
 
@@ -398,55 +456,7 @@ def admin_close_ticket(ticket_id: int):
         flash("Debes capturar el motivo para cerrar/cancelar la solicitud.", "error")
         return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
 
-    has_missing = False
-    for item in (ticket.items or []):
-        delivered = max(0, item.quantity_delivered or 0)
-        returned = max(0, item.quantity_returned or 0)
-
-        material = item.material
-        if material and material.pieces_qty is not None and returned > 0:
-            material.pieces_qty += returned
-
-        missing = max(0, delivered - returned)
-        if missing <= 0:
-            continue
-        has_missing = True
-        material_name = item.material.name if item.material else f"Material ID {item.material_id}"
-        existing_debt = (
-            Debt.query
-            .filter(
-                Debt.user_id == ticket.user_id,
-                Debt.material_id == item.material_id,
-                Debt.status == DebtStatus.PENDING,
-                Debt.reason.ilike(f"%Solicitud #{ticket.id}%"),
-            )
-            .first()
-        )
-        if existing_debt:
-            continue
-        debt = Debt(
-            user_id=ticket.user_id,
-            material_id=item.material_id,
-            status=DebtStatus.PENDING,
-            reason=f"Faltante en devolución (Solicitud #{ticket.id}) - {material_name}",
-            amount=missing,
-        )
-        db.session.add(debt)
-
-    ticket.status = STATUS_CLOSED
-    ticket.closed_at = datetime.now()
-    previous_notes = (ticket.notes or "").strip()
-    status_note = DEBT_CLOSED_MARKER if has_missing else "[CERRADO]"
-    close_note = f"[Cierre admin] {cancel_reason}"
-    ticket.notes = f"{previous_notes}\n{status_note}\n{close_note}".strip() if previous_notes else f"{status_note}\n{close_note}"
-    log_event(
-        module="INVENTORY_REQUESTS",
-        action="INVENTORY_DAILY_REQUEST_CLOSED",
-        user_id=current_user.id,
-        entity_label=f"InventoryRequestTicket #{ticket.id}",
-        description=f"Solicitud de material #{ticket.id} cerrada",
-        metadata={"ticket_id": ticket.id, "target_user_id": ticket.user_id},
-    )
+    _process_close_after_return(ticket=ticket, cancel_reason=cancel_reason)
 
     db.session.commit()
 
