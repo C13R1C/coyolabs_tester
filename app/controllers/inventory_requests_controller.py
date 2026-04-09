@@ -445,6 +445,17 @@ def admin_register_return(ticket_id: int):
 
     created_debts = _process_close_after_return(ticket=ticket, cancel_reason=cancel_reason)
     db.session.commit()
+    flash("Devolución guardada y solicitud cerrada.", "success")
+    return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
+
+
+@inventory_requests_bp.route("/admin/<int:ticket_id>/close", methods=["POST"])
+@min_role_required("ADMIN")
+def admin_close_ticket(ticket_id: int):
+    ticket = InventoryRequestTicket.query.get(ticket_id)
+    if not ticket:
+        flash("Solicitud no encontrada.", "error")
+        return redirect(url_for("inventory_requests.admin_daily_requests"))
 
     debt_notifications: list[Notification] = []
     if created_debts:
