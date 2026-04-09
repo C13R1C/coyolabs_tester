@@ -71,280 +71,6 @@
   color: var(--text-dim, #728078);
 }
 
-.res-occupancy-card {
-  margin-top: 16px;
-}
-
-.res-occupancy-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
-  flex-wrap: wrap;
-  margin-bottom: 14px;
-}
-
-.res-occupancy-title h2 {
-  margin: 0;
-}
-
-.res-occupancy-controls {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-bottom: 10px;
-}
-
-.res-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.res-legend-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 9px;
-  border-radius: 999px;
-  font-size: .76rem;
-  border: 1px solid rgba(0,0,0,.08);
-  background: #fff;
-}
-
-.res-legend-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-  display: inline-block;
-}
-
-.res-dot-available { background: #5aa56f; }
-.res-dot-occupied { background: #cf4d4d; }
-.res-dot-pending { background: #d4a63d; }
-.res-dot-progress { background: #4c8fd9; }
-
-.res-occupancy-table {
-  min-width: 1160px;
-  border-collapse: separate;
-  border-spacing: 0 8px;
-}
-
-.daily-room-grid{
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 8px;
-}
-
-.daily-room-card{
-  border: 1px solid rgba(0,0,0,0.08);
-  border-radius: 12px;
-  padding: 8px;
-  background: rgba(255,255,255,0.55);
-}
-
-@media (max-width: 1280px){
-  .daily-room-grid{ grid-template-columns: repeat(3, 1fr); }
-}
-
-@media (max-width: 768px){
-  .daily-room-grid{ grid-template-columns: 1fr; }
-}
-
-.res-room-label {
-  font-weight: 700;
-  white-space: nowrap;
-  font-size: .9rem;
-}
-
-.res-cell {
-  vertical-align: top;
-  min-width: 168px;
-}
-
-.res-cell-shell {
-  border: 1px solid var(--stroke);
-  border-radius: 14px;
-  background: linear-gradient(180deg, rgba(255,255,255,.9), rgba(255,255,255,.65));
-  padding: 6px;
-  min-height: 86px;
-  transition: transform .15s ease, box-shadow .15s ease;
-}
-
-.res-cell-shell:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(0,0,0,.08);
-}
-
-.res-cell-shell.is-available {
-  border-style: dashed;
-  border-color: rgba(90,165,111,.35);
-  background: rgba(90,165,111,.08);
-}
-
-.res-cell-shell.is-occupied {
-  border-color: rgba(207,77,77,.35);
-  background: rgba(207,77,77,.08);
-}
-
-.res-cell-shell.is-pending {
-  border-color: rgba(212,166,61,.35);
-  background: rgba(212,166,61,.1);
-}
-
-.res-cell-shell.is-progress {
-  border-color: rgba(76,143,217,.38);
-  background: rgba(76,143,217,.1);
-}
-
-.res-empty {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  opacity: .8;
-  font-weight: 600;
-  font-size: .88rem;
-}
-
-.res-booking-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.res-booking-item {
-  border-radius: 10px;
-  background: rgba(255,255,255,.75);
-  border: 1px solid rgba(0,0,0,.08);
-  padding: 8px;
-}
-
-.res-booking-item-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 4px;
-}
-
-.res-booking-hour {
-  font-weight: 700;
-  font-size: .85rem;
-}
-
-.res-chip {
-  padding: 3px 8px;
-  border-radius: 999px;
-  font-size: .72rem;
-  font-weight: 700;
-  border: 1px solid transparent;
-}
-
-.res-chip-occupied {
-  color: #8f2f2f;
-  border-color: rgba(207,77,77,.4);
-  background: rgba(207,77,77,.15);
-}
-
-.res-chip-pending {
-  color: #7e651f;
-  border-color: rgba(212,166,61,.45);
-  background: rgba(212,166,61,.16);
-}
-
-.res-chip-progress {
-  color: #255f9e;
-  border-color: rgba(76,143,217,.45);
-  background: rgba(76,143,217,.14);
-}
-
-.res-booking-subject {
-  font-size: .86rem;
-  font-weight: 600;
-  line-height: 1.2;
-}
-
-.res-booking-meta {
-  margin-top: 2px;
-  font-size: .76rem;
-  opacity: .82;
-}
-
-
-.time-slot {
-  font-size: 10px;
-  padding: 3px 4px;
-  border-radius: 6px;
-  margin-bottom: 3px;
-  text-align: center;
-  transition: 0.2s;
-  border: 1px solid transparent;
-  line-height: 1.25;
-}
-
-.time-slot.available {
-  background: rgba(76, 175, 80, 0.15);
-  color: #4CAF50;
-}
-
-.time-slot.occupied {
-  background: rgba(207, 77, 77, 0.18);
-  color: #8f2f2f;
-}
-
-.time-slot.pending {
-  background: rgba(255, 193, 7, 0.2);
-  color: #B8860B;
-}
-
-.time-slot.in_progress {
-  background: rgba(33, 150, 243, 0.2);
-  color: #2196F3;
-}
-
-.time-slot:hover {
-  transform: scale(1.03);
-}
-
-.time-slot.has-tooltip {
-  position: relative;
-  cursor: help;
-}
-
-.time-slot.has-tooltip:hover,
-.time-slot.has-tooltip:focus {
-  transform: translateY(-1px) scale(1.03);
-  box-shadow: 0 8px 18px rgba(0,0,0,.18);
-}
-
-.time-slot.has-tooltip::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  left: 50%;
-  bottom: calc(100% + 8px);
-  transform: translateX(-50%);
-  min-width: 220px;
-  max-width: 280px;
-  background: rgba(18, 23, 34, .96);
-  color: #fff;
-  border-radius: 10px;
-  padding: 8px 10px;
-  font-size: .74rem;
-  line-height: 1.35;
-  white-space: pre-line;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity .16s ease;
-  z-index: 40;
-}
-
-.time-slot.has-tooltip:hover::after,
-.time-slot.has-tooltip:focus::after {
-  opacity: 1;
-}
-
 @media (max-width: 900px) {
   .reservation-request-form {
     grid-template-columns: 1fr !important;
@@ -371,19 +97,9 @@
   <span>Ver ocupación semanal de laboratorios</span>
 </div>
 <div id="calendarContainer" class="collapsed">
-{% set calendar_title = "Disponibilidad semanal de laboratorios" %}
   <div id="calendarContent">
     {% include "reservations/_weekly_calendar_content.html" %}
   </div>
-</div>
-{% set calendar_subtitle = "Semana del " ~ week_start.strftime('%d/%m/%Y') ~ " al " ~ week_end.strftime('%d/%m/%Y') %}
-{% set filter_action = url_for('reservations.request_reservation') %}
-{% set clear_url = url_for('reservations.request_reservation') %}
-{% set prev_url = url_for('reservations.request_reservation', week_start=prev_week.isoformat(), calendar_building=selected_calendar_building, calendar_room=selected_calendar_room, calendar_day=selected_calendar_day.isoformat()) %}
-{% set next_url = url_for('reservations.request_reservation', week_start=next_week.isoformat(), calendar_building=selected_calendar_building, calendar_room=selected_calendar_room, calendar_day=selected_calendar_day.isoformat()) %}
-{% set include_day_filter = true %}
-{% set interactive_slots = false %}
-{% include "components/reservation_weekly_grid.html" %}
 </div>
 
 <section class="toolbar-card" id="reservationFormSection">
@@ -646,6 +362,26 @@ function bindCalendarAsyncFilters() {
   const form = content.querySelector("form.reservation-calendar-filter");
   if (!form) return;
   const clearBtn = form.querySelector('a.btn.btn-ghost:last-of-type');
+  const buildingSelect = form.querySelector("#buildingSelect");
+  const roomSelect = form.querySelector("#roomSelect");
+
+  const syncRoomOptionsByBuilding = () => {
+    if (!buildingSelect || !roomSelect) return;
+    const building = (buildingSelect.value || "").trim().toUpperCase();
+    Array.from(roomSelect.options).forEach((opt) => {
+      if (!opt.value) {
+        opt.style.display = "block";
+        return;
+      }
+      const visible = !building || opt.value.toUpperCase().startsWith(building);
+      opt.style.display = visible ? "block" : "none";
+      if (!visible && opt.selected) {
+        roomSelect.value = "";
+      }
+    });
+  };
+  buildingSelect?.addEventListener("change", syncRoomOptionsByBuilding);
+  syncRoomOptionsByBuilding();
 
   const refreshCalendar = async (params) => {
     const container = document.getElementById("calendarContainer");
@@ -655,7 +391,6 @@ function bindCalendarAsyncFilters() {
     const html = await resp.text();
     content.innerHTML = html;
     bindCalendarAsyncFilters();
-    rebindCalendarEvents();
     if (container?.classList.contains("open")) {
       container.style.setProperty("--calendar-max-height", `${container.scrollHeight + 120}px`);
     }
