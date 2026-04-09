@@ -36,15 +36,10 @@
 
 <section class="toolbar-card">
   <div class="inventory-admin-detail-actions" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-    <span class="status-badge {% if ticket.status == 'OPEN' %}status-warn{% elif ticket.status == 'READY' %}status-ok{% else %}status-bad{% endif %}">{{ ticket.status|status_label }}</span>
+    {% set closed_with_debt = ticket.status == 'CLOSED' and ticket.notes and '[CERRADO_CON_ADEUDO]' in ticket.notes %}
+    <span class="status-badge {% if ticket.status == 'OPEN' %}status-warn{% elif ticket.status == 'READY' %}status-ok{% elif closed_with_debt %}status-bad{% else %}status-neutral{% endif %}">{{ 'Cerrado con adeudo' if closed_with_debt else ticket.status|status_label }}</span>
 
-    {% if ticket.status != 'READY' and ticket.status != 'CLOSED' %}
-    <form method="post" action="{{ url_for('inventory_requests.admin_mark_ready', ticket_id=ticket.id) }}">
-      <button type="submit" class="btn btn-gold">Entregar material y marcar listo para recoger</button>
-    </form>
-    {% endif %}
-
-    {% if ticket.status != 'CLOSED' %}
+    {% if ticket.status == 'READY' %}
     <form method="post" action="{{ url_for('inventory_requests.admin_close_ticket', ticket_id=ticket.id) }}" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
       <textarea
         name="cancel_reason"
@@ -62,12 +57,20 @@
 
 <section class="table-card" style="margin-top:16px;">
   <p><strong>Materia o motivo:</strong> {{ ticket.notes or '-' }}</p>
+  {% if ticket.status != 'READY' and ticket.status != 'CLOSED' %}
+  <form method="post" action="{{ url_for('inventory_requests.admin_mark_ready', ticket_id=ticket.id) }}">
+  {% elif ticket.status == 'READY' %}
+  <form method="post" action="{{ url_for('inventory_requests.admin_register_return', ticket_id=ticket.id) }}">
+  {% endif %}
   <div class="table-wrap">
     <table class="inventory-table" style="min-width:750px;">
       <thead>
         <tr>
           <th>Material</th>
           <th>Cantidad solicitada</th>
+          <th>Cantidad entregada</th>
+          <th>Cantidad devuelta</th>
+          <th>Faltante</th>
         </tr>
       </thead>
       <tbody>
@@ -75,10 +78,37 @@
         <tr>
           <td>{{ item.material.name if item.material else ('ID ' ~ item.material_id) }}</td>
           <td>{{ item.quantity_requested }}</td>
+          <td>
+            {% if ticket.status != 'READY' and ticket.status != 'CLOSED' %}
+            <input type="number" min="0" max="{{ item.quantity_requested }}" name="delivered_{{ item.id }}" value="{{ item.quantity_delivered if item.quantity_delivered is not none and item.quantity_delivered > 0 else item.quantity_requested }}" class="form-control" style="max-width:120px;">
+            {% else %}
+            {{ item.quantity_delivered }}
+            {% endif %}
+          </td>
+          <td>
+            {% if ticket.status == 'READY' %}
+            <input type="number" min="0" max="{{ item.quantity_delivered }}" name="returned_{{ item.id }}" value="{{ item.quantity_returned }}" class="form-control" style="max-width:120px;">
+            {% else %}
+            {{ item.quantity_returned }}
+            {% endif %}
+          </td>
+          <td>{{ [0, (item.quantity_delivered or 0) - (item.quantity_returned or 0)]|max }}</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
+  {% if ticket.status != 'READY' and ticket.status != 'CLOSED' %}
+  <div class="toolbar-actions" style="margin-top:10px;">
+    <button type="submit" class="btn btn-gold">Entregar material y marcar listo para recoger</button>
+  </div>
+  {% elif ticket.status == 'READY' %}
+  <div class="toolbar-actions" style="margin-top:10px;">
+    <button type="submit" class="btn btn-gold">Guardar devolución</button>
+  </div>
+  {% endif %}
+  {% if ticket.status != 'CLOSED' %}
+  </form>
+  {% endif %}
 </section>
 {% endblock %}
