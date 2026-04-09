@@ -1105,14 +1105,14 @@ textarea.form-control{
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 14px 10px;
-  margin: 12px 0;
+  padding: 10px 8px;
+  margin: 2px 0;
 }
 
 .sidebar.collapsed .nav-submenu-static{
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 2px;
   margin-top: 0;
 }
 
@@ -1120,13 +1120,27 @@ textarea.form-control{
   display: flex;
   justify-content: center;
   align-items: center;
-  margin: 12px 0;
+  margin: 0;
   margin-left: 0;
-  padding: 10px;
+  padding: 9px 8px;
   border-radius: 12px;
 }
 
 .sidebar.collapsed .nav-subitem span{
+  display: none;
+}
+
+.sidebar.collapsed .sidebar-logout{
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  margin: 6px auto 0;
+  padding: 0;
+  justify-content: center;
+  gap: 0;
+}
+
+.sidebar.collapsed .sidebar-logout span{
   display: none;
 }
 
