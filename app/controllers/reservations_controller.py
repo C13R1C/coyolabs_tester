@@ -47,6 +47,7 @@ from app.utils.statuses import (
 )
 from app.utils.validators import normalize_and_validate_group_code
 from app.constants import ROOMS
+from app.utils.text import lab_room_code_variants, normalize_lab_room_code
 
 reservations_bp = Blueprint("reservations", __name__, url_prefix="/reservations")
 logger = logging.getLogger(__name__)
@@ -158,9 +159,10 @@ def overlaps(room: str, date_, start_t, end_t) -> bool:
     True si hay solapamiento con una reserva aprobada en el mismo salón/fecha.
     Condición de solapamiento: start < existing_end AND end > existing_start
     """
+    room_variants = lab_room_code_variants(room)
     q = (
         Reservation.query
-        .filter(Reservation.room == room)
+        .filter(Reservation.room.in_(room_variants) if room_variants else Reservation.room == room)
         .filter(Reservation.date == date_)
         .filter(Reservation.status == ReservationStatus.APPROVED)
         .filter(Reservation.start_time < end_t)
@@ -192,7 +194,7 @@ def _build_time_slots() -> list[tuple[str, str, object, object]]:
 
 
 def _room_building(room: str | None) -> str:
-    value = (room or "").strip().upper()
+    value = normalize_lab_room_code(room)
     return value[:1] if value else ""
 
 
@@ -228,12 +230,16 @@ def build_week_schedule(week_days, selected_room=None, rooms_scope: list[str] | 
 
     scoped_rooms = list(rooms_scope or ROOMS)
     if selected_room:
-        q = q.filter(Reservation.room == selected_room)
+        room_variants = lab_room_code_variants(selected_room)
+        q = q.filter(Reservation.room.in_(room_variants) if room_variants else Reservation.room == selected_room)
         room_list = [selected_room]
     else:
         room_list = scoped_rooms
         if room_list:
-            q = q.filter(Reservation.room.in_(room_list))
+            room_filter_values = {room for room in room_list}
+            for room_value in room_list:
+                room_filter_values.update(lab_room_code_variants(room_value))
+            q = q.filter(Reservation.room.in_(sorted(room_filter_values)))
 
     reservations = q.order_by(
         Reservation.room.asc(),
@@ -252,8 +258,9 @@ def build_week_schedule(week_days, selected_room=None, rooms_scope: list[str] | 
     }
 
     for r in reservations:
-        if r.room in schedule and r.date in schedule[r.room]:
-            schedule[r.room][r.date]["items"].append(r)
+        normalized_room = normalize_lab_room_code(r.room)
+        if normalized_room in schedule and r.date in schedule[normalized_room]:
+            schedule[normalized_room][r.date]["items"].append(r)
 
     now = datetime.now()
     today = now.date()
@@ -381,27 +388,24 @@ def request_reservation():
 
     calendar_buildings = sorted({room[:1] for room in ROOMS})
     calendar_rooms_by_building = {building: _rooms_by_building(building) for building in calendar_buildings}
-    default_calendar_building = "B" if "B" in calendar_buildings else ""
-    selected_calendar_building = (
-        calendar_building
-        if calendar_building in calendar_buildings
-        else default_calendar_building
-    )
+    selected_calendar_building = calendar_building if calendar_building in calendar_buildings else ""
     available_calendar_rooms = _rooms_by_building(selected_calendar_building)
-    is_operational_calendar = is_admin_role(current_user.role)
-    selected_calendar_room = calendar_room if (is_operational_calendar and calendar_room in available_calendar_rooms) else ""
+    selected_calendar_room = calendar_room if calendar_room in available_calendar_rooms else ""
     week_schedule, calendar_rooms = build_week_schedule(
         week_days=week_days,
         selected_room=selected_calendar_room or None,
         rooms_scope=available_calendar_rooms,
     )
     calendar_day_s = (request.args.get("calendar_day") or "").strip()
+    day_filter_active = False
     try:
         selected_calendar_day = parse_date(calendar_day_s) if calendar_day_s else base_date
+        day_filter_active = bool(calendar_day_s)
     except ValueError:
         selected_calendar_day = base_date
     if selected_calendar_day not in week_days:
         selected_calendar_day = week_start
+        day_filter_active = False
 
     daily_schedule = []
     for room in calendar_rooms:
@@ -508,6 +512,11 @@ def request_reservation():
             flash("La hora final debe ser mayor a la hora inicial.", "error")
             return redirect(url_for("reservations.request_reservation"))
 
+        today = datetime.today().date()
+        if date_ < today:
+            flash("No puedes reservar en fechas pasadas.", "error")
+            return redirect(url_for("reservations.request_reservation"))
+
         allowed_start_time = parse_time("08:00")
         allowed_end_time = parse_time("21:00")
         if start_t < allowed_start_time or end_t > allowed_end_time:
@@ -582,28 +591,38 @@ def request_reservation():
         flash("Solicitud enviada. Queda pendiente de aprobación.", "success")
         return redirect(url_for("reservations.my_reservations"))
 
+    base_context = dict(
+        calendar_buildings=calendar_buildings,
+        calendar_rooms_by_building=calendar_rooms_by_building,
+        calendar_filter_rooms=available_calendar_rooms,
+        week_days=week_days,
+        week_start=week_start,
+        week_end=week_end,
+        week_schedule=week_schedule,
+        calendar_rooms=calendar_rooms,
+        selected_calendar_building=selected_calendar_building,
+        selected_calendar_room=selected_calendar_room,
+        selected_calendar_day=selected_calendar_day,
+        day_filter_active=day_filter_active,
+        daily_schedule=daily_schedule,
+        today=datetime.today().date(),
+        calendar_now=datetime.now(),
+        prev_week=prev_week,
+        next_week=next_week,
+    )
+
+    if request.args.get("calendar_partial") == "1" or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return render_template("reservations/_weekly_calendar_content.html", **base_context)
+
     return render_template(
         "reservations/request.html",
-    rooms=ROOMS,
-    calendar_buildings=calendar_buildings,
-    calendar_rooms_by_building=calendar_rooms_by_building,
-    calendar_filter_rooms=available_calendar_rooms,
-    week_days=week_days,
-    week_start=week_start,
-    week_end=week_end,
-    week_schedule=week_schedule,
-    calendar_rooms=calendar_rooms,
-    selected_calendar_building=selected_calendar_building,
-    selected_calendar_room=selected_calendar_room,
-    selected_calendar_day=selected_calendar_day,
-    daily_schedule=daily_schedule,
-    prev_week=prev_week,
-    next_week=next_week,
-    is_professor=is_professor,
-    professor_subjects=professor_subjects,
-    professor_groups_by_subject=professor_groups_by_subject,
-    active_page="reservations"
-)
+        rooms=ROOMS,
+        is_professor=is_professor,
+        professor_subjects=professor_subjects,
+        professor_groups_by_subject=professor_groups_by_subject,
+        active_page="reservations",
+        **base_context,
+    )
 
 @reservations_bp.route("/admin", methods=["GET"])
 @min_role_required("ADMIN")
@@ -657,6 +676,7 @@ def admin_queue():
         calendar_filter_rooms=available_calendar_rooms,
         selected_calendar_building=selected_calendar_building,
         selected_calendar_room=selected_calendar_room,
+        calendar_now=datetime.now(),
         active_page="reservations"
     )
 
@@ -792,7 +812,14 @@ def admin_approve(res_id: int):
         admin_user=current_user,
         admin_note=request.form.get("admin_note"),
     )
-    publish_notification_created(approval_notification)
+    try:
+        publish_notification_created(approval_notification)
+    except Exception:
+        logger.warning(
+            "SSE publish failed after reservation approval",
+            exc_info=True,
+            extra={"reservation_id": r.id, "notification_id": approval_notification.id},
+        )
 
     flash("Reserva aprobada.", "success")
     return redirect(url_for("reservations.admin_queue"))
@@ -845,7 +872,14 @@ def admin_reject(res_id: int):
         admin_user=current_user,
         admin_note=request.form.get("admin_note"),
     )
-    publish_notification_created(rejection_notification)
+    try:
+        publish_notification_created(rejection_notification)
+    except Exception:
+        logger.warning(
+            "SSE publish failed after reservation rejection",
+            exc_info=True,
+            extra={"reservation_id": r.id, "notification_id": rejection_notification.id},
+        )
 
     flash("Reserva rechazada.", "success")
     return redirect(url_for("reservations.admin_queue"))

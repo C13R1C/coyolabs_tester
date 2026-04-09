@@ -70,7 +70,7 @@
           <td><span class="status-badge status-warn">{{ row.status|status_label }}</span></td>
           <td>{{ row.summary }}</td>
           <td>{{ row.module }}</td>
-          <td>{{ row.created_at if row.created_at else '-' }}</td>
+          <td>{{ row.created_at.strftime('%Y-%m-%d') if row.created_at else '-' }}</td>
           <td>
             <div class="toolbar-actions" style="justify-content:flex-start; gap:6px;">
               {% if row.link_admin %}

@@ -256,7 +256,14 @@ def new_job():
             return redirect(url_for("print3d.new_job"))
 
         for notif in admin_notifications:
-            publish_notification_created(notif)
+            try:
+                publish_notification_created(notif)
+            except Exception:
+                logger.warning(
+                    "SSE publish failed after print3d request creation",
+                    exc_info=True,
+                    extra={"notification_id": notif.id, "target_user_id": notif.user_id},
+                )
 
         flash(f"Solicitud enviada correctamente. Archivos registrados: {len(created_job_ids)}.", "success")
         return redirect(url_for("print3d.my_jobs"))

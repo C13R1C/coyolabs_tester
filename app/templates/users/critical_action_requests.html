@@ -47,7 +47,7 @@
               {{ req.status|status_label }}
             </span>
           </td>
-          <td>{{ req.created_at }}</td>
+          <td>{{ req.created_at.strftime('%Y-%m-%d') if req.created_at else '-' }}</td>
           <td>
             {% if req.reviewed_at %}
               {{ req.reviewed_at }}<br>
