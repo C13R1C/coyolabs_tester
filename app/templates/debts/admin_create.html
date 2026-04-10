@@ -177,6 +177,35 @@
   box-shadow: none !important;
   border: 1px solid rgba(31, 46, 37, 0.14) !important;
 }
+
+.readonly-wrapper-clean {
+  background: #f1f3f5 !important;
+  border: 1px solid rgba(31, 46, 37, 0.14) !important;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  box-shadow: none !important;
+}
+
+.readonly-wrapper-clean .search-icon {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.readonly-wrapper-clean .readonly-field-clean {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  width: 100%;
+}
+
+.readonly-wrapper-clean .readonly-field-clean:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  border: 0 !important;
+}
 </style>
 
 <div class="debt-create-shell">
@@ -205,7 +234,7 @@
 
       <div class="toolbar-group">
         <label for="studentCareer">Carrera</label>
-        <div class="search-box">
+        <div class="search-box readonly-wrapper-clean">
           <i class="ph ph-graduation-cap search-icon"></i>
           <input type="text" id="studentCareer" class="readonly-field-clean" placeholder="Se autocompleta al seleccionar alumno" readonly>
         </div>
@@ -213,7 +242,7 @@
 
       <div class="toolbar-group">
         <label for="studentMatricula">Matrícula</label>
-        <div class="search-box">
+        <div class="search-box readonly-wrapper-clean">
           <i class="ph ph-identification-card search-icon"></i>
           <input type="text" id="studentMatricula" class="readonly-field-clean" placeholder="Se autocompleta al seleccionar alumno" readonly>
         </div>
