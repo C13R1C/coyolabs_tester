@@ -10,10 +10,10 @@ from app.utils.statuses import (
 
 ROLE_LABELS = {
     "ADMIN": "Administrador",
-    "STAFF": "Administrativo",
+    "STAFF": "Staff",
     "STUDENT": "Estudiante",
     "TEACHER": "Profesor",
-    "SUPERADMIN": "Administrador",
+    "SUPERADMIN": "Superadministrador",
     "PENDING": "Pendiente",
 }
 

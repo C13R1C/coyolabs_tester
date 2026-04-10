@@ -1,0 +1,160 @@
+{% extends "layouts/student_base.html" %}
+{% set crumbs = [("Inicio", url_for('root_home'))] %}
+{% block title %}Panel de consulta{% endblock %}
+
+{% block content %}
+<style>
+  .staff-dashboard-wrap{
+    display:grid;
+    grid-template-columns: 2fr 1fr;
+    gap:16px;
+  }
+  .staff-hero{
+    border:1px solid var(--stroke);
+    border-radius:18px;
+    background: linear-gradient(180deg, var(--panel-2), var(--panel));
+    padding:20px;
+    box-shadow: var(--shadow-md);
+  }
+  .staff-hero-top{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+  .staff-role-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:6px 10px;
+    border:1px solid var(--stroke);
+    border-radius:999px;
+    background: rgba(255,255,255,.55);
+    font-weight:700;
+    color:var(--text-soft);
+  }
+  .staff-kpi-grid{
+    display:grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap:10px;
+    margin-top:14px;
+  }
+  .staff-kpi{
+    border:1px solid var(--stroke);
+    border-radius:14px;
+    background: rgba(255,255,255,.5);
+    padding:12px;
+  }
+  .staff-kpi strong{ font-size:1.2rem; display:block; }
+  .staff-cards{
+    display:grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap:12px;
+    margin-top:16px;
+  }
+  .staff-card{
+    border:1px solid var(--stroke);
+    border-radius:14px;
+    background: rgba(255,255,255,.48);
+    padding:14px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .staff-card i{ font-size:1.2rem; color:var(--gold-dark); }
+  .staff-note{
+    margin-top:16px;
+    border:1px dashed var(--stroke-strong);
+    border-radius:12px;
+    padding:12px;
+    color:var(--text-soft);
+    background: rgba(255,255,255,.42);
+  }
+  @media (max-width: 980px){
+    .staff-dashboard-wrap{ grid-template-columns: 1fr; }
+    .staff-cards{ grid-template-columns: 1fr; }
+  }
+</style>
+
+<section class="staff-dashboard-wrap">
+  <div class="staff-hero">
+    <div class="staff-hero-top">
+      <div>
+        <p class="page-kicker">STAFF</p>
+        <h1 style="margin-bottom:6px;">Panel de consulta</h1>
+        <p class="page-subtitle">Consulta institucional con acceso controlado y sin acciones administrativas.</p>
+      </div>
+      <span class="staff-role-badge">
+        <i class="ph ph-identification-badge"></i>
+        {{ current_user.role|role_label }}
+      </span>
+    </div>
+
+    <div class="staff-kpi-grid">
+      <article class="staff-kpi">
+        <span class="stat-label">Módulos disponibles</span>
+        <strong>3</strong>
+      </article>
+      <article class="staff-kpi">
+        <span class="stat-label">Notificaciones recientes</span>
+        <strong>{{ header_notifications|length }}</strong>
+      </article>
+      <article class="staff-kpi">
+        <span class="stat-label">Modo de acceso</span>
+        <strong>Solo lectura</strong>
+      </article>
+    </div>
+
+    <div class="staff-cards">
+      <article class="staff-card">
+        <i class="ph ph-package"></i>
+        <strong>Inventario</strong>
+        <p class="page-subtitle">Consulta materiales, ubicaciones y estado sin modificar registros.</p>
+        <a class="btn btn-ghost" href="{{ url_for('inventory.inventory_list') }}">Ir a inventario</a>
+      </article>
+      <article class="staff-card">
+        <i class="ph ph-chart-bar"></i>
+        <strong>Reportes</strong>
+        <p class="page-subtitle">Visualiza reportes y exporta información para seguimiento.</p>
+        <a class="btn btn-ghost" href="{{ url_for('reports.reports_home') }}">Ver reportes</a>
+      </article>
+      <article class="staff-card">
+        <i class="ph ph-user-circle"></i>
+        <strong>Mi perfil</strong>
+        <p class="page-subtitle">Actualiza tus datos personales dentro de los permisos permitidos.</p>
+        <a class="btn btn-ghost" href="{{ url_for('profile.my_profile') }}">Abrir perfil</a>
+      </article>
+      <article class="staff-card">
+        <i class="ph ph-info"></i>
+        <strong>Acceso institucional</strong>
+        <p class="page-subtitle">Este panel está optimizado para consulta operativa diaria.</p>
+        <span class="btn btn-ghost" aria-disabled="true">Sin acciones sensibles</span>
+      </article>
+    </div>
+
+    <div class="staff-note">
+      Este panel no habilita creación, edición, eliminación ni aprobaciones administrativas.
+    </div>
+  </div>
+
+  <aside class="card">
+    <div class="card-title">Actividad reciente</div>
+    <p class="card-subtitle">Últimas notificaciones relacionadas con tu cuenta.</p>
+    {% if header_notifications %}
+      <div class="list" style="margin-top:10px;">
+        {% for notif in header_notifications[:5] %}
+        <article class="list-item">
+          <strong>{{ notif.title }}</strong>
+          <p style="margin:6px 0;color:var(--text-soft);">{{ notif.message }}</p>
+        </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty" style="margin-top:12px;">
+        <p>No hay actividad reciente para mostrar.</p>
+      </div>
+    {% endif %}
+  </aside>
+</section>
+{% endblock %}

@@ -362,10 +362,17 @@
           <p class="nav-section-title">Principal</p>
 
           {% set is_admin_nav = current_user.is_authenticated and is_admin_role(current_user.role) %}
+          {% set is_staff_only_nav = current_user.is_authenticated and (current_user.role or '')|upper == 'STAFF' %}
           {% if is_admin_nav %}
           <a href="{{ url_for('dashboard.dashboard_home') }}" class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
             <i class="ph ph-gauge nav-icon"></i>
             <span class="nav-label">Panel</span>
+          </a>
+          {% elif is_staff_only_nav %}
+          <a href="{{ url_for('home.staff_dashboard') }}"
+            class="nav-item {% if active_page == 'home' %}active{% endif %}">
+            <i class="ph ph-house nav-icon"></i>
+            <span class="nav-label">Inicio</span>
           </a>
           {% else %}
           <a href="{{ url_for('root_home') }}"
@@ -374,6 +381,28 @@
             <span class="nav-label">Inicio</span>
           </a>
           {% endif %}
+          {% if is_staff_only_nav %}
+          <div class="nav-submenu nav-submenu-static">
+            <a href="{{ url_for('inventory.inventory_list') }}" class="nav-subitem {% if active_page == 'inventory' %}active{% endif %}">
+              <i class="ph ph-package nav-subicon"></i>
+              <span>Inventario</span>
+            </a>
+            <a href="{{ url_for('reports.reports_home') }}" class="nav-subitem {% if active_page == 'reports' %}active{% endif %}">
+              <i class="ph ph-chart-bar nav-subicon"></i>
+              <span>Reportes</span>
+            </a>
+            <a href="{{ url_for('profile.my_profile') }}" class="nav-subitem {% if active_page == 'profile' %}active{% endif %}">
+              <i class="ph ph-user-circle nav-subicon"></i>
+              <span>Mi perfil</span>
+            </a>
+            <form method="post" action="{{ url_for('auth.logout') }}" style="margin:0;">
+              <button type="submit" class="btn btn-ghost sidebar-logout">
+                <i class="ph ph-sign-out"></i>
+                <span>Cerrar sesión</span>
+              </button>
+            </form>
+          </div>
+          {% else %}
           <div class="nav-submenu nav-submenu-static">
             <a href="{{ url_for('reservations.reservations_home') }}" class="nav-subitem {% if active_page == 'reservations' %}active{% endif %}">
               <i class="ph ph-calendar-check nav-subicon"></i>
@@ -445,6 +474,7 @@
               </button>
             </form>
           </div>
+          {% endif %}
         </nav>
       </div>
       <div class="sidebar-footer">
