@@ -1,11 +1,12 @@
 import re
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, abort
+from flask import Blueprint, current_app, render_template, request, redirect, url_for, flash, abort
 from flask_login import current_user
 
 from app.extensions import db
 from app.models.software import Software
 from app.models.lab import Lab
+from app.services.notification_service import notify_roles, publish_notifications_safe
 from app.utils.authz import min_role_required
 from app.utils.roles import is_admin_role
 from app.constants import ROOMS
@@ -164,7 +165,23 @@ def request_update(software_id: int):
     note = (request.form.get("update_note") or "").strip()
     s.update_requested = True
     s.update_note = note or "Seguimiento técnico solicitado"
+    notifications = notify_roles(
+        roles=["ADMIN", "SUPERADMIN", "STAFF"],
+        title="Nueva solicitud técnica de software",
+        message="Se registró una solicitud técnica de software.",
+        link=url_for("software.list_software"),
+        actor_name=(current_user.full_name or current_user.email),
+        entity_name=s.name,
+        extra_context=(note or None),
+        priority="low",
+    )
     db.session.commit()
+    publish_notifications_safe(
+        notifications,
+        logger=current_app.logger,
+        event_label="software update request",
+        extra={"software_id": s.id},
+    )
 
     flash("Seguimiento técnico registrado.", "success")
     return redirect(url_for("software.list_software"))
@@ -179,7 +196,22 @@ def admin_clear_update(software_id: int):
 
     s.update_requested = False
     s.update_note = None
+    notifications = notify_roles(
+        roles=["ADMIN", "SUPERADMIN", "STAFF"],
+        title="Solicitud técnica atendida",
+        message="La solicitud técnica fue marcada como atendida.",
+        link=url_for("software.list_software"),
+        actor_name=(current_user.full_name or current_user.email),
+        entity_name=s.name,
+        priority="medium",
+    )
     db.session.commit()
+    publish_notifications_safe(
+        notifications,
+        logger=current_app.logger,
+        event_label="software update clear",
+        extra={"software_id": s.id},
+    )
 
     flash("Seguimiento marcado como atendido.", "success")
     return redirect(url_for("software.list_software"))

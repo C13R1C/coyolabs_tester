@@ -34,6 +34,14 @@
 .users-admin-icon-btn i{
   font-size: 1.05rem;
 }
+@media (max-width: 768px){
+  .users-admin-edit-form{
+    grid-template-columns: 1fr;
+  }
+  .users-admin-quick-actions{
+    justify-content: flex-start;
+  }
+}
 </style>
 
 <header class="topbar">
@@ -45,14 +53,14 @@
   {% if is_superadmin %}
   <div class="topbar-actions">
     <a href="{{ url_for('users.profile_change_requests') }}" class="btn btn-ghost">Solicitudes de perfil</a>
-    <a href="{{ url_for('users.critical_action_requests') }}" class="btn btn-ghost">Solicitudes críticas</a>
+    <a href="{{ url_for('users.critical_action_requests') }}" class="btn btn-ghost">Revisión de acciones de cuenta</a>
     <a href="{{ url_for('reports.logbook_admin_view') }}" class="btn btn-ghost">Bitácora</a>
     <a href="{{ url_for('users.create_admin_account') }}" class="btn btn-gold">Crear cuenta de administrador</a>
   </div>
   {% else %}
   <div class="topbar-actions">
     <a href="{{ url_for('users.profile_change_requests') }}" class="btn btn-ghost">Solicitudes de perfil</a>
-    <a href="{{ url_for('users.critical_action_requests') }}" class="btn btn-ghost">Mis solicitudes críticas</a>
+    <a href="{{ url_for('users.critical_action_requests') }}" class="btn btn-ghost">Mis acciones de cuenta</a>
     <a href="{{ url_for('reports.logbook_admin_view') }}" class="btn btn-ghost">Bitácora</a>
   </div>
   {% endif %}
@@ -96,7 +104,7 @@
 
 <section class="table-card" style="margin-top:16px;">
   <div class="table-wrap">
-    <table class="inventory-table" style="min-width: 1400px;">
+    <table class="inventory-table table-mobile-cards" style="min-width: 1400px;">
       <thead>
         <tr>
           <th>ID</th>
@@ -113,15 +121,15 @@
       <tbody>
         {% for user in users %}
         <tr>
-          <td>{{ user.id }}</td>
-          <td>{{ user.email }}</td>
-          <td>{{ user.full_name or '-' }}</td>
-          <td>{{ user.matricula or '-' }}</td>
-          <td>{{ user.phone or '-' }}</td>
-          <td><span class="status-badge {% if user.role in ['ADMIN','SUPERADMIN'] %}status-warn{% else %}status-ok{% endif %}" title="Rol actual">{{ user.role|role_label }}</span></td>
-          <td><span class="status-badge {% if user.is_active %}status-ok{% else %}status-bad{% endif %}" title="Estado de activación">{{ 'Sí' if user.is_active else 'No' }}</span></td>
-          <td><span class="status-badge {% if user.is_banned %}status-bad{% else %}status-ok{% endif %}" title="Estado de bloqueo">{{ 'Sí' if user.is_banned else 'No' }}</span></td>
-          <td>
+          <td data-label="ID">{{ user.id }}</td>
+          <td data-label="Email">{{ user.email }}</td>
+          <td data-label="Nombre">{{ user.full_name or '-' }}</td>
+          <td data-label="Matrícula">{{ user.matricula or '-' }}</td>
+          <td data-label="Teléfono">{{ user.phone or '-' }}</td>
+          <td data-label="Rol"><span class="status-badge {% if user.role in ['ADMIN','SUPERADMIN'] %}status-warn{% else %}status-ok{% endif %}" title="Rol actual">{{ user.role|role_label }}</span></td>
+          <td data-label="Activo"><span class="status-badge {% if user.is_active %}status-ok{% else %}status-bad{% endif %}" title="Estado de activación">{{ 'Sí' if user.is_active else 'No' }}</span></td>
+          <td data-label="Bloqueado"><span class="status-badge {% if user.is_banned %}status-bad{% else %}status-ok{% endif %}" title="Estado de bloqueo">{{ 'Sí' if user.is_banned else 'No' }}</span></td>
+          <td data-label="Acciones">
             <form method="post" action="{{ url_for('users.admin_update_user', user_id=user.id) }}" class="users-admin-edit-form">
               <div class="search-box">
                 <i class="ph ph-envelope search-icon"></i>

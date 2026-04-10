@@ -12,6 +12,7 @@ from app.models.notification import Notification
 from app.models.ticket_item import TicketItem
 from app.models.user import User
 from app.services.audit_service import log_event
+from app.services.notification_service import build_debt_message, build_notification, notify_roles
 from app.utils.statuses import DebtStatus, LabTicketStatus
 
 
@@ -153,6 +154,16 @@ def sync_ticket_after_debt_resolution(debt: Debt) -> ServiceResult:
     return ServiceResult.success(ticket=ticket, ticket_closed=False)
 
 
+def _should_restock_on_payment(debt: Debt) -> bool:
+    if not debt.material_id:
+        return False
+    reason = (debt.reason or "").strip().lower()
+    if debt.ticket_id:
+        return True
+    markers = ("faltante", "devoluci", "ticket #", "solicitud #")
+    return any(marker in reason for marker in markers)
+
+
 def resolve_debt(debt: Debt, actor_user: User, payment_amount: str | int | float | Decimal | None = None) -> ServiceResult:
     if debt.status != DebtStatus.PENDING:
         message = "El adeudo ya fue resuelto." if debt.status == DebtStatus.PAID else f"El adeudo no se puede resolver desde estado {debt.status}."
@@ -184,7 +195,7 @@ def resolve_debt(debt: Debt, actor_user: User, payment_amount: str | int | float
     new_remaining = (remaining - payment).quantize(Decimal("0.01"))
     paid_in_full = new_remaining == Decimal("0.00")
 
-    should_restock = bool(debt.material_id) and "faltante" in (debt.reason or "").lower()
+    should_restock = _should_restock_on_payment(debt)
     if should_restock and debt.material and debt.material.pieces_qty is not None:
         debt.material.pieces_qty += int(payment)
 
@@ -220,6 +231,20 @@ def resolve_debt(debt: Debt, actor_user: User, payment_amount: str | int | float
     ticket_closed = bool(sync_result.data.get("ticket_closed")) if sync_result.ok else False
 
     ticket_notification = None
+    user_resolution_notification = build_notification(
+        user_id=debt.user_id,
+        title="Tu adeudo fue actualizado",
+        message=build_debt_message(
+            "resolved" if paid_in_full else "partial",
+            actor_name=(actor_user.full_name or actor_user.email),
+            debt_id=debt.id,
+            amount_label=f"pendiente {int(new_remaining)}",
+        ),
+        link=url_for("debts.my_debts"),
+        entity_name=f"Adeudo #{debt.id}",
+        extra_context=f"Pendiente actual: {int(new_remaining)}",
+        priority="high" if not paid_in_full else "medium",
+    )
     if ticket_to_close and ticket_closed:
         log_event(
             module="DEBTS",
@@ -244,21 +269,24 @@ def resolve_debt(debt: Debt, actor_user: User, payment_amount: str | int | float
         )
         db.session.add(ticket_notification)
 
-    admin_notifications = []
-    admins = User.query.filter(User.role.in_(["ADMIN", "SUPERADMIN"])).all()
-    for admin in admins:
-        notif = Notification(
-            user_id=admin.id,
-            title="Adeudo resuelto" if paid_in_full else "Adeudo abonado",
-            message=f"El adeudo #{debt.id} {'fue marcado como pagado' if paid_in_full else f'registró un abono de {payment}'}.",
-            link=url_for("debts.admin_list"),
-        )
-        db.session.add(notif)
-        admin_notifications.append(notif)
+    admin_notifications = notify_roles(
+        roles=["ADMIN", "SUPERADMIN", "STAFF"],
+        title="Adeudo resuelto" if paid_in_full else "Adeudo abonado",
+        message=build_debt_message(
+            "resolved" if paid_in_full else "partial",
+            actor_name=(actor_user.full_name or actor_user.email),
+            debt_id=debt.id,
+            amount_label=str(payment),
+        ),
+        link=url_for("debts.admin_list"),
+        entity_name=f"Adeudo #{debt.id}",
+        priority="high" if not paid_in_full else "medium",
+    )
 
     db.session.commit()
     return ServiceResult.success(
         ticket_notification=ticket_notification,
+        user_resolution_notification=user_resolution_notification,
         admin_notifications=admin_notifications,
         debt=debt,
         paid_in_full=paid_in_full,

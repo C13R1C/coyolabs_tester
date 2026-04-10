@@ -1,17 +1,17 @@
 {% extends "layouts/student_base.html" %}
-{% set crumbs = [("Inicio", url_for('root_home')), ("Solicitudes críticas", url_for('users.critical_action_requests'))] %}
-{% block title %}Solicitudes críticas{% endblock %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Acciones de cuenta", url_for('users.critical_action_requests'))] %}
+{% block title %}Acciones de cuenta{% endblock %}
 
 {% block content %}
 <header class="topbar">
   <div class="topbar-left">
     <p class="page-kicker">Gobernanza</p>
-    <h1>Solicitudes de acciones críticas</h1>
+    <h1>Revisión de acciones de cuenta</h1>
     <p class="page-subtitle">
       {% if is_superadmin %}
-      El administrador principal puede aprobar o rechazar acciones críticas de administración.
+      El administrador principal puede aprobar o rechazar acciones sensibles sobre cuentas (activar, desactivar, bloquear o desbloquear).
       {% else %}
-      Consulta el estado de tus solicitudes críticas enviadas a administración.
+      Consulta el estado de tus solicitudes de acciones de cuenta enviadas a administración.
       {% endif %}
     </p>
   </div>
@@ -19,7 +19,7 @@
 
 <section class="table-card">
   {% if requests|length == 0 %}
-    <p>No hay solicitudes críticas registradas.</p>
+    <p>No hay acciones de cuenta registradas.</p>
   {% else %}
   <div class="table-wrap">
     <table class="inventory-table" style="min-width: 1080px;">

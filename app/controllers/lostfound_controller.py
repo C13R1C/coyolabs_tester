@@ -8,8 +8,7 @@ from app.extensions import db
 from app.models.lost_found import LostFound
 from app.models.material import Material
 from app.models.notification import Notification
-from app.models.user import User
-from app.services.notification_realtime_service import publish_notification_created
+from app.services.notification_service import build_notification, notify_roles, publish_notifications_safe
 from app.utils.authz import min_role_required
 from app.utils.roles import is_admin_role
 
@@ -66,7 +65,7 @@ def _lostfound_status_label(status: str | None) -> str:
 @min_role_required("STUDENT")
 def lostfound_home():
     if is_admin_role(current_user.role):
-        return redirect(url_for("lostfound.admin_new"))
+        return redirect(url_for("lostfound.list_items"))
 
     return redirect(url_for("lostfound.list_items"))
 
@@ -156,31 +155,30 @@ def admin_new():
         db.session.add(item)
         db.session.commit()
 
-        users = User.query.filter(
-            User.role.in_(["STUDENT", "TEACHER"])
-        ).all()
+        if report_kind == "lost":
+            notif_title = "Nueva pérdida reportada"
+            notif_message = f"Se registró un caso de objeto perdido: {item.title}."
+        else:
+            notif_title = "Nuevo hallazgo registrado"
+            notif_message = f"Se registró un hallazgo en resguardo: {item.title}."
 
-        notifications_created: list[Notification] = []
-        for user in users:
-            if report_kind == "lost":
-                notif_title = "Nuevo objeto perdido registrado"
-                notif_message = f"Se registró una pérdida reportada: {item.title}"
-            else:
-                notif_title = "Nuevo hallazgo registrado"
-                notif_message = f"Se registró un hallazgo en resguardo: {item.title}"
-            notif = Notification(
-                user_id=user.id,
-                title=notif_title,
-                message=notif_message,
-                link=url_for("lostfound.list_items"),
-                is_read=False,
-            )
-            db.session.add(notif)
-            notifications_created.append(notif)
+        notifications_created = notify_roles(
+            roles=["ADMIN", "SUPERADMIN", "STAFF"],
+            title=notif_title,
+            message=notif_message,
+            link=url_for("lostfound.detail", item_id=item.id),
+            actor_name=(current_user.full_name or current_user.email),
+            entity_name=f"Caso #{item.id}",
+            priority="low",
+        )
 
         db.session.commit()
-        for notif in notifications_created:
-            publish_notification_created(notif)
+        publish_notifications_safe(
+            notifications_created,
+            logger=current_app.logger,
+            event_label="lostfound creation",
+            extra={"lostfound_id": item.id},
+        )
 
         flash("Registro creado.", "success")
         return redirect(url_for("lostfound.detail", item_id=item.id))
@@ -204,7 +202,40 @@ def admin_set_status(item_id: int):
 
     item.status = new_status
     item.admin_note = admin_note or None
+
+    status_labels = {
+        "REPORTED": "pérdida reportada",
+        "IN_STORAGE": "resguardo administrativo",
+        "RETURNED": "entregado a propietario",
+    }
+    notifications_created: list[Notification] = notify_roles(
+        roles=["ADMIN", "SUPERADMIN", "STAFF"],
+        title="Caso de objeto perdido actualizado",
+        message=f"El caso cambió a {status_labels.get(new_status, new_status)}.",
+        link=url_for("lostfound.detail", item_id=item.id),
+        actor_name=(current_user.full_name or current_user.email),
+        entity_name=f"Caso #{item.id}",
+        priority="medium",
+    )
+    if item.reported_by_user_id:
+        notifications_created.append(
+            build_notification(
+                user_id=item.reported_by_user_id,
+                title="Tu reporte de objeto perdido fue actualizado",
+                message=f"Tu reporte ahora está en estado: {status_labels.get(new_status, new_status)}.",
+                link=url_for("lostfound.detail", item_id=item.id),
+                actor_name=(current_user.full_name or current_user.email),
+                entity_name=f"Caso #{item.id}",
+                priority="medium",
+            )
+        )
     db.session.commit()
+    publish_notifications_safe(
+        notifications_created,
+        logger=current_app.logger,
+        event_label="lostfound status update",
+        extra={"lostfound_id": item.id, "status": new_status},
+    )
 
     flash("Estado actualizado.", "success")
     return redirect(url_for("lostfound.detail", item_id=item.id))

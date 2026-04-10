@@ -186,27 +186,20 @@
         </form>
       {% else %}
         <p style="margin-top:0; color:var(--text-dim);">
-          Para mantener la integridad institucional, debes solicitar al administrador cualquier cambio de teléfono.
+          Puedes actualizar directamente tu teléfono de contacto.
         </p>
-        <form method="post" action="{{ url_for('profile.request_phone_change') }}" class="toolbar" style="grid-template-columns:1fr;">
+        <form method="post" action="{{ url_for('profile.update_phone') }}" class="toolbar profile-phone-form" style="grid-template-columns:1fr auto;">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
           <div class="toolbar-group">
-            <label>Teléfono solicitado</label>
+            <label>Teléfono de contacto</label>
             <div class="search-box">
               <i class="ph ph-phone search-icon"></i>
-              <input type="text" name="requested_phone" placeholder="Ej.: 555-123-4567" required>
+              <input type="text" name="phone" value="{{ current_user.phone or '' }}" placeholder="Ej.: 555-123-4567" required>
             </div>
           </div>
-          <div class="toolbar-group">
-            <label>Motivo (opcional)</label>
-            <div class="search-box">
-              <i class="ph ph-note-pencil search-icon"></i>
-              <input type="text" name="reason" placeholder="Describe brevemente el motivo">
-            </div>
+          <div class="toolbar-actions" style="align-self:end;">
+            <button type="submit" class="btn btn-gold">Actualizar teléfono</button>
           </div>
-          <button type="submit" class="btn btn-gold">
-            Solicitar cambio de teléfono
-          </button>
         </form>
         {% if current_user.role|upper == 'STUDENT' %}
         <hr style="margin:16px 0; border:none; border-top:1px solid var(--stroke);">

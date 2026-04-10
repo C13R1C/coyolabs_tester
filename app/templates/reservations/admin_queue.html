@@ -13,19 +13,45 @@
 }
 
 .reservation-admin-action-form .form-control {
-  min-height: 90px;
-  border-radius: 16px;
+  min-height: 70px;
+  border-radius: 12px;
+  padding: 8px 10px;
 }
 
 .reservation-admin-action-form .btn {
-  min-height: 54px;
-  border-radius: 16px;
-  width: 100%;
+  min-height: 42px;
+  border-radius: 12px;
+  width: auto;
+}
+
+.reservation-admin-action-form .reservation-admin-row-actions{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+#reservations-admin-queue-container .inventory-table tbody td{
+  padding: 10px 12px;
+}
+
+#reservations-admin-queue-container .inventory-table tbody tr{
+  vertical-align: top;
+}
+
+#reservations-admin-queue-container .queue-requester{
+  line-height: 1.2;
+  font-size: .9rem;
 }
 
 .signature-modal{position:fixed;inset:0;z-index:1200;align-items:center;justify-content:center}
 .signature-modal-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.72)}
 .signature-modal-content{position:relative;width:min(520px,92vw);border-radius:14px;background:#fff;padding:14px;box-shadow:0 24px 50px rgba(0,0,0,.28)}
+@media (max-width: 768px){
+  #reservations-admin-queue-container .table-wrap{
+    border:none;
+    background:transparent;
+  }
+}
 </style>
 
 <header class="topbar">
@@ -55,61 +81,39 @@
   {% else %}
     <section class="table-card">
       <div class="table-wrap">
-        <table class="inventory-table" style="min-width: 1450px;">
+        <table class="inventory-table table-mobile-cards" style="min-width: 1450px;">
           <thead>
             <tr>
-              <th>ID</th>
+              <th>Solicitante</th>
               <th>Usuario</th>
-              <th>Salón/Lab</th>
+              <th>Grupo</th>
               <th>Fecha</th>
               <th>Inicio</th>
               <th>Fin</th>
-              <th>Materia</th>
-              <th>Grupo</th>
-              <th>Solicitante</th>
               <th>Motivo</th>
-              <th>Materiales solicitados</th>
               <th class="th-actions">Acciones</th>
             </tr>
           </thead>
           <tbody>
             {% for r in reservations %}
             <tr>
-              <td>{{ r.id }}</td>
-              <td>{{ r.user.email }}</td>
-              <td>{{ r.room }}</td>
-              <td>{{ r.date }}</td>
-              <td>{{ r.start_time }}</td>
-              <td>{{ r.end_time }}</td>
-              <td>{{ r.subject }}</td>
-              <td>{{ r.group_name }}</td>
-              <td>{{ (r.user.full_name or '')|trim or r.user.email }}</td>
-              <td>{{ r.purpose or '-' }}</td>
-
-              <td>
-                {% if r.items %}
-                  <ul style="padding-left:16px; margin:0;">
-                    {% for item in r.items %}
-                      <li>
-                        {{ item.material.name if item.material else ('ID ' ~ item.material_id) }}
-                        ({{ item.quantity_requested }})
-                      </li>
-                    {% endfor %}
-                  </ul>
-                {% else %}
-                  -
-                {% endif %}
-              </td>
-
-              <td>
-                <form method="post" action="{{ url_for('reservations.admin_approve', res_id=r.id) }}" class="reservation-admin-action-form">
-                  <input type="text" name="admin_note" placeholder="Nota administrativa (opcional)" class="form-control">
-                  <button type="submit" class="btn btn-gold">Aprobar</button>
-                </form>
-
-                <form method="post" action="{{ url_for('reservations.admin_reject', res_id=r.id) }}" class="reservation-admin-action-form">
-                  <textarea name="admin_note" rows="3" placeholder="Escribe el motivo o comentario..." class="form-control"></textarea>
-                  <button type="submit" class="btn btn-ghost">Rechazar</button>
+              <td data-label="Solicitante" class="queue-requester">{{ (r.user.full_name or '')|trim or r.user.email }}</td>
+              <td data-label="Usuario">{{ r.user.email }}</td>
+              <td data-label="Grupo">{{ r.group_name }}</td>
+              <td data-label="Fecha">{{ r.date }}</td>
+              <td data-label="Inicio">{{ r.start_time }}</td>
+              <td data-label="Fin">{{ r.end_time }}</td>
+              <td data-label="Motivo">{{ r.purpose or '-' }}</td>
+              <td data-label="Acciones">
+                <form method="post" class="reservation-admin-action-form">
+                  <label for="admin-note-{{ r.id }}" style="font-size:.86rem; color:var(--text-dim); font-weight:700;">
+                    Nota / motivo de rechazo
+                  </label>
+                  <textarea id="admin-note-{{ r.id }}" name="admin_note" rows="3" placeholder="Ej. Falta evidencia, ajuste de horario, observación de aprobación..." class="form-control"></textarea>
+                  <div class="reservation-admin-row-actions">
+                    <button type="submit" formaction="{{ url_for('reservations.admin_approve', res_id=r.id) }}" class="btn btn-gold">Aprobar</button>
+                    <button type="submit" formaction="{{ url_for('reservations.admin_reject', res_id=r.id) }}" class="btn btn-ghost">Rechazar</button>
+                  </div>
                 </form>
               </td>
             </tr>
