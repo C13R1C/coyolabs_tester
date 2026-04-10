@@ -24,6 +24,10 @@
     <strong>{{ debt.user.email if debt.user else '-' }}</strong>
   </article>
   <article class="stat-card">
+    <span class="stat-label">Carrera</span>
+    <strong>{{ user_career_name or '-' }}</strong>
+  </article>
+  <article class="stat-card">
     <span class="stat-label">Flujo</span>
     <strong><span class="status-badge status-neutral">{{ case_flow }}</span></strong>
   </article>
