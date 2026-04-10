@@ -49,6 +49,25 @@
   .lostfound-detail-admin-form .toolbar-actions .btn{
     width: 100%;
   }
+  .lostfound-detail-specs td{
+    display:block;
+    width:100%;
+  }
+  .lostfound-detail-specs tr{
+    display:block;
+    border-bottom:1px dashed rgba(102,81,45,.18);
+    padding:8px 0;
+  }
+  .lostfound-detail-specs tr:last-child{
+    border-bottom:none;
+  }
+  .lostfound-detail-specs td:first-child{
+    font-size:.78rem;
+    color:var(--text-dim);
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    padding-bottom:4px;
+  }
 }
 </style>
 
@@ -99,7 +118,7 @@
   </div>
 
   <div class="table-wrap">
-    <table class="inventory-table" style="min-width:800px;">
+    <table class="inventory-table lostfound-detail-specs" style="min-width:800px;">
       <tbody>
         <tr><td><strong>Nombre</strong></td><td>{{ item.title }}</td></tr>
         <tr><td><strong>Estado del caso</strong></td><td>{{ status_label_fn(item.status) }}</td></tr>
