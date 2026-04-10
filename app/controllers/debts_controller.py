@@ -138,6 +138,8 @@ def _build_admin_debt_rows(debts: list[Debt]) -> list[dict]:
                 case_status = _case_status_from_items(case_items_sorted)
                 case_visible_id = _visible_case_id("ADEUDO-CJ", case_items_sorted[0].id)
                 paid_items, total_items, progress_pct = _case_item_progress(case_items_sorted)
+                paid_items, total_items, progress_pct = _case_item_progress(case_items_sorted)
+
                 case_material_names = " ".join(
                     (item.material.name if item.material else "").lower()
                     for item in case_items_sorted
@@ -151,6 +153,9 @@ def _build_admin_debt_rows(debts: list[Debt]) -> list[dict]:
                     "materials_count": len(case_items_sorted),
                     "material_label": f"{len(case_items_sorted)} materiales",
                     "material_preview": _build_material_preview(case_items_sorted),
+                    "paid_items": paid_items,
+                    "total_items": total_items,
+                    "progress_pct": progress_pct,
                     "paid_items": paid_items,
                     "total_items": total_items,
                     "progress_pct": progress_pct,
@@ -189,6 +194,10 @@ def _build_admin_debt_rows(debts: list[Debt]) -> list[dict]:
             "paid_items": 1 if pending == 0 else 0,
             "total_items": 1,
             "progress_pct": 100 if pending == 0 else 0,
+            "paid_items": 1 if pending == 0 else 0,
+            "total_items": 1,
+            "progress_pct": 100 if pending == 0 else 0,
+
             "total_original": original,
             "total_pending": pending,
             "reason": debt.reason or "-",
@@ -392,6 +401,8 @@ def admin_detail(debt_id: int):
     case_flow = "Conjunto" if len(case_debts) > 1 else "Singular"
     case_visible_id = _visible_case_id("ADEUDO-CJ", case_debts[0].id) if len(case_debts) > 1 else _visible_case_id("ADEUDO-SG", debt.id)
     paid_items, total_items, progress_pct = _case_item_progress(case_debts)
+    paid_items, total_items, progress_pct = _case_item_progress(case_debts)
+
 
     return render_template(
         "debts/admin_detail.html",
@@ -402,6 +413,9 @@ def admin_detail(debt_id: int):
         case_status=case_status,
         case_flow=case_flow,
         case_visible_id=case_visible_id,
+        paid_items=paid_items,
+        total_items=total_items,
+        progress_pct=progress_pct,
         paid_items=paid_items,
         total_items=total_items,
         progress_pct=progress_pct,
