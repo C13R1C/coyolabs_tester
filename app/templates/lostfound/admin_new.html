@@ -41,6 +41,14 @@
 <section class="toolbar-card">
   <form method="post" enctype="multipart/form-data" class="toolbar" style="grid-template-columns: repeat(2, minmax(280px, 1fr));" id="lostfoundNewForm" data-form-mode="create">
     <div class="toolbar-group"><label for="title">Título (obligatorio)</label><div class="search-box"><i class="ph ph-tag search-icon"></i><input id="title" type="text" name="title" placeholder="Ejemplo: Mochila negra con llavero" required></div></div>
+    <div class="toolbar-group">
+      <label for="report_kind">Categoría (obligatoria)</label>
+      <select class="form-control" id="report_kind" name="report_kind" required>
+        <option value="" disabled selected>Selecciona una categoría</option>
+        <option value="lost">Reportar como perdido</option>
+        <option value="found">Reportar como encontrado</option>
+      </select>
+    </div>
     <div class="toolbar-group" style="grid-column: 1 / -1;">
       <label for="evidence_file">Foto de evidencia (opcional)</label>
       <div class="lostfound-file-box">

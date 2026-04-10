@@ -3,6 +3,14 @@
 {% block title %}Foro{% endblock %}
 
 {% block content %}
+<style>
+.commenter-tone-1{ color:#3d5a80; }
+.commenter-tone-2{ color:#5b4b8a; }
+.commenter-tone-3{ color:#2f6f5f; }
+.commenter-tone-4{ color:#7a5b3a; }
+.commenter-tone-5{ color:#6a3f58; }
+.commenter-tone-6{ color:#4f5d75; }
+</style>
 <header class="topbar">
   <div class="topbar-left">
     <p class="page-kicker">Comunidad</p>
@@ -42,7 +50,7 @@
             {% for comment in preview_comments %}
             <div style="padding:8px 10px; border:1px solid var(--stroke); border-radius:10px; background:rgba(255,255,255,.42);">
               <div class="text-dim" style="font-size:.85rem;">
-                <strong>{{ author_label_fn(comment.author, comment.is_anonymous) }}</strong>:
+                <strong class="{{ author_tone_fn(comment.author, comment.is_anonymous) }}">{{ author_label_fn(comment.author, comment.is_anonymous) }}</strong>:
                 {{ comment.content[:110] }}{% if comment.content|length > 110 %}...{% endif %}
               </div>
             </div>

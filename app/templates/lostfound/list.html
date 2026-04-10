@@ -149,10 +149,14 @@
 
 <section class="toolbar-card">
   <div class="toolbar-actions lostfound-list-filters">
-    <a class="btn {% if not status %}btn-gold{% else %}btn-ghost{% endif %}" href="{{ url_for('lostfound.list_items') }}">Todos</a>
-    <a class="btn {% if status == 'REPORTED' %}btn-gold{% else %}btn-ghost{% endif %}" href="{{ url_for('lostfound.list_items', status='REPORTED') }}">Reportado</a>
-    <a class="btn {% if status == 'IN_STORAGE' %}btn-gold{% else %}btn-ghost{% endif %}" href="{{ url_for('lostfound.list_items', status='IN_STORAGE') }}">En resguardo</a>
-    <a class="btn {% if status == 'RETURNED' %}btn-gold{% else %}btn-ghost{% endif %}" href="{{ url_for('lostfound.list_items', status='RETURNED') }}">Devuelto</a>
+    {% if current_user.is_authenticated and is_admin_role(current_user.role) %}
+      <a class="btn {% if not status %}btn-gold{% else %}btn-ghost{% endif %}" href="{{ url_for('lostfound.list_items') }}">Todos</a>
+      <a class="btn {% if status == 'REPORTED' %}btn-gold{% else %}btn-ghost{% endif %}" href="{{ url_for('lostfound.list_items', status='REPORTED') }}">Reportado</a>
+      <a class="btn {% if status == 'IN_STORAGE' %}btn-gold{% else %}btn-ghost{% endif %}" href="{{ url_for('lostfound.list_items', status='IN_STORAGE') }}">En resguardo</a>
+      <a class="btn {% if status == 'RETURNED' %}btn-gold{% else %}btn-ghost{% endif %}" href="{{ url_for('lostfound.list_items', status='RETURNED') }}">Devuelto</a>
+    {% else %}
+      <span class="text-dim">Mostrando reportes de objetos perdidos.</span>
+    {% endif %}
   </div>
 </section>
 

@@ -28,6 +28,17 @@ def _author_label(user, is_anonymous: bool) -> str:
     return user.email if user else "N/A"
 
 
+def _author_tone_class(user, is_anonymous: bool) -> str:
+    if is_anonymous and not _is_superadmin():
+        seed = "anon"
+    else:
+        seed = (getattr(user, "email", None) or getattr(user, "name", None) or str(getattr(user, "id", "0"))).strip().lower()
+    if not seed:
+        seed = "unknown"
+    tone_index = (sum(ord(ch) for ch in seed) % 6) + 1
+    return f"commenter-tone-{tone_index}"
+
+
 def _can_edit_post(post: ForumPost) -> bool:
     if not post or not getattr(current_user, "is_authenticated", False):
         return False
@@ -76,7 +87,7 @@ def forum_home():
             ForumComment.query
             .options(joinedload(ForumComment.author))
             .join(ranked_subq, ForumComment.id == ranked_subq.c.comment_id)
-            .filter(ranked_subq.c.rn <= 2)
+            .filter(ranked_subq.c.rn <= 5)
             .order_by(ForumComment.post_id.asc(), ForumComment.created_at.desc())
             .all()
         )
@@ -93,6 +104,7 @@ def forum_home():
         is_admin=_is_admin(),
         is_superadmin=_is_superadmin(),
         author_label_fn=_author_label,
+        author_tone_fn=_author_tone_class,
         active_page="forum",
     )
 
@@ -215,6 +227,7 @@ def post_detail(post_id: int):
         can_edit_post=_can_edit_post(post),
         is_superadmin=_is_superadmin(),
         author_label_fn=_author_label,
+        author_tone_fn=_author_tone_class,
         active_page="forum",
     )
 

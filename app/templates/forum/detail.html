@@ -16,6 +16,13 @@
   flex-wrap:wrap;
 }
 
+.commenter-tone-1{ color:#3d5a80; }
+.commenter-tone-2{ color:#5b4b8a; }
+.commenter-tone-3{ color:#2f6f5f; }
+.commenter-tone-4{ color:#7a5b3a; }
+.commenter-tone-5{ color:#6a3f58; }
+.commenter-tone-6{ color:#4f5d75; }
+
 @media (max-width: 768px){
   .forum-comment-actions .btn{
     width: 100%;
@@ -62,7 +69,7 @@
   {% for c in comments %}
     <article class="toolbar-card" style="margin-bottom:0; {% if c.is_hidden %}opacity:.6;{% endif %}">
       <div style="display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap; align-items:center;">
-        <strong>{{ author_label_fn(c.author, c.is_anonymous) }}</strong>
+        <strong class="{{ author_tone_fn(c.author, c.is_anonymous) }}">{{ author_label_fn(c.author, c.is_anonymous) }}</strong>
         <span class="text-dim">{{ c.created_at }}</span>
       </div>
       {% if c.is_anonymous %}<span class="status-badge status-warn">ANÓNIMO</span>{% endif %}

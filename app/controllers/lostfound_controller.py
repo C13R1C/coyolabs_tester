@@ -67,7 +67,9 @@ def list_items():
     status = (request.args.get("status") or "").strip().upper()
 
     q = LostFound.query
-    if status in {"REPORTED", "IN_STORAGE", "RETURNED"}:
+    if not is_admin_role(current_user.role):
+        q = q.filter(LostFound.status == "REPORTED")
+    elif status in {"REPORTED", "IN_STORAGE", "RETURNED"}:
         q = q.filter(LostFound.status == status)
 
     items = q.order_by(LostFound.created_at.desc()).all()
@@ -96,11 +98,16 @@ def admin_new():
         title = (request.form.get("title") or "").strip()
         description = (request.form.get("description") or "").strip()
         location = (request.form.get("location") or "").strip()
+        report_kind = (request.form.get("report_kind") or "").strip().lower()
         evidence_file = request.files.get("evidence_file")
         material_id = request.form.get("material_id")
 
         if not title:
             flash("El título es obligatorio.", "error")
+            return redirect(url_for("lostfound.admin_new"))
+
+        if report_kind not in {"lost", "found"}:
+            flash("Debes seleccionar la categoría del registro.", "error")
             return redirect(url_for("lostfound.admin_new"))
 
         mat = None
@@ -127,7 +134,7 @@ def admin_new():
             description=description or None,
             location=location or None,
             evidence_ref=saved_image_ref,
-            status="REPORTED",
+            status="REPORTED" if report_kind == "lost" else "IN_STORAGE",
         )
 
         db.session.add(item)
@@ -139,10 +146,16 @@ def admin_new():
 
         notifications_created: list[Notification] = []
         for user in users:
+            if report_kind == "lost":
+                notif_title = "Nuevo objeto perdido registrado"
+                notif_message = f"Se reportó un objeto perdido: {item.title}"
+            else:
+                notif_title = "Nuevo objeto encontrado registrado"
+                notif_message = f"Se registró un objeto encontrado: {item.title}"
             notif = Notification(
                 user_id=user.id,
-                title="Nuevo objeto perdido registrado",
-                message=f"Se registró un nuevo objeto: {item.title}",
+                title=notif_title,
+                message=notif_message,
                 link=url_for("lostfound.list_items"),
                 is_read=False,
             )
