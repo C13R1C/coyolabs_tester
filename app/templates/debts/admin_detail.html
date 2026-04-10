@@ -6,8 +6,8 @@
 <header class="topbar">
   <div class="topbar-left">
     <p class="page-kicker">Adeudos</p>
-    <h1>Detalle de adeudo{% if debt.case_code %} compuesto{% endif %}</h1>
-    <p class="page-subtitle">Flujo administrativo por material, compatible con adeudos legacy.</p>
+    <h1>Detalle de ticket de adeudo {{ case_flow|lower }}</h1>
+    <p class="page-subtitle">Flujo administrativo por material, compatible con adeudos singulares previos.</p>
   </div>
   <div class="topbar-actions">
     <a href="{{ url_for('debts.admin_list') }}" class="btn btn-ghost">Volver a listado</a>
@@ -16,14 +16,26 @@
 
 <section class="stats-row">
   <article class="stat-card">
+    <span class="stat-label">Caso</span>
+    <strong>{{ case_visible_id }}</strong>
+  </article>
+  <article class="stat-card">
     <span class="stat-label">Usuario</span>
     <strong>{{ debt.user.email if debt.user else '-' }}</strong>
+  </article>
+  <article class="stat-card">
+    <span class="stat-label">Flujo</span>
+    <strong><span class="status-badge status-neutral">{{ case_flow }}</span></strong>
   </article>
   <article class="stat-card">
     <span class="stat-label">Estado global</span>
     <strong>
       <span class="status-badge {% if case_status == 'PENDING' %}status-bad{% else %}status-ok{% endif %}">{{ case_status|status_label }}</span>
     </strong>
+  </article>
+  <article class="stat-card">
+    <span class="stat-label">Materiales</span>
+    <strong>{{ case_debts|length }}</strong>
   </article>
   <article class="stat-card">
     <span class="stat-label">Total original</span>
@@ -33,10 +45,25 @@
     <span class="stat-label">Total pendiente</span>
     <strong>{{ total_pending }}</strong>
   </article>
+  {% if case_flow == 'Conjunto' %}
+  <article class="stat-card">
+    <span class="stat-label">Progreso por items</span>
+    <strong>{{ paid_items }} / {{ total_items }} pagados ({{ progress_pct }}%)</strong>
+  </article>
+  {% endif %}
+</section>
+
+<section class="toolbar-card" style="margin-top:16px;">
+  <div><strong>Razón general:</strong> {{ debt.reason or '-' }}</div>
+  <div style="margin-top:6px;">
+    <span class="status-badge status-neutral">
+      El caso permanece pendiente mientras exista al menos un material con saldo pendiente.
+    </span>
+  </div>
 </section>
 
 <section class="table-card" style="margin-top:16px;">
-  <h3 style="margin:0 0 12px 0;">Materiales del adeudo</h3>
+  <h3 style="margin:0 0 12px 0;">Items/materiales del caso</h3>
   <div class="table-wrap">
     <table class="inventory-table" style="min-width: 940px;">
       <thead>

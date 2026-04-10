@@ -24,19 +24,27 @@
 <section class="stats-row">
   <article class="stat-card">
     <span class="stat-label">Adeudos abiertos</span>
-    <strong>{{ debts | selectattr("status","equalto","PENDING") | list | length }}</strong>
+    <strong>{{ debt_rows | selectattr("status","equalto","PENDING") | list | length }}</strong>
   </article>
 
   <article class="stat-card">
     <span class="stat-label">Adeudos pagados</span>
-    <strong>{{ debts | selectattr("status","equalto","PAID") | list | length }}</strong>
+    <strong>{{ debt_rows | selectattr("status","equalto","PAID") | list | length }}</strong>
   </article>
 
   <article class="stat-card">
     <span class="stat-label">Usuarios con adeudos</span>
     <strong>
-      {{ debts | map(attribute="user_id") | unique | list | length }}
+      {{ users_with_debts }}
     </strong>
+  </article>
+  <article class="stat-card">
+    <span class="stat-label">Casos visibles</span>
+    <strong>{{ case_count }}</strong>
+  </article>
+  <article class="stat-card">
+    <span class="stat-label">Registros Debt</span>
+    <strong>{{ debt_records_count }}</strong>
   </article>
 </section>
 
@@ -60,10 +68,25 @@
     <button class="btn btn-ghost" onclick="filterTable('PENDING')">Abiertos</button>
     <button class="btn btn-ghost" onclick="filterTable('PAID')">Pagados</button>
   </div>
+  <div class="toolbar-actions" style="margin-top:10px; gap:10px;">
+    <input
+      type="text"
+      id="debtSearchInput"
+      class="form-control"
+      style="max-width:340px;"
+      placeholder="Buscar por caso, usuario, material o razón"
+      oninput="applyDebtFilters()"
+    >
+    <select id="flowFilter" class="form-control" style="max-width:180px;" onchange="applyDebtFilters()">
+      <option value="ALL">Flujo: Todos</option>
+      <option value="Singular">Flujo: Singular</option>
+      <option value="Conjunto">Flujo: Conjunto</option>
+    </select>
+  </div>
 </section>
 
 <div id="debts-admin-list-container">
-  {% if debts %}
+  {% if debt_rows %}
   <section class="table-card">
     <div class="table-wrap">
       <table class="inventory-table" id="debtTable" style="min-width: 1100px;">
@@ -72,7 +95,7 @@
             <th>ID</th>
             <th>Usuario</th>
             <th>Estado</th>
-            <th>Material</th>
+            <th>Materiales</th>
             <th>Cant. original</th>
             <th>Cant. pendiente</th>
             <th>Razón</th>
@@ -82,45 +105,42 @@
         </thead>
 
         <tbody>
-        {% for d in debts %}
-          <tr data-status="{{ d.status }}">
-            <td>{{ d.id }}</td>
+        {% for row in debt_rows %}
+          <tr data-status="{{ row.status }}" data-flow="{{ row.flow_label }}" data-search="{{ row.search_blob }}">
+            <td>{{ row.id_label }}</td>
 
             <td>
-              <strong>{{ d.user.email }}</strong>
+              <strong>{{ row.user.email }}</strong>
             </td>
 
             <td>
-              <span class="status-badge {% if d.status == 'PENDING' %}status-bad{% else %}status-ok{% endif %}">
-                {{ d.status|status_label }}
+              <span class="status-badge {% if row.status == 'PENDING' %}status-bad{% else %}status-ok{% endif %}">
+                {{ row.status|status_label }}
               </span>
             </td>
 
             <td>
-              {% if d.material %}
-                {{ d.material.name }} ({{ d.material.id }})
-              {% else %}
-                -
+              <div>{{ row.material_label }}</div>
+              {% if row.row_type == "group" %}
+                <small style="opacity:.8;">{{ row.material_preview }}</small>
+                <br>
+                <small style="opacity:.8;">{{ row.paid_items }} / {{ row.total_items }} materiales pagados · {{ row.progress_pct }}%</small>
               {% endif %}
             </td>
 
-            <td>{{ ((d.original_amount if d.original_amount is not none else d.amount) or 0)|int }}</td>
-            <td>{{ ((d.remaining_amount if d.remaining_amount is not none else d.amount) or 0)|int }}</td>
+            <td>{{ row.total_original }}</td>
+            <td>{{ row.total_pending }}</td>
 
-            <td>{{ d.reason or '-' }}</td>
+            <td>{{ row.reason }}</td>
             <td>
-              {% if d.case_code %}
-                <span class="status-badge status-neutral">Compuesto</span>
-              {% else %}
-                <span class="status-badge status-neutral">Legacy</span>
-              {% endif %}
+              <span class="status-badge status-neutral">{{ row.flow_label }}</span>
             </td>
 
             <td>
               <div style="display:flex; flex-wrap:wrap; gap:6px;">
-                <a href="{{ url_for('debts.admin_detail', debt_id=d.id) }}" class="btn btn-ghost">Ver detalle</a>
-                {% if d.status == "PENDING" %}
-                  <form method="post" action="{{ url_for('debts.admin_close', debt_id=d.id) }}">
+                <a href="{{ url_for('debts.admin_detail', debt_id=row.detail_debt_id) }}" class="btn btn-ghost">Ver detalle</a>
+                {% if row.can_pay_from_list %}
+                  <form method="post" action="{{ url_for('debts.admin_close', debt_id=row.payment_debt_id) }}">
                     <input type="hidden" name="return_to" value="list">
                     <div style="display:flex; gap:6px; align-items:center;">
                       <input
@@ -128,8 +148,8 @@
                         name="payment_amount"
                         min="1"
                         step="1"
-                        max="{{ ((d.remaining_amount if d.remaining_amount is not none else d.amount) or 0)|int }}"
-                        value="{{ ((d.remaining_amount if d.remaining_amount is not none else d.amount) or 0)|int }}"
+                        max="{{ row.payment_max }}"
+                        value="{{ row.payment_max }}"
                         class="form-control"
                         style="max-width:110px;"
                         required
@@ -137,6 +157,8 @@
                       <button type="submit" class="btn btn-gold">Abonar</button>
                     </div>
                   </form>
+                {% elif row.status == "PENDING" %}
+                  <span class="status-badge status-neutral">Abonar en detalle</span>
                 {% else %}
                   <span class="status-badge status-neutral">Pagado</span>
                 {% endif %}
@@ -159,13 +181,22 @@
 
 <!-- 🔥 SCRIPT FILTRO -->
 <script>
+let activeStatusFilter = "ALL";
+
 function filterTable(status) {
+  activeStatusFilter = status;
+  applyDebtFilters();
+}
+
+function applyDebtFilters() {
+  const query = (document.getElementById("debtSearchInput")?.value || "").toLowerCase().trim();
+  const flow = document.getElementById("flowFilter")?.value || "ALL";
   document.querySelectorAll("#debtTable tbody tr").forEach(row => {
-    if (status === "ALL") {
-      row.style.display = "";
-    } else {
-      row.style.display = row.dataset.status === status ? "" : "none";
-    }
+    const matchesStatus = activeStatusFilter === "ALL" || row.dataset.status === activeStatusFilter;
+    const matchesFlow = flow === "ALL" || row.dataset.flow === flow;
+    const searchBlob = (row.dataset.search || "").toLowerCase();
+    const matchesSearch = !query || searchBlob.includes(query);
+    row.style.display = matchesStatus && matchesFlow && matchesSearch ? "" : "none";
   });
 }
 </script>
