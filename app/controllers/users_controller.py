@@ -23,8 +23,8 @@ from app.utils.validators import is_valid_utpn_email
 users_bp = Blueprint("users", __name__, url_prefix="/users")
 PENDING_APPROVAL_ROLES = (ROLE_TEACHER, ROLE_STAFF, ROLE_ADMIN)
 ADMIN_PANEL_ROLE_FILTERS = (ROLE_PENDING, ROLE_STUDENT, ROLE_TEACHER, ROLE_STAFF, ROLE_ADMIN, ROLE_SUPERADMIN)
-SUPERADMIN_ASSIGNABLE_ROLES = (ROLE_STUDENT, ROLE_TEACHER, ROLE_ADMIN)
-ADMIN_ASSIGNABLE_ROLES = (ROLE_STUDENT, ROLE_TEACHER)
+SUPERADMIN_ASSIGNABLE_ROLES = (ROLE_STUDENT, ROLE_TEACHER, ROLE_STAFF, ROLE_ADMIN)
+ADMIN_ASSIGNABLE_ROLES = (ROLE_STUDENT, ROLE_TEACHER, ROLE_STAFF)
 STAFF_PENDING_ASSIGNABLE_ROLES = (ROLE_TEACHER, ROLE_STAFF)
 ADMIN_PENDING_ASSIGNABLE_ROLES = (ROLE_TEACHER, ROLE_STAFF, ROLE_ADMIN)
 CRITICAL_ACTION_TYPES = {
@@ -128,7 +128,7 @@ def _apply_critical_action(req: CriticalActionRequest) -> str:
 
 
 @users_bp.route("/pending", methods=["GET"])
-@min_role_required("STAFF")
+@min_role_required("ADMIN")
 def pending_users():
     users = (
         User.query.filter(User.role == ROLE_PENDING)
@@ -144,7 +144,7 @@ def pending_users():
 
 
 @users_bp.route("/<int:user_id>/role", methods=["POST"])
-@min_role_required("STAFF")
+@min_role_required("ADMIN")
 def assign_role(user_id: int):
     user = User.query.get_or_404(user_id)
     new_role = normalize_role(request.form.get("role"))
