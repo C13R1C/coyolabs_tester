@@ -62,6 +62,15 @@
   </div>
 </section>
 
+<section class="toolbar-card" style="margin-top:16px;">
+  <div><strong>Razón general:</strong> {{ debt.reason or '-' }}</div>
+  <div style="margin-top:6px;">
+    <span class="status-badge status-neutral">
+      El caso permanece pendiente mientras exista al menos un material con saldo pendiente.
+    </span>
+  </div>
+</section>
+
 <section class="table-card" style="margin-top:16px;">
   <h3 style="margin:0 0 12px 0;">Items/materiales del caso</h3>
   <div class="table-wrap">
