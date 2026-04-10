@@ -128,7 +128,7 @@ def _apply_critical_action(req: CriticalActionRequest) -> str:
 
 
 @users_bp.route("/pending", methods=["GET"])
-@min_role_required("STAFF")
+@min_role_required("ADMIN")
 def pending_users():
     users = (
         User.query.filter(User.role == ROLE_PENDING)
@@ -144,7 +144,7 @@ def pending_users():
 
 
 @users_bp.route("/<int:user_id>/role", methods=["POST"])
-@min_role_required("STAFF")
+@min_role_required("ADMIN")
 def assign_role(user_id: int):
     user = User.query.get_or_404(user_id)
     new_role = normalize_role(request.form.get("role"))

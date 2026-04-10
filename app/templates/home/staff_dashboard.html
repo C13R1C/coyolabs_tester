@@ -1,0 +1,34 @@
+{% extends "layouts/student_base.html" %}
+{% set crumbs = [("Inicio", url_for('root_home'))] %}
+{% block title %}Panel de consulta{% endblock %}
+
+{% block content %}
+<section class="topbar" style="margin-bottom:14px;">
+  <div class="topbar-left">
+    <p class="page-kicker">STAFF</p>
+    <h1>Panel de consulta</h1>
+    <p class="page-subtitle">Acceso de solo lectura para consulta institucional.</p>
+  </div>
+</section>
+
+<section class="stats-row" style="grid-template-columns: repeat(3, minmax(220px, 1fr));">
+  <a class="stat-card" href="{{ url_for('inventory.inventory_list') }}" style="text-decoration:none;">
+    <span class="stat-label">Inventario</span>
+    <strong>Consultar materiales</strong>
+  </a>
+  <a class="stat-card" href="{{ url_for('reports.reports_home') }}" style="text-decoration:none;">
+    <span class="stat-label">Reportes</span>
+    <strong>Ver y exportar reportes</strong>
+  </a>
+  <a class="stat-card" href="{{ url_for('profile.my_profile') }}" style="text-decoration:none;">
+    <span class="stat-label">Mi perfil</span>
+    <strong>Administrar perfil</strong>
+  </a>
+</section>
+
+<section class="card" style="margin-top:16px;">
+  <p style="margin:0;color:var(--text-soft);">
+    Este panel está diseñado para consulta: no incluye acciones de creación, edición o administración.
+  </p>
+</section>
+{% endblock %}

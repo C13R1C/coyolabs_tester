@@ -5,7 +5,7 @@ from sqlalchemy.orm import joinedload
 from flask_login import current_user, login_required
 
 from app.utils.authz import min_role_required
-from app.utils.roles import is_admin_role
+from app.utils.roles import ROLE_STAFF, is_admin_role, normalize_role
 
 from app.models.reservation import Reservation
 from app.models.debt import Debt
@@ -90,6 +90,9 @@ def labs_view():
 @home_bp.route("/", methods=["GET"])
 @login_required
 def home_dashboard():
+    if normalize_role(current_user.role) == ROLE_STAFF:
+        return redirect(url_for("home.staff_dashboard"))
+
     if is_admin_role(current_user.role):
         return redirect(url_for("dashboard.dashboard_home"))
 
@@ -168,4 +171,16 @@ def home_dashboard():
         selected_date=selected_date,
         selected_time=selected_time.strftime("%H:%M"),
         labs_by_floor=labs_by_floor,
+    )
+
+
+@home_bp.route("/staff", methods=["GET"])
+@min_role_required("STAFF")
+def staff_dashboard():
+    if normalize_role(current_user.role) != ROLE_STAFF:
+        return redirect(url_for("root_home"))
+
+    return render_template(
+        "home/staff_dashboard.html",
+        active_page="home",
     )
