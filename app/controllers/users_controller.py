@@ -22,7 +22,7 @@ from app.utils.validators import is_valid_utpn_email
 
 users_bp = Blueprint("users", __name__, url_prefix="/users")
 PENDING_APPROVAL_ROLES = (ROLE_TEACHER, ROLE_STAFF, ROLE_ADMIN)
-ADMIN_PANEL_ROLE_FILTERS = (ROLE_PENDING, ROLE_STUDENT, ROLE_TEACHER, ROLE_STAFF, ROLE_ADMIN, ROLE_SUPERADMIN)
+ADMIN_PANEL_ROLE_FILTERS = (ROLE_STUDENT, ROLE_TEACHER, ROLE_STAFF, ROLE_ADMIN, ROLE_SUPERADMIN)
 SUPERADMIN_ASSIGNABLE_ROLES = (ROLE_STUDENT, ROLE_TEACHER, ROLE_STAFF, ROLE_ADMIN)
 ADMIN_ASSIGNABLE_ROLES = (ROLE_STUDENT, ROLE_TEACHER, ROLE_STAFF)
 STAFF_PENDING_ASSIGNABLE_ROLES = (ROLE_TEACHER, ROLE_STAFF)
@@ -183,7 +183,7 @@ def admin_panel():
     q = (request.args.get("q") or "").strip()
     role = normalize_role(request.args.get("role"))
 
-    query = User.query
+    query = User.query.filter(User.role != ROLE_PENDING)
 
     if q:
         like = f"%{q.lower()}%"
@@ -199,6 +199,11 @@ def admin_panel():
         query = query.filter(User.role == role)
 
     users = query.order_by(User.created_at.desc()).limit(300).all()
+    pending_review_count = (
+        User.query.filter(User.role == ROLE_PENDING).count()
+        + CriticalActionRequest.query.filter(CriticalActionRequest.status == "PENDING").count()
+        + ProfileChangeRequest.query.filter(ProfileChangeRequest.status == "PENDING").count()
+    )
 
     assignable_roles = SUPERADMIN_ASSIGNABLE_ROLES if _is_superadmin() else ADMIN_ASSIGNABLE_ROLES
 
@@ -210,6 +215,7 @@ def admin_panel():
         role_filters=ADMIN_PANEL_ROLE_FILTERS,
         assignable_roles=assignable_roles,
         is_superadmin=_is_superadmin(),
+        pending_review_count=pending_review_count,
         active_page="users",
     )
 
@@ -236,11 +242,27 @@ def profile_change_requests():
 @users_bp.route("/admin/critical-action-requests", methods=["GET"])
 @min_role_required("ADMIN")
 def critical_action_requests():
+    pending_accounts = (
+        User.query
+        .filter(User.role == ROLE_PENDING)
+        .order_by(User.created_at.asc())
+        .limit(300)
+        .all()
+    )
+
+    pending_profile_requests = (
+        ProfileChangeRequest.query
+        .filter(ProfileChangeRequest.status == "PENDING")
+        .order_by(ProfileChangeRequest.created_at.desc())
+        .limit(100)
+        .all()
+    )
+
     query = CriticalActionRequest.query
     if not _is_superadmin():
         query = query.filter(CriticalActionRequest.requester_id == current_user.id)
 
-    requests = (
+    critical_requests = (
         query.order_by(
             db.case((CriticalActionRequest.status == "PENDING", 0), else_=1),
             CriticalActionRequest.created_at.desc(),
@@ -250,7 +272,10 @@ def critical_action_requests():
     )
     return render_template(
         "users/critical_action_requests.html",
-        requests=requests,
+        requests=critical_requests,
+        pending_accounts=pending_accounts,
+        pending_profile_requests=pending_profile_requests,
+        pending_accounts_assignable_roles=_pending_assignable_roles(),
         is_superadmin=_is_superadmin(),
         action_labels=CRITICAL_ACTION_TYPES,
         active_page="users",
