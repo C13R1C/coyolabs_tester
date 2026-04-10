@@ -107,6 +107,30 @@ def _case_item_progress(items: list[Debt]) -> tuple[int, int, int]:
     return paid_items, total_items, progress_pct
 
 
+def _user_career_name(user: User | None) -> str:
+    if not user:
+        return ""
+    return (user.career_rel.name if user.career_rel else user.career) or ""
+
+
+def _can_assign_material_to_user(user: User, material: Material | None) -> tuple[bool, str | None]:
+    if not material:
+        return True, None
+
+    role = (user.role or "").upper()
+    if role == "STUDENT":
+        if material.career_id is None:
+            return True, None
+        if not user.career_id:
+            return False, f"El alumno {user.email} no tiene carrera asignada y el material '{material.name}' requiere carrera."
+        if material.career_id != user.career_id:
+            return False, f"El material '{material.name}' no corresponde a la carrera del alumno seleccionado."
+        return True, None
+
+    # Docente (y roles administrativos por compatibilidad legacy) puede recibir cualquier material.
+    return True, None
+
+
 def _build_admin_debt_rows(debts: list[Debt]) -> list[dict]:
     grouped_by_case: dict[tuple[str, int], list[Debt]] = {}
     for debt in debts:
@@ -138,7 +162,6 @@ def _build_admin_debt_rows(debts: list[Debt]) -> list[dict]:
                 case_status = _case_status_from_items(case_items_sorted)
                 case_visible_id = _visible_case_id("ADEUDO-CJ", case_items_sorted[0].id)
                 paid_items, total_items, progress_pct = _case_item_progress(case_items_sorted)
-                paid_items, total_items, progress_pct = _case_item_progress(case_items_sorted)
 
                 case_material_names = " ".join(
                     (item.material.name if item.material else "").lower()
@@ -166,6 +189,8 @@ def _build_admin_debt_rows(debts: list[Debt]) -> list[dict]:
                     "search_blob": " ".join([
                         case_visible_id.lower(),
                         (case_items_sorted[0].user.email if case_items_sorted[0].user else "").lower(),
+                        (case_items_sorted[0].user.full_name if case_items_sorted[0].user else "").lower(),
+                        (case_items_sorted[0].user.matricula if case_items_sorted[0].user else "").lower(),
                         case_status.lower(),
                         "conjunto",
                         case_material_names,
@@ -201,6 +226,8 @@ def _build_admin_debt_rows(debts: list[Debt]) -> list[dict]:
             "search_blob": " ".join([
                 visible_id.lower(),
                 (debt.user.email if debt.user else "").lower(),
+                (debt.user.full_name if debt.user else "").lower(),
+                (debt.user.matricula if debt.user else "").lower(),
                 singular_status.lower(),
                 "singular",
                 singular_material.lower(),
@@ -285,7 +312,7 @@ def admin_list():
 @min_role_required("ADMIN")
 @permission_required("debts.create")
 def admin_create():
-    materials = Material.query.order_by(Material.name.asc()).limit(500).all()
+    materials = Material.query.options(joinedload(Material.career)).order_by(Material.name.asc()).limit(500).all()
     if request.method == "POST":
         user_id = request.form.get("user_id", type=int)
         email = (request.form.get("email") or "").strip().lower()
@@ -296,6 +323,10 @@ def admin_create():
             user = User.query.filter_by(email=email).first()
         if not user:
             flash("No existe un usuario con ese correo.", "error")
+            return redirect(url_for("debts.admin_create"))
+
+        if (user.role or "").upper() not in {"STUDENT", "TEACHER", "ADMIN", "STAFF", "SUPERADMIN"}:
+            flash("El usuario seleccionado no es válido para asignación de adeudos.", "error")
             return redirect(url_for("debts.admin_create"))
 
         try:
@@ -314,6 +345,12 @@ def admin_create():
                     flash("material_id no existe.", "error")
                     return redirect(url_for("debts.admin_create"))
             parsed_items = [{"material": material, "amount": amount if amount is not None else 1}]
+
+        for item in parsed_items:
+            valid, validation_error = _can_assign_material_to_user(user=user, material=item["material"])
+            if not valid:
+                flash(validation_error or "Material no permitido para el usuario seleccionado.", "error")
+                return redirect(url_for("debts.admin_create"))
 
         case_code = str(uuid.uuid4()) if len(parsed_items) > 1 else None
         created_debts: list[Debt] = []
@@ -363,10 +400,10 @@ def admin_create():
         flash("Adeudo creado." if len(created_debts) == 1 else "Adeudo conjunto creado.", "success")
         return redirect(url_for("debts.admin_detail", debt_id=first_debt.id))
 
-    students = (
+    debt_receivers = (
         User.query
         .options(joinedload(User.career_rel))
-        .filter(User.role == "STUDENT")
+        .filter(User.role.in_(["STUDENT", "TEACHER", "ADMIN", "STAFF", "SUPERADMIN"]))
         .order_by(User.full_name.asc(), User.email.asc())
         .limit(1000)
         .all()
@@ -375,7 +412,7 @@ def admin_create():
         "debts/admin_create.html",
         active_page="debts",
         materials=materials,
-        students=students,
+        debt_receivers=debt_receivers,
     )
 
 
@@ -385,7 +422,7 @@ def admin_create():
 def admin_detail(debt_id: int):
     debt = (
         Debt.query
-        .options(joinedload(Debt.user), joinedload(Debt.material))
+        .options(joinedload(Debt.user).joinedload(User.career_rel), joinedload(Debt.material))
         .get(debt_id)
     )
     if not debt:
@@ -396,7 +433,7 @@ def admin_detail(debt_id: int):
     if debt.case_code:
         case_debts = (
             Debt.query
-            .options(joinedload(Debt.user), joinedload(Debt.material))
+            .options(joinedload(Debt.user).joinedload(User.career_rel), joinedload(Debt.material))
             .filter(Debt.case_code == debt.case_code, Debt.user_id == debt.user_id)
             .order_by(Debt.id.asc())
             .all()
@@ -410,6 +447,7 @@ def admin_detail(debt_id: int):
     case_flow = "Conjunto" if len(case_debts) > 1 else "Singular"
     case_visible_id = _visible_case_id("ADEUDO-CJ", case_debts[0].id) if len(case_debts) > 1 else _visible_case_id("ADEUDO-SG", debt.id)
     paid_items, total_items, progress_pct = _case_item_progress(case_debts)
+    user_career_name = _user_career_name(debt.user)
 
 
     return render_template(
@@ -424,6 +462,7 @@ def admin_detail(debt_id: int):
         paid_items=paid_items,
         total_items=total_items,
         progress_pct=progress_pct,
+        user_career_name=user_career_name,
         active_page="debts",
     )
 
