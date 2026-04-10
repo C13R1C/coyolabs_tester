@@ -1,7 +1,7 @@
 from datetime import datetime
 import json
 
-from flask import Blueprint, flash, redirect, render_template, request, session, url_for
+from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for
 from flask_login import current_user
 from sqlalchemy import func
 from sqlalchemy.orm import joinedload
@@ -12,9 +12,8 @@ from app.models.inventory_request_ticket import InventoryRequestTicket
 from app.models.debt import Debt
 from app.models.material import Material
 from app.models.notification import Notification
-from app.models.user import User
 from app.services.audit_service import log_event
-from app.services.notification_realtime_service import publish_notification_created
+from app.services.notification_service import build_notification, notify_roles, publish_notifications_safe
 from app.utils.authz import min_role_required
 from app.utils.roles import ROLE_STUDENT, normalize_role
 from app.utils.statuses import DebtStatus, InventoryRequestStatus
@@ -94,18 +93,12 @@ def _is_student_role(role: str | None) -> bool:
 
 
 def _notify_admins_for_ticket(ticket: InventoryRequestTicket, message: str) -> list[Notification]:
-    admins = User.query.filter(User.role.in_(["ADMIN", "SUPERADMIN"])).all()
-    notifications_created: list[Notification] = []
-    for admin in admins:
-        notif = Notification(
-            user_id=admin.id,
-            title="Solicitud de material actualizada",
-            message=message,
-            link=url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id),
-        )
-        db.session.add(notif)
-        notifications_created.append(notif)
-    return notifications_created
+    return notify_roles(
+        roles=["ADMIN", "SUPERADMIN", "STAFF"],
+        title="Nueva solicitud de material",
+        message=message,
+        link=url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id),
+    )
 
 
 def _close_stale_open_tickets() -> None:
@@ -351,8 +344,12 @@ def add_to_daily_request():
     )
 
     db.session.commit()
-    for notif in admin_notifications:
-        publish_notification_created(notif)
+    publish_notifications_safe(
+        admin_notifications,
+        logger=current_app.logger,
+        event_label="inventory request creation",
+        extra={"ticket_id": ticket.id},
+    )
 
     session.pop("daily_request_reason_draft", None)
     flash(f"Solicitud de material creada (#{ticket.id}).", "success")
@@ -527,7 +524,12 @@ def admin_mark_ready(ticket_id: int):
     )
 
     db.session.commit()
-    publish_notification_created(notification)
+    publish_notifications_safe(
+        [notification],
+        logger=current_app.logger,
+        event_label="inventory request ready",
+        extra={"ticket_id": ticket.id},
+    )
 
     flash("Solicitud marcada como lista y usuario notificado.", "success")
     return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
@@ -572,7 +574,12 @@ def admin_reject_ticket(ticket_id: int):
     )
 
     db.session.commit()
-    publish_notification_created(notification)
+    publish_notifications_safe(
+        [notification],
+        logger=current_app.logger,
+        event_label="inventory request rejection",
+        extra={"ticket_id": ticket.id},
+    )
     flash("Solicitud rechazada correctamente.", "success")
     return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
 
@@ -612,6 +619,31 @@ def admin_register_return(ticket_id: int):
         return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))
 
     created_debts = _process_close_after_return(ticket=ticket, cancel_reason=cancel_reason)
+
+    requester_notifications: list[Notification] = [
+        build_notification(
+            user_id=ticket.user_id,
+            title="Tu solicitud de material fue cerrada",
+            message=f"La solicitud #{ticket.id} fue cerrada tras registrar devolución. Motivo: {cancel_reason}",
+            link=url_for("inventory_requests.my_ticket_detail", ticket_id=ticket.id),
+        )
+    ]
+    if created_debts:
+        requester_notifications.extend(_build_debt_created_notification(debt) for debt in created_debts)
+
+    admin_notifications = notify_roles(
+        roles=["ADMIN", "SUPERADMIN", "STAFF"],
+        title="Solicitud de material cerrada",
+        message=f"La solicitud #{ticket.id} fue cerrada. {'Se generaron adeudos.' if created_debts else 'Sin adeudos.'}",
+        link=url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id),
+    )
+
     db.session.commit()
+    publish_notifications_safe(
+        [*requester_notifications, *admin_notifications],
+        logger=current_app.logger,
+        event_label="inventory request return closure",
+        extra={"ticket_id": ticket.id, "created_debts": len(created_debts)},
+    )
     flash("Devolución guardada y solicitud cerrada.", "success")
     return redirect(url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id))

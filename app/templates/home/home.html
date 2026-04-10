@@ -9,6 +9,8 @@
   .card-title{font-size:1.05rem;font-weight:800;margin-bottom:4px}
   .card-subtitle{color:var(--text-dim);font-size:.92rem}
   .hero{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;background:linear-gradient(135deg,rgba(91,140,114,.16),rgba(199,159,51,.15));border:1px solid var(--stroke-strong);border-radius:22px;padding:22px}
+  .hero > div:first-child{min-width:0;flex:1}
+  .hero .card{flex:0 0 320px}
   .hero h1{font-size:clamp(1.4rem,2.3vw,2rem);margin-top:6px}
   .hero p{margin-top:8px;color:var(--text-soft)}
   .badge{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.62);border:1px solid var(--stroke);font-size:.82rem;font-weight:700;color:var(--text-soft)}
@@ -66,12 +68,18 @@
     .home-grid{grid-template-columns:1fr}
   }
   @media (max-width: 760px){
+    .hero{flex-direction:column}
+    .hero .card{width:100%;max-width:none !important;min-width:0 !important}
     .quick-actions{grid-template-columns:repeat(2,minmax(0,1fr))}
     .labs-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .labs-filter-controls{width:100%}
+    .labs-filter-input{flex:1 1 150px}
+    .labs-filter-btn{width:100%}
   }
   @media (max-width: 480px){
     .quick-actions,.labs-grid{grid-template-columns:1fr}
-    .hero{padding:16px}
+    .hero{padding:14px}
+    .badge{font-size:.75rem}
   }
 </style>
 {% endblock %}
@@ -88,7 +96,7 @@
       <a class="quick-link" href="{{ url_for('reservations.my_reservations') }}"><i class="ph ph-calendar-check"></i>Mis reservas</a>
     </div>
   </div>
-  <div class="card" style="min-width:260px;max-width:320px;">
+  <div class="card">
     <div class="card-title">Estado rápido</div>
     <div class="list" style="margin-top:10px;">
       <div class="list-item"><strong>{{ upcoming_reservations|length }}</strong> próximas reservas</div>

@@ -16,6 +16,7 @@ from app.models.user import User
 from app.services.audit_service import log_event
 from app.services.email_service import send_print3d_ready_email
 from app.services.notification_realtime_service import publish_notification_created
+from app.services.notification_service import publish_notifications_safe
 from app.utils.authz import min_role_required
 from app.utils.roles import is_admin_role
 from app.utils.statuses import Print3DJobStatus, PRINT3D_ALLOWED_STATUSES, PRINT3D_ALLOWED_TRANSITIONS
@@ -425,6 +426,7 @@ def admin_set_status(job_id: int):
 
     db.session.commit()
     created_user_notification: Notification | None = None
+    additional_status_notification: Notification | None = None
     if should_notify_ready:
         created_user_notification = _build_ready_notification(job)
         if created_user_notification is not None:
@@ -436,22 +438,34 @@ def admin_set_status(job_id: int):
         if created_user_notification is not None:
             db.session.add(created_user_notification)
             db.session.commit()
+    elif target_status in {Print3DJobStatus.QUOTED, Print3DJobStatus.IN_PROGRESS, Print3DJobStatus.DELIVERED}:
+        status_messages = {
+            Print3DJobStatus.QUOTED: "Tu solicitud 3D fue cotizada.",
+            Print3DJobStatus.IN_PROGRESS: "Tu solicitud 3D está en proceso de impresión.",
+            Print3DJobStatus.DELIVERED: "Tu solicitud 3D fue marcada como entregada.",
+        }
+        additional_status_notification = Notification(
+            user_id=job.requester_user_id,
+            title="Tu solicitud 3D fue actualizada",
+            message=f"{status_messages[target_status]} Folio #{job.id}.",
+            link=url_for("print3d.my_jobs"),
+        )
+        db.session.add(additional_status_notification)
+        db.session.commit()
+
+    notifications_to_publish = []
+    if created_user_notification is not None:
+        notifications_to_publish.append(created_user_notification)
+    if additional_status_notification is not None:
+        notifications_to_publish.append(additional_status_notification)
+    publish_notifications_safe(
+        notifications_to_publish,
+        logger=logger,
+        event_label="print3d status update",
+        extra={"job_id": job.id, "target_status": target_status},
+    )
 
     if created_user_notification is not None:
-        try:
-            publish_notification_created(created_user_notification)
-        except Exception:
-            logger.warning(
-                "SSE publish failed after print3d user notification",
-                exc_info=True,
-                extra={
-                    "job_id": job.id,
-                    "notification_id": created_user_notification.id,
-                    "target_user_id": created_user_notification.user_id,
-                    "target_status": target_status,
-                },
-            )
-
         if target_status == Print3DJobStatus.READY_FOR_PICKUP and job.requester_user and job.requester_user.email:
             jobs_url = url_for("print3d.my_jobs", _external=True)
             email_sent = False

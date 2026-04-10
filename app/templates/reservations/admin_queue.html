@@ -26,6 +26,12 @@
 .signature-modal{position:fixed;inset:0;z-index:1200;align-items:center;justify-content:center}
 .signature-modal-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.72)}
 .signature-modal-content{position:relative;width:min(520px,92vw);border-radius:14px;background:#fff;padding:14px;box-shadow:0 24px 50px rgba(0,0,0,.28)}
+@media (max-width: 768px){
+  #reservations-admin-queue-container .table-wrap{
+    border:none;
+    background:transparent;
+  }
+}
 </style>
 
 <header class="topbar">
@@ -55,7 +61,7 @@
   {% else %}
     <section class="table-card">
       <div class="table-wrap">
-        <table class="inventory-table" style="min-width: 1450px;">
+        <table class="inventory-table table-mobile-cards" style="min-width: 1450px;">
           <thead>
             <tr>
               <th>ID</th>
@@ -75,18 +81,18 @@
           <tbody>
             {% for r in reservations %}
             <tr>
-              <td>{{ r.id }}</td>
-              <td>{{ r.user.email }}</td>
-              <td>{{ r.room }}</td>
-              <td>{{ r.date }}</td>
-              <td>{{ r.start_time }}</td>
-              <td>{{ r.end_time }}</td>
-              <td>{{ r.subject }}</td>
-              <td>{{ r.group_name }}</td>
-              <td>{{ (r.user.full_name or '')|trim or r.user.email }}</td>
-              <td>{{ r.purpose or '-' }}</td>
+              <td data-label="ID">{{ r.id }}</td>
+              <td data-label="Usuario">{{ r.user.email }}</td>
+              <td data-label="Salón/Lab">{{ r.room }}</td>
+              <td data-label="Fecha">{{ r.date }}</td>
+              <td data-label="Inicio">{{ r.start_time }}</td>
+              <td data-label="Fin">{{ r.end_time }}</td>
+              <td data-label="Materia">{{ r.subject }}</td>
+              <td data-label="Grupo">{{ r.group_name }}</td>
+              <td data-label="Solicitante">{{ (r.user.full_name or '')|trim or r.user.email }}</td>
+              <td data-label="Motivo">{{ r.purpose or '-' }}</td>
 
-              <td>
+              <td data-label="Materiales">
                 {% if r.items %}
                   <ul style="padding-left:16px; margin:0;">
                     {% for item in r.items %}
@@ -101,7 +107,7 @@
                 {% endif %}
               </td>
 
-              <td>
+              <td data-label="Acciones">
                 <form method="post" action="{{ url_for('reservations.admin_approve', res_id=r.id) }}" class="reservation-admin-action-form">
                   <input type="text" name="admin_note" placeholder="Nota administrativa (opcional)" class="form-control">
                   <button type="submit" class="btn btn-gold">Aprobar</button>

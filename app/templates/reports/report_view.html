@@ -215,6 +215,25 @@
     .report-view-topbar h3{
       font-size: 1.1rem;
     }
+    .report-view-actions .btn{
+      width: 100%;
+    }
+    .report-table-wrap{
+      border-radius: 14px;
+      position: relative;
+    }
+    .report-table-wrap::before{
+      content: "Desliza horizontalmente para ver todas las columnas";
+      position: sticky;
+      left: 0;
+      display: block;
+      font-size: .76rem;
+      color: var(--text-dim);
+      background: rgba(255,255,255,.8);
+      padding: 6px 10px;
+      border-bottom: 1px dashed var(--stroke);
+      z-index: 3;
+    }
   }
 </style>
 {% endblock %}
