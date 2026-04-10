@@ -168,8 +168,12 @@ def request_update(software_id: int):
     notifications = notify_roles(
         roles=["ADMIN", "SUPERADMIN", "STAFF"],
         title="Nueva solicitud técnica de software",
-        message=f"{current_user.email} solicitó seguimiento para {s.name}.",
+        message="Se registró una solicitud técnica de software.",
         link=url_for("software.list_software"),
+        actor_name=(current_user.full_name or current_user.email),
+        entity_name=s.name,
+        extra_context=(note or None),
+        priority="low",
     )
     db.session.commit()
     publish_notifications_safe(
@@ -195,8 +199,11 @@ def admin_clear_update(software_id: int):
     notifications = notify_roles(
         roles=["ADMIN", "SUPERADMIN", "STAFF"],
         title="Solicitud técnica atendida",
-        message=f"El seguimiento de {s.name} fue marcado como atendido por {current_user.email}.",
+        message="La solicitud técnica fue marcada como atendida.",
         link=url_for("software.list_software"),
+        actor_name=(current_user.full_name or current_user.email),
+        entity_name=s.name,
+        priority="medium",
     )
     db.session.commit()
     publish_notifications_safe(

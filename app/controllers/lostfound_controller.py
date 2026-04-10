@@ -167,6 +167,9 @@ def admin_new():
             title=notif_title,
             message=notif_message,
             link=url_for("lostfound.detail", item_id=item.id),
+            actor_name=(current_user.full_name or current_user.email),
+            entity_name=f"Caso #{item.id}",
+            priority="low",
         )
 
         db.session.commit()
@@ -208,16 +211,22 @@ def admin_set_status(item_id: int):
     notifications_created: list[Notification] = notify_roles(
         roles=["ADMIN", "SUPERADMIN", "STAFF"],
         title="Caso de objeto perdido actualizado",
-        message=f"El caso #{item.id} cambió a {status_labels.get(new_status, new_status)}.",
+        message=f"El caso cambió a {status_labels.get(new_status, new_status)}.",
         link=url_for("lostfound.detail", item_id=item.id),
+        actor_name=(current_user.full_name or current_user.email),
+        entity_name=f"Caso #{item.id}",
+        priority="medium",
     )
     if item.reported_by_user_id:
         notifications_created.append(
             build_notification(
                 user_id=item.reported_by_user_id,
                 title="Tu reporte de objeto perdido fue actualizado",
-                message=f"El caso #{item.id} ahora está en estado: {status_labels.get(new_status, new_status)}.",
+                message=f"Tu reporte ahora está en estado: {status_labels.get(new_status, new_status)}.",
                 link=url_for("lostfound.detail", item_id=item.id),
+                actor_name=(current_user.full_name or current_user.email),
+                entity_name=f"Caso #{item.id}",
+                priority="medium",
             )
         )
     db.session.commit()

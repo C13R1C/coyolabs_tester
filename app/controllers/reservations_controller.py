@@ -23,7 +23,11 @@ from app.extensions import db
 from app.models.reservation import Reservation
 from app.services.audit_service import log_event
 from app.services.debt_service import user_has_open_debts
-from app.services.notification_service import notify_roles, publish_notifications_safe
+from app.services.notification_service import (
+    build_reservation_message,
+    notify_roles,
+    publish_notifications_safe,
+)
 from app.services.reservation_service import approve_reservation, reject_reservation
 from app.services.ticket_service import (
     add_material_to_ticket,
@@ -586,8 +590,17 @@ def request_reservation():
         admin_notifications = notify_roles(
             roles=["ADMIN", "SUPERADMIN", "STAFF"],
             title="Nueva reservación recibida",
-            message=f"{current_user.email} creó la reservación #{r.id} para {room} el {date_}.",
+            message=build_reservation_message(
+                "created",
+                actor_name=(current_user.full_name or current_user.email),
+                room=room,
+                time_range=f"{start_t.strftime('%H:%M')} - {end_t.strftime('%H:%M')}",
+            ),
             link=url_for("reservations.admin_queue"),
+            entity_name=f"Reserva #{r.id} · {room}",
+            time_range=f"{start_t.strftime('%H:%M')} - {end_t.strftime('%H:%M')}",
+            extra_context=f"Fecha {date_}",
+            priority="low",
         )
 
         log_event(

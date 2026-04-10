@@ -98,6 +98,8 @@ def _notify_admins_for_ticket(ticket: InventoryRequestTicket, message: str) -> l
         title="Nueva solicitud de material",
         message=message,
         link=url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id),
+        entity_name=f"Solicitud #{ticket.id}",
+        priority="low",
     )
 
 
@@ -331,7 +333,7 @@ def add_to_daily_request():
 
     admin_notifications = _notify_admins_for_ticket(
         ticket,
-        f"El usuario {current_user.email} creó la solicitud de material #{ticket.id}.",
+        f"{(current_user.full_name or current_user.email)} creó una solicitud de material.",
     )
 
     log_event(
@@ -510,9 +512,10 @@ def admin_mark_ready(ticket_id: int):
     notification = Notification(
         user_id=ticket.user_id,
         title="Solicitud de material lista para recoger",
-        message=f"Tu solicitud de material #{ticket.id} está lista para recoger.",
-        link=url_for("inventory_requests.my_daily_request"),
+        message="Tu solicitud de material está lista para recoger.",
+        link=url_for("inventory_requests.my_ticket_detail", ticket_id=ticket.id),
     )
+    setattr(notification, "_priority", "medium")
     db.session.add(notification)
     log_event(
         module="INVENTORY_REQUESTS",
@@ -560,9 +563,10 @@ def admin_reject_ticket(ticket_id: int):
     notification = Notification(
         user_id=ticket.user_id,
         title="Solicitud de material rechazada",
-        message=f"Tu solicitud de material #{ticket.id} fue rechazada. Motivo: {reject_reason}",
+        message=f"Tu solicitud de material fue rechazada. Motivo: {reject_reason}",
         link=url_for("inventory_requests.my_ticket_detail", ticket_id=ticket.id),
     )
+    setattr(notification, "_priority", "high")
     db.session.add(notification)
     log_event(
         module="INVENTORY_REQUESTS",
@@ -624,8 +628,11 @@ def admin_register_return(ticket_id: int):
         build_notification(
             user_id=ticket.user_id,
             title="Tu solicitud de material fue cerrada",
-            message=f"La solicitud #{ticket.id} fue cerrada tras registrar devolución. Motivo: {cancel_reason}",
+            message="La solicitud fue cerrada tras registrar devolución.",
             link=url_for("inventory_requests.my_ticket_detail", ticket_id=ticket.id),
+            entity_name=f"Solicitud #{ticket.id}",
+            extra_context=f"Motivo: {cancel_reason}",
+            priority="medium",
         )
     ]
     if created_debts:
@@ -634,8 +641,11 @@ def admin_register_return(ticket_id: int):
     admin_notifications = notify_roles(
         roles=["ADMIN", "SUPERADMIN", "STAFF"],
         title="Solicitud de material cerrada",
-        message=f"La solicitud #{ticket.id} fue cerrada. {'Se generaron adeudos.' if created_debts else 'Sin adeudos.'}",
+        message=f"La solicitud fue cerrada. {'Se generaron adeudos.' if created_debts else 'Sin adeudos.'}",
         link=url_for("inventory_requests.admin_ticket_detail", ticket_id=ticket.id),
+        entity_name=f"Solicitud #{ticket.id}",
+        actor_name=(current_user.full_name or current_user.email),
+        priority="high" if created_debts else "medium",
     )
 
     db.session.commit()

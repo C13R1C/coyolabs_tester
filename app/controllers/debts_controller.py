@@ -11,12 +11,16 @@ from app.utils.permission_required import permission_required
 
 from app.extensions import db
 from app.models.debt import Debt
-from app.models.notification import Notification
 from app.models.user import User
 from app.models.material import Material
 from app.services.debt_service import resolve_debt
 from app.services.audit_service import log_event
-from app.services.notification_service import notify_roles, publish_notifications_safe
+from app.services.notification_service import (
+    build_debt_message,
+    build_notification,
+    notify_roles,
+    publish_notifications_safe,
+)
 from app.utils.statuses import DebtStatus
 
 
@@ -377,26 +381,41 @@ def admin_create():
 
         first_debt = created_debts[0]
         total_pending = sum(int(d.remaining_amount or d.amount or 0) for d in created_debts)
-        user_notification = Notification(
+        actor_name = (current_user.full_name or current_user.email or "Administración")
+        user_notification = build_notification(
             user_id=user.id,
             title="Se generó un adeudo" if len(created_debts) == 1 else "Se generó un adeudo conjunto",
-            message=(
-                f"Se registró {'un adeudo' if len(created_debts) == 1 else f'un adeudo de {len(created_debts)} materiales'} "
-                f"({total_pending} pendiente total)."
-                f"{f' Motivo: {reason}.' if reason else ''}"
+            message=build_debt_message(
+                "created",
+                actor_name=actor_name,
+                debt_id=first_debt.id,
+                amount_label=f"{total_pending} pendiente total",
             ),
             link=url_for("debts.my_debts"),
+            entity_name=f"Adeudo #{first_debt.id}",
+            extra_context=(reason or None),
+            priority="high",
         )
         admin_notifications = notify_roles(
             roles=["ADMIN", "SUPERADMIN", "STAFF"],
             title="Se generó un adeudo",
-            message=f"Se registró un adeudo para {user.email}.",
+            message=build_debt_message(
+                "created",
+                actor_name=actor_name,
+                debt_id=first_debt.id,
+                amount_label=f"{total_pending} pendiente total",
+            ),
             link=url_for("debts.admin_detail", debt_id=first_debt.id),
+            entity_name=f"Usuario {user.email}",
+            extra_context=(reason or None),
+            priority="high",
         )
-        db.session.add(user_notification)
         db.session.commit()
+        notifications_to_publish = [*admin_notifications]
+        if user_notification is not None:
+            notifications_to_publish.append(user_notification)
         publish_notifications_safe(
-            [user_notification, *admin_notifications],
+            notifications_to_publish,
             logger=logger,
             event_label="debt creation",
             extra={"debt_id": first_debt.id},
