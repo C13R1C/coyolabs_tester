@@ -9,6 +9,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment
 from openpyxl.utils import get_column_letter
 from app.models.lab import Lab
+from app.models.career import Career
 from app.models.material import Material
 from app.models.debt import Debt
 from app.models.inventory_request_ticket import InventoryRequestTicket
@@ -255,8 +256,11 @@ def build_download_url(endpoint: str) -> str:
 
 def build_inventory_rows(lab_id=None, status=None, search=None):
     q = Material.query
+    career_id = request.args.get("career_id", type=int)
     if lab_id:
         q = q.filter(Material.lab_id == lab_id)
+    if career_id:
+        q = q.filter(Material.career_id == career_id)
     if status:
         q = q.filter(Material.status == status)
     if search:
@@ -523,6 +527,7 @@ def pdf_response(
 @min_role_required("ADMIN")
 def reports_home():
     labs = Lab.query.order_by(Lab.name).all()
+    careers = Career.query.order_by(Career.name.asc()).all()
 
     reservations_by_status = (
         db.session.query(Reservation.status, func.count(Reservation.id))
@@ -582,6 +587,7 @@ def reports_home():
     return render_template(
         "reports/home.html",
         labs=labs,
+        careers=careers,
         reservations_by_status=reservations_by_status,
         room_usage=room_usage,
         inventory_daily_by_status=inventory_daily_by_status,
@@ -600,12 +606,18 @@ def reports_home():
 @min_role_required("ADMIN")
 def report_inventory():
     lab_id = request.args.get("lab_id", type=int)
+    career_id = request.args.get("career_id", type=int)
     status = (request.args.get("status") or "").strip()
     search = (request.args.get("search") or "").strip()
     headers, rows = build_inventory_rows(lab_id=lab_id, status=status or None, search=search or None)
     selected_columns = parse_selected_columns(headers)
     headers, rows = project_rows(headers, rows, selected_columns)
-    fname = "inventory.csv" if not lab_id else f"inventory_lab_{lab_id}.csv"
+    if career_id:
+        fname = f"inventory_career_{career_id}.csv"
+    elif lab_id:
+        fname = f"inventory_lab_{lab_id}.csv"
+    else:
+        fname = "inventory.csv"
     return csv_response(fname, headers, rows)
 
 
@@ -613,12 +625,18 @@ def report_inventory():
 @min_role_required("ADMIN")
 def report_inventory_excel():
     lab_id = request.args.get("lab_id", type=int)
+    career_id = request.args.get("career_id", type=int)
     status = (request.args.get("status") or "").strip()
     search = (request.args.get("search") or "").strip()
     headers, rows = build_inventory_rows(lab_id=lab_id, status=status or None, search=search or None)
     selected_columns = parse_excel_selected_columns(headers)
     headers, rows = project_rows(headers, rows, selected_columns)
-    fname = "inventory.xlsx" if not lab_id else f"inventory_lab_{lab_id}.xlsx"
+    if career_id:
+        fname = f"inventory_career_{career_id}.xlsx"
+    elif lab_id:
+        fname = f"inventory_lab_{lab_id}.xlsx"
+    else:
+        fname = "inventory.xlsx"
     return excel_response(fname, headers, rows)
 
 
@@ -626,6 +644,7 @@ def report_inventory_excel():
 @min_role_required("ADMIN")
 def report_inventory_view():
     lab_id = request.args.get("lab_id", type=int)
+    career_id = request.args.get("career_id", type=int)
     status = (request.args.get("status") or "").strip()
     search = (request.args.get("search") or "").strip()
     headers, rows = build_inventory_rows(lab_id=lab_id, status=status or None, search=search or None)
@@ -635,7 +654,11 @@ def report_inventory_view():
 
     report_title = "Inventario general"
     extra_meta = None
-    if lab_id:
+    if career_id:
+        career = Career.query.get(career_id)
+        report_title = f"Inventario - {career.name if career else f'Carrera {career_id}'}"
+        extra_meta = f"ID de carrera: {career_id}"
+    elif lab_id:
         lab = Lab.query.get(lab_id)
         report_title = f"Inventario - {lab.name if lab else f'Lab {lab_id}'}"
         extra_meta = f"ID de laboratorio: {lab_id}"
@@ -648,6 +671,7 @@ def report_inventory_view():
         report_description="Vista completa del inventario.",
         extra_meta=extra_meta,
         filter_fields=[
+            {"name": "career_id", "label": "ID de carrera", "type": "number", "value": career_id or "", "placeholder": "Ejemplo: 3"},
             {"name": "lab_id", "label": "ID de laboratorio", "type": "number", "value": lab_id or "", "placeholder": "Ejemplo: 1"},
             {"name": "status", "label": "Estado", "type": "text", "value": status, "placeholder": "Ejemplo: DISPONIBLE"},
             {"name": "search", "label": "Buscar", "type": "text", "value": search, "placeholder": "Nombre, código o ubicación"},
