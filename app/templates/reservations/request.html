@@ -175,8 +175,9 @@
       {% else %}
         <div class="search-box">
           <i class="ph ph-users search-icon"></i>
-          <input type="text" name="group_name" placeholder="Ejemplo: 3A" value="{{ student_group_name }}" maxlength="80" required>
+          <input type="text" value="{{ student_group_name }}" readonly>
         </div>
+        <input type="hidden" name="group_name" value="{{ student_group_name }}">
       {% endif %}
     </div>
 
@@ -226,7 +227,7 @@
       <label>Fecha de uso</label>
       <div class="search-box">
         <i class="ph ph-calendar search-icon"></i>
-        <input type="date" id="reservationDateInput" name="date" min="{{ today.isoformat() }}" required aria-describedby="reservationDateHelp">
+        <input type="date" id="reservationDateInput" name="date" value="{{ today.isoformat() }}" min="{{ today.isoformat() }}" required aria-describedby="reservationDateHelp">
       </div>
       <small id="reservationDateHelp" class="datetime-helper">Selecciona la fecha en formato local del navegador.</small>
     </div>
