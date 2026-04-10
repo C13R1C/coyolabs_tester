@@ -267,52 +267,8 @@
     <span class="profile-chip">{{ teacher_loads|length }} asignaciones</span>
   </div>
   <p style="margin:0 0 12px 0; color:var(--text-dim);">
-    Gestiona únicamente tus asignaciones docentes. No se permiten duplicados de la misma materia y grupo.
+    Selecciona materia, captura grupo y agrega tu asignación. No se permiten duplicados de la misma materia y grupo.
   </p>
-  <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
-    <span class="status-badge status-neutral">Carrera docente: {{ teacher_scope.career or 'No definida' }}</span>
-    <span class="status-badge status-neutral">Nivel docente: {{ teacher_scope.level or 'No definido' }}</span>
-  </div>
-
-  <form method="get" action="{{ url_for('profile.my_profile') }}" class="toolbar profile-filter-form" style="grid-template-columns: 1fr 1fr 1fr auto;">
-    <div class="toolbar-group">
-      <label>Buscar materia</label>
-      <div class="search-box">
-        <i class="ph ph-magnifying-glass search-icon"></i>
-        <input type="text" name="q" value="{{ catalog_filters.q }}" placeholder="Nombre de la materia">
-      </div>
-    </div>
-
-    <div class="toolbar-group">
-      <label>Carrera</label>
-      <div class="select-wrap">
-        <select name="career_id">
-          <option value="">Todas</option>
-          {% for c in catalog_careers %}
-          <option value="{{ c.id }}" {% if catalog_filters.career_id == c.id|string %}selected{% endif %}>{{ c.name }}</option>
-          {% endfor %}
-        </select>
-        <i class="ph ph-caret-down select-arrow"></i>
-      </div>
-    </div>
-
-    <div class="toolbar-group">
-      <label>Nivel</label>
-      <div class="select-wrap">
-        <select name="level">
-          <option value="">Todos</option>
-          {% for level in catalog_levels %}
-          <option value="{{ level }}" {% if catalog_filters.level == level %}selected{% endif %}>{{ level }}</option>
-          {% endfor %}
-        </select>
-        <i class="ph ph-caret-down select-arrow"></i>
-      </div>
-    </div>
-
-    <div class="toolbar-actions" style="align-self:end;">
-      <button type="submit" class="btn btn-ghost">Filtrar catálogo</button>
-    </div>
-  </form>
 
   <form method="post" action="{{ url_for('profile.add_teaching_load') }}" class="toolbar profile-add-load-form" style="grid-template-columns: 1.2fr .8fr auto; margin-top:12px;">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -320,7 +276,7 @@
       <label>Materia</label>
       <div class="select-wrap">
         <select name="subject_id" required>
-          <option value="">Selecciona una materia del catálogo filtrado</option>
+          <option value="">Selecciona una materia</option>
           {% for s in available_subjects %}
           <option value="{{ s.id }}">{{ s.name }} · {{ s.career.name if s.career else '-' }} · {{ s.level }} C{{ s.quarter }}</option>
           {% endfor %}
@@ -342,7 +298,7 @@
     </div>
   </form>
   {% if available_subjects|length == 0 %}
-    <p style="margin-top:10px; color:var(--text-dim);">No hay materias disponibles con los filtros actuales.</p>
+    <p style="margin-top:10px; color:var(--text-dim);">No hay materias activas disponibles para asignar.</p>
   {% endif %}
 
   {% if teacher_loads %}
