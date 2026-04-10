@@ -496,6 +496,38 @@ def change_password():
     return redirect(url_for("profile.my_profile"))
 
 
+@profile_bp.route("/group/update", methods=["POST"])
+@login_required
+def update_group_name():
+    if normalize_role(current_user.role) != ROLE_STUDENT:
+        flash("Solo estudiantes pueden actualizar su grupo desde este formulario.", "error")
+        return redirect(url_for("profile.my_profile"))
+
+    group_name, group_error = _normalize_group_name(request.form.get("group_name"))
+    if group_error:
+        flash(group_error, "error")
+        return redirect(url_for("profile.my_profile"))
+
+    old_group_name = (current_user.group_name or "").strip() or None
+    if old_group_name == group_name:
+        flash("No detectamos cambios en tu grupo.", "info")
+        return redirect(url_for("profile.my_profile"))
+
+    current_user.group_name = group_name
+    db.session.commit()
+    log_event(
+        module="PROFILE",
+        action="GROUP_NAME_UPDATED",
+        user_id=current_user.id,
+        entity_label=f"User #{current_user.id}",
+        description="Grupo actualizado por el estudiante desde Mi perfil",
+        metadata={"old_group_name": old_group_name, "new_group_name": group_name},
+    )
+    db.session.commit()
+    flash("Tu grupo se actualizó correctamente.", "success")
+    return redirect(url_for("profile.my_profile"))
+
+
 @profile_bp.route("/update-basic", methods=["POST"])
 @login_required
 def update_basic_profile():
