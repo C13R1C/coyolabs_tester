@@ -154,6 +154,16 @@ def sync_ticket_after_debt_resolution(debt: Debt) -> ServiceResult:
     return ServiceResult.success(ticket=ticket, ticket_closed=False)
 
 
+def _should_restock_on_payment(debt: Debt) -> bool:
+    if not debt.material_id:
+        return False
+    reason = (debt.reason or "").strip().lower()
+    if debt.ticket_id:
+        return True
+    markers = ("faltante", "devoluci", "ticket #", "solicitud #")
+    return any(marker in reason for marker in markers)
+
+
 def resolve_debt(debt: Debt, actor_user: User, payment_amount: str | int | float | Decimal | None = None) -> ServiceResult:
     if debt.status != DebtStatus.PENDING:
         message = "El adeudo ya fue resuelto." if debt.status == DebtStatus.PAID else f"El adeudo no se puede resolver desde estado {debt.status}."
@@ -185,7 +195,7 @@ def resolve_debt(debt: Debt, actor_user: User, payment_amount: str | int | float
     new_remaining = (remaining - payment).quantize(Decimal("0.01"))
     paid_in_full = new_remaining == Decimal("0.00")
 
-    should_restock = bool(debt.material_id) and "faltante" in (debt.reason or "").lower()
+    should_restock = _should_restock_on_payment(debt)
     if should_restock and debt.material and debt.material.pieces_qty is not None:
         debt.material.pieces_qty += int(payment)
 

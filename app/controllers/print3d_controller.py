@@ -140,9 +140,20 @@ def _notify_admins_for_new_job(job: Print3DJob) -> list[Notification]:
     )
 
 
+@print3d_bp.route("/", methods=["GET"])
+@min_role_required("STUDENT")
+def print3d_home():
+    if is_admin_role(current_user.role):
+        return redirect(url_for("print3d.admin_list"))
+    return redirect(url_for("print3d.my_jobs"))
+
+
 @print3d_bp.route("/my", methods=["GET"])
 @min_role_required("STUDENT")
 def my_jobs():
+    if is_admin_role(current_user.role):
+        return redirect(url_for("print3d.admin_list"))
+
     jobs = (
         Print3DJob.query
         .filter(Print3DJob.requester_user_id == current_user.id)
@@ -160,6 +171,9 @@ def my_jobs():
 @print3d_bp.route("/new", methods=["GET", "POST"])
 @min_role_required("STUDENT")
 def new_job():
+    if is_admin_role(current_user.role):
+        return redirect(url_for("print3d.admin_list"))
+
     if request.method == "POST":
         title = (request.form.get("title") or "").strip()
         description = (request.form.get("description") or "").strip()

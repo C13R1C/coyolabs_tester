@@ -65,7 +65,7 @@ def _lostfound_status_label(status: str | None) -> str:
 @min_role_required("STUDENT")
 def lostfound_home():
     if is_admin_role(current_user.role):
-        return redirect(url_for("lostfound.admin_new"))
+        return redirect(url_for("lostfound.list_items"))
 
     return redirect(url_for("lostfound.list_items"))
 

@@ -15,7 +15,7 @@ from app.models.notification import Notification
 from app.services.audit_service import log_event
 from app.services.notification_service import build_notification, notify_roles, publish_notifications_safe
 from app.utils.authz import min_role_required
-from app.utils.roles import ROLE_STUDENT, normalize_role
+from app.utils.roles import ROLE_STUDENT, is_admin_role, normalize_role
 from app.utils.statuses import DebtStatus, InventoryRequestStatus
 
 
@@ -213,6 +213,9 @@ def _build_debt_created_notification(debt: Debt) -> Notification:
 @inventory_requests_bp.route("/", methods=["GET"], endpoint="my_daily_request")
 @min_role_required("STUDENT")
 def my_daily_request():
+    if is_admin_role(current_user.role):
+        return redirect(url_for("inventory_requests.admin_daily_requests"))
+
     clear_cart_on_load = request.args.get("saved") == "1"
     if clear_cart_on_load:
         session.pop("daily_request_reason_draft", None)

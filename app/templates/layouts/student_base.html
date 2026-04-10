@@ -426,7 +426,7 @@
 
           <p class="nav-section-title">Servicios</p>
           <div class="nav-submenu nav-submenu-static">
-            <a href="{{ url_for('print3d.my_jobs') }}" class="nav-subitem {% if active_page == 'prints3d' %}active{% endif %}">
+            <a href="{% if current_user.is_authenticated and is_admin_role(current_user.role) %}{{ url_for('print3d.admin_list') }}{% else %}{{ url_for('print3d.my_jobs') }}{% endif %}" class="nav-subitem {% if active_page == 'prints3d' %}active{% endif %}">
               <i class="ph ph-cube nav-subicon"></i>
               <span>Impresiones 3D</span>
             </a>
