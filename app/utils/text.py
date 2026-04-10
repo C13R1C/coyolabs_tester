@@ -36,7 +36,7 @@ STATUS_LABELS = {
     DebtStatus.PAID: "Pagado",
     "CANCELLED": "Cancelado",
     DebtStatus.CANCELED: "Cancelado",
-    Print3DJobStatus.REQUESTED: "Solicitado",
+    Print3DJobStatus.REQUESTED: "En revisión",
     Print3DJobStatus.QUOTED: "Cotizado",
     Print3DJobStatus.IN_PROGRESS: "En proceso",
     Print3DJobStatus.READY: "Listo",

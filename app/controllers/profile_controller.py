@@ -149,21 +149,7 @@ def my_profile():
 
     available_subjects = []
     teacher_loads = []
-    catalog_filters = {"q": "", "career_id": "", "level": ""}
-    catalog_careers = []
-    catalog_levels = []
-    teacher_scope = {"career": None, "level": None}
     if _is_professor_role(current_user.role):
-        q = (request.args.get("q") or "").strip()
-        selected_career_id = request.args.get("career_id", type=int)
-        selected_level = (request.args.get("level") or "").strip().upper()
-
-        catalog_filters = {
-            "q": q,
-            "career_id": str(selected_career_id or ""),
-            "level": selected_level,
-        }
-
         teacher_loads = (
             TeacherAcademicLoad.query
             .options(joinedload(TeacherAcademicLoad.subject).joinedload(Subject.career))
@@ -171,41 +157,14 @@ def my_profile():
             .order_by(TeacherAcademicLoad.group_code.asc())
             .all()
         )
-        teacher_scope = {
-            "career": current_user.career_rel.name if current_user.career_rel else (current_user.career or None),
-            "level": current_user.academic_level,
-        }
-        catalog_q = (
+
+        available_subjects = (
             Subject.query
             .options(joinedload(Subject.career), joinedload(Subject.academic_level))
             .filter(Subject.is_active.is_(True))
-        )
-        if q:
-            like = f"%{q.lower()}%"
-            catalog_q = catalog_q.filter(func.lower(Subject.name).like(like))
-        if selected_career_id:
-            catalog_q = catalog_q.filter(Subject.career_id == selected_career_id)
-        if selected_level:
-            catalog_q = catalog_q.filter(func.upper(Subject.level) == selected_level)
-        if current_user.career_id:
-            catalog_q = catalog_q.filter(Subject.career_id == current_user.career_id)
-        if current_user.academic_level:
-            catalog_q = catalog_q.filter(func.upper(Subject.level) == current_user.academic_level.upper())
-
-        available_subjects = (
-            catalog_q
             .order_by(Subject.name.asc(), Subject.level.asc(), Subject.quarter.asc())
             .all()
         )
-        catalog_careers = Career.query.order_by(Career.name.asc()).all()
-        catalog_levels = (
-            db.session.query(func.upper(Subject.level))
-            .filter(Subject.is_active.is_(True), Subject.level.isnot(None))
-            .distinct()
-            .order_by(func.upper(Subject.level))
-            .all()
-        )
-        catalog_levels = [row[0] for row in catalog_levels if row and row[0]]
 
     return render_template(
         "profile/my_profile.html",
@@ -216,10 +175,6 @@ def my_profile():
         is_professor=_is_professor_role(current_user.role),
         teacher_loads=teacher_loads,
         available_subjects=available_subjects,
-        catalog_filters=catalog_filters,
-        catalog_careers=catalog_careers,
-        catalog_levels=catalog_levels,
-        teacher_scope=teacher_scope,
     )
 
 
@@ -248,10 +203,6 @@ def add_teaching_load():
     if not subject.is_active:
         flash("La materia seleccionada está inactiva.", "error")
         return redirect(url_for("profile.my_profile"))
-    if not _subject_allowed_for_teacher(subject, current_user):
-        flash("No puedes asignar materias fuera de tu carrera o nivel académico.", "error")
-        return redirect(url_for("profile.my_profile"))
-
     existing = TeacherAcademicLoad.query.filter_by(
         teacher_id=current_user.id,
         subject_id=subject_id,
@@ -370,69 +321,34 @@ def request_profile_update():
 @profile_bp.route("/phone-change/request", methods=["POST"])
 @login_required
 def request_phone_change():
-    if _is_professor_role(current_user.role):
-        flash("Como profesor puedes editar tu teléfono directamente.", "info")
-        return redirect(url_for("profile.my_profile"))
-
-    phone_raw = request.form.get("requested_phone")
-    reason = (request.form.get("reason") or "").strip()
-
-    phone, phone_error = normalize_and_validate_phone(phone_raw)
+    phone, phone_error = normalize_and_validate_phone(request.form.get("requested_phone"))
     if phone_error:
         flash(phone_error, "error")
         return redirect(url_for("profile.my_profile"))
 
-    pending = (
-        ProfileChangeRequest.query
-        .filter(ProfileChangeRequest.user_id == current_user.id)
-        .filter(ProfileChangeRequest.request_type == "PHONE_CHANGE")
-        .filter(ProfileChangeRequest.status == "PENDING")
-        .first()
-    )
-    if pending:
-        flash("Ya tienes una solicitud de cambio de teléfono pendiente.", "warning")
-        return redirect(url_for("profile.my_profile"))
-
-    req = ProfileChangeRequest(
-        user_id=current_user.id,
-        request_type="PHONE_CHANGE",
-        requested_phone=phone,
-        reason=reason or None,
-        status="PENDING",
-    )
-    db.session.add(req)
-
-    admins = User.query.filter(User.role.in_(["ADMIN", "SUPERADMIN"])).all()
-    for admin in admins:
-        notif = Notification(
-            user_id=admin.id,
-            title="Solicitud de cambio de teléfono",
-            message=f"{current_user.email} solicitó actualización de teléfono.",
-            link=url_for("users.profile_change_requests"),
-        )
-        db.session.add(notif)
-
+    old_phone = current_user.phone
+    current_user.phone = phone
     db.session.commit()
     log_event(
         module="PROFILE",
-        action="PHONE_CHANGE_REQUESTED",
+        action="PHONE_UPDATED_DIRECT",
         user_id=current_user.id,
-        entity_label=f"ProfileChangeRequest #{req.id}",
-        description="Solicitud de cambio de teléfono enviada",
-        metadata={"request_id": req.id, "requested_phone": phone},
+        entity_label=f"User #{current_user.id}",
+        description="Teléfono actualizado directamente por el usuario",
+        metadata={
+            "old_phone": old_phone,
+            "new_phone": phone,
+            "source": "request_phone_change",
+        },
     )
     db.session.commit()
-    flash("Solicitud de cambio de teléfono enviada.", "success")
+    flash("Teléfono actualizado.", "success")
     return redirect(url_for("profile.my_profile"))
 
 
 @profile_bp.route("/phone/update", methods=["POST"])
 @login_required
 def update_phone():
-    if not _is_professor_role(current_user.role):
-        flash("Solo profesores pueden editar teléfono directamente.", "error")
-        return redirect(url_for("profile.my_profile"))
-
     phone, phone_error = normalize_and_validate_phone(request.form.get("phone"))
     if phone_error:
         flash(phone_error, "error")
@@ -446,7 +362,7 @@ def update_phone():
         action="PHONE_UPDATED_DIRECT",
         user_id=current_user.id,
         entity_label=f"User #{current_user.id}",
-        description="Teléfono actualizado directamente por profesor",
+        description="Teléfono actualizado directamente por el usuario",
         metadata={"old_phone": old_phone, "new_phone": phone},
     )
     db.session.commit()

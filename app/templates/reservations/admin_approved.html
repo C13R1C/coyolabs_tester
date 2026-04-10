@@ -15,14 +15,6 @@
     <a class="btn btn-ghost" href="{{ url_for('reservations.admin_queue') }}">
       Ver reservas pendientes
     </a>
-  </div>
-</section>
-
-<section class="toolbar-card">
-  <div class="toolbar-actions">
-    <a class="btn btn-ghost" href="{{ url_for('reservations.admin_queue') }}">
-      Ver reservas pendientes
-    </a>
     <a class="btn btn-ghost" href="{{ url_for('reservations.admin_approved_history') }}">
       Ver historial
     </a>
@@ -42,57 +34,34 @@
   {% else %}
   <section class="table-card">
     <div class="table-wrap">
-      <table class="inventory-table" style="min-width: 1500px;">
+      <table class="inventory-table table-mobile-cards" style="min-width: 1100px;">
         <thead>
           <tr>
-            <th>ID</th>
+            <th>Solicitante</th>
             <th>Usuario</th>
-            <th>Salón/Lab</th>
+            <th>Grupo</th>
             <th>Fecha</th>
             <th>Inicio</th>
             <th>Fin</th>
-            <th>Materia</th>
-            <th>Grupo</th>
-            <th>Solicitante</th>
             <th>Motivo</th>
-            <th>Materiales solicitados</th>
-            <th class="th-actions">Acciones</th>
+            <th>Estado</th>
           </tr>
         </thead>
         <tbody>
           {% for r in reservations %}
           <tr>
-            <td>{{ r.id }}</td>
-            <td>{{ r.user.email }}</td>
-            <td>{{ r.room }}</td>
-            <td>{{ r.date }}</td>
-            <td>{{ r.start_time }}</td>
-            <td>{{ r.end_time }}</td>
-            <td>{{ r.subject }}</td>
-            <td>{{ r.group_name }}</td>
-            <td>{{ (r.user.full_name or '')|trim or r.user.email }}</td>
-            <td>{{ r.purpose or '-' }}</td>
-
-            <td>
-              {% if r.items %}
-                <ul style="padding-left:16px; margin:0;">
-                  {% for item in r.items %}
-                    <li>
-                      {{ item.material.name if item.material else ('ID ' ~ item.material_id) }}
-                      ({{ item.quantity_requested }})
-                    </li>
-                  {% endfor %}
-                </ul>
-              {% else %}
-                -
-              {% endif %}
+            <td data-label="Solicitante">{{ (r.user.full_name or '')|trim or r.user.email }}</td>
+            <td data-label="Usuario">{{ r.user.email }}</td>
+            <td data-label="Grupo">{{ r.group_name }}</td>
+            <td data-label="Fecha">{{ r.date }}</td>
+            <td data-label="Inicio">{{ r.start_time }}</td>
+            <td data-label="Fin">{{ r.end_time }}</td>
+            <td data-label="Motivo">{{ r.purpose or '-' }}</td>
+            <td data-label="Estado">
+              <span class="status-badge {% if r.operation_state == 'FINALIZADO' %}status-neutral{% else %}status-ok{% endif %}">
+                {{ 'Finalizado' if r.operation_state == 'FINALIZADO' else 'En progreso' }}
+              </span>
             </td>
-
-            <td>
-              <a class="btn btn-ghost" href="{{ url_for('inventory_requests.admin_daily_requests') }}">
-                Ver solicitudes de material
-              </a>
-  </td>
           </tr>
           {% endfor %}
         </tbody>
