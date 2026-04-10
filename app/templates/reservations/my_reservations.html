@@ -10,6 +10,7 @@
   z-index: 1200;
   align-items: center;
   justify-content: center;
+  padding: 18px;
 }
 .signature-modal-backdrop {
   position: absolute;
@@ -18,20 +19,48 @@
 }
 .signature-modal-content {
   position: relative;
-  width: min(880px, 92vw);
-  max-height: 92vh;
+  width: min(880px, 100%);
+  max-height: min(92vh, 720px);
   border-radius: 14px;
   background: #fff;
   padding: 14px;
   box-shadow: 0 24px 50px rgba(0,0,0,.28);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: hidden;
+}
+.signature-preview-wrap{
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
+  border-radius: 10px;
+  background: #fafafa;
 }
 .signature-preview {
   width: 100%;
-  max-height: 76vh;
+  max-width: 100%;
+  max-height: 80vh;
   object-fit: contain;
   border-radius: 10px;
   border: 1px solid rgba(0,0,0,.08);
   background: #fafafa;
+}
+@media (max-width: 768px){
+  .signature-modal{
+    padding: 10px;
+  }
+  .signature-modal-content{
+    width: 100%;
+    max-height: 94vh;
+    padding: 12px;
+  }
+  .signature-preview{
+    max-height: 72vh;
+  }
 }
 </style>
 <header class="topbar">
@@ -117,11 +146,15 @@
       <h3 style="margin:0;">Firma digital</h3>
       <button type="button" class="btn btn-ghost" onclick="closeSignature()">Cerrar</button>
     </div>
-    <img id="signaturePreview" class="signature-preview" src="" alt="Firma digital">
+    <div class="signature-preview-wrap">
+      <img id="signaturePreview" class="signature-preview" src="" alt="Firma digital">
+    </div>
   </div>
 </div>
 
 <script>
+let signatureEscHandler = null;
+
 function openSignature(url) {
   const modal = document.getElementById("signatureModal");
   const img = document.getElementById("signaturePreview");
@@ -130,6 +163,12 @@ function openSignature(url) {
   modal.style.display = "flex";
   modal.setAttribute("aria-hidden", "false");
   document.body.classList.add("modal-open");
+  document.body.style.overflow = "hidden";
+
+  signatureEscHandler = (event) => {
+    if (event.key === "Escape") closeSignature();
+  };
+  document.addEventListener("keydown", signatureEscHandler);
 }
 
 function closeSignature() {
@@ -140,6 +179,11 @@ function closeSignature() {
   modal.setAttribute("aria-hidden", "true");
   img.src = "";
   document.body.classList.remove("modal-open");
+  document.body.style.overflow = "";
+  if (signatureEscHandler) {
+    document.removeEventListener("keydown", signatureEscHandler);
+    signatureEscHandler = null;
+  }
 }
 </script>
 <section class="toolbar-card" style="margin-top:18px;">

@@ -1,6 +1,6 @@
 {% extends "layouts/student_base.html" %}
 {% set crumbs = [("Inicio", url_for('root_home')), ("Objetos perdidos", url_for('lostfound.list_items')), ("Nuevo", url_for('lostfound.admin_new'))] %}
-{% block title %}Nuevo objeto perdido{% endblock %}
+{% block title %}Nuevo registro de objetos{% endblock %}
 
 {% block content %}
 <style>
@@ -34,13 +34,21 @@
   <div class="topbar-left">
     <p class="page-kicker">Objetos perdidos</p>
     <h1>Nuevo registro (Administración)</h1>
-    <p class="page-subtitle">Registra un objeto con foto de evidencia para facilitar su identificación.</p>
+    <p class="page-subtitle">Define el tipo de reporte y adjunta evidencia para facilitar su identificación.</p>
   </div>
 </header>
 
 <section class="toolbar-card">
   <form method="post" enctype="multipart/form-data" class="toolbar" style="grid-template-columns: repeat(2, minmax(280px, 1fr));" id="lostfoundNewForm" data-form-mode="create">
     <div class="toolbar-group"><label for="title">Título (obligatorio)</label><div class="search-box"><i class="ph ph-tag search-icon"></i><input id="title" type="text" name="title" placeholder="Ejemplo: Mochila negra con llavero" required></div></div>
+    <div class="toolbar-group">
+      <label for="report_kind">Categoría (obligatoria)</label>
+      <select class="form-control" id="report_kind" name="report_kind" required>
+        <option value="" disabled selected>Selecciona una categoría</option>
+        <option value="lost">Reportar pérdida</option>
+        <option value="found">Registrar hallazgo</option>
+      </select>
+    </div>
     <div class="toolbar-group" style="grid-column: 1 / -1;">
       <label for="evidence_file">Foto de evidencia (opcional)</label>
       <div class="lostfound-file-box">
