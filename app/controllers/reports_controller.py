@@ -695,13 +695,8 @@ def report_inventory_view():
         report_description="Vista completa del inventario.",
         extra_meta=extra_meta,
         filter_fields=[
-<<<<<<< codex/implementar-buscador-de-alumno-por-matricula-o-nombre-80n7cw
             {"name": "lab_id", "label": "Laboratorio (ID)", "type": "number", "value": lab_id or "", "placeholder": "Ejemplo: 1"},
             {"name": "category", "label": "Categoría", "type": "text", "value": category, "placeholder": "Ejemplo: Electrónica"},
-=======
-            {"name": "career_id", "label": "ID de carrera", "type": "number", "value": career_id or "", "placeholder": "Ejemplo: 3"},
-            {"name": "lab_id", "label": "ID de laboratorio", "type": "number", "value": lab_id or "", "placeholder": "Ejemplo: 1"},
->>>>>>> main
             {"name": "status", "label": "Estado", "type": "text", "value": status, "placeholder": "Ejemplo: DISPONIBLE"},
             {"name": "search", "label": "Buscar", "type": "text", "value": search, "placeholder": "Nombre, código o ubicación"},
         ],
