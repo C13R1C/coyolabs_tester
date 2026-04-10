@@ -102,6 +102,11 @@
     font-size: .9rem;
     color: var(--text-soft);
   }
+  .column-limit-note{
+    margin-top: 8px;
+    font-size: .9rem;
+    color: #7b5a12;
+  }
 
   .report-view-meta{
     display: flex;
@@ -254,6 +259,9 @@
       </div>
     </div>
     <form method="get" action="{{ request.path }}">
+      {% for key, value in fixed_filters.items() %}
+        <input type="hidden" name="{{ key }}" value="{{ value }}">
+      {% endfor %}
       {% if filter_fields %}
       <div class="report-view-filters">
         {% for field in filter_fields %}
@@ -274,6 +282,12 @@
 
       <details class="report-columns-card" open>
         <summary><strong>Columnas visibles y exportables</strong></summary>
+        {% if column_limit %}
+          <div class="column-limit-note" id="columnLimitNote">Máximo {{ column_limit }} columnas para impresión/exportación.</div>
+        {% endif %}
+        {% if column_limit_message %}
+          <div class="column-limit-note">{{ column_limit_message }}</div>
+        {% endif %}
         <div class="report-columns-list">
           {% for col in all_columns %}
             <label>
@@ -339,17 +353,42 @@
 (() => {
   const input = document.getElementById("reportLiveSearch");
   const rows = Array.from(document.querySelectorAll(".report-table tbody tr"));
-  if (!input || !rows.length) return;
+  if (input && rows.length) {
+    const applyFilter = () => {
+      const query = (input.value || "").trim().toLowerCase();
+      rows.forEach((row) => {
+        const text = (row.textContent || "").toLowerCase();
+        row.style.display = !query || text.includes(query) ? "" : "none";
+      });
+    };
+    input.addEventListener("input", applyFilter);
+  }
 
-  const applyFilter = () => {
-    const query = (input.value || "").trim().toLowerCase();
-    rows.forEach((row) => {
-      const text = (row.textContent || "").toLowerCase();
-      row.style.display = !query || text.includes(query) ? "" : "none";
+  const maxColumns = Number({{ column_limit or 'null' }});
+  const checkboxes = Array.from(document.querySelectorAll('input[type="checkbox"][name="cols"]'));
+  if (!maxColumns || !checkboxes.length) return;
+  const limitNote = document.getElementById("columnLimitNote");
+
+  const selectedCount = () => checkboxes.filter((cb) => cb.checked).length;
+  const updateDisabled = () => {
+    const atLimit = selectedCount() >= maxColumns;
+    checkboxes.forEach((cb) => {
+      cb.disabled = atLimit && !cb.checked;
     });
   };
 
-  input.addEventListener("input", applyFilter);
+  checkboxes.forEach((cb) => {
+    cb.addEventListener("change", () => {
+      if (selectedCount() > maxColumns) {
+        cb.checked = false;
+        if (limitNote) {
+          limitNote.textContent = `Máximo ${maxColumns} columnas para impresión/exportación.`;
+        }
+      }
+      updateDisabled();
+    });
+  });
+  updateDisabled();
 })();
 </script>
 {% endblock %}

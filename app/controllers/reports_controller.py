@@ -232,6 +232,12 @@ def parse_excel_selected_columns(headers: list[str]) -> list[str]:
     return (fallback or headers)[:10]
 
 
+def _limit_selected_columns(selected_columns: list[str], max_columns: int) -> tuple[list[str], bool]:
+    if len(selected_columns) <= max_columns:
+        return selected_columns, False
+    return selected_columns[:max_columns], True
+
+
 def project_rows(headers: list[str], rows: list[list], selected_columns: list[str]) -> tuple[list[str], list[list]]:
     index_by_name = {name: idx for idx, name in enumerate(headers)}
     projected_headers = [name for name in selected_columns if name in index_by_name]
@@ -254,7 +260,7 @@ def build_download_url(endpoint: str) -> str:
     return f"{base}?{query}" if query else base
 
 
-def build_inventory_rows(lab_id=None, status=None, search=None):
+def build_inventory_rows(lab_id=None, status=None, search=None, category=None):
     q = Material.query
     career_id = request.args.get("career_id", type=int)
     if lab_id:
@@ -269,6 +275,8 @@ def build_inventory_rows(lab_id=None, status=None, search=None):
             | (Material.code.ilike(f"%{search}%"))
             | (Material.location.ilike(f"%{search}%"))
         )
+    if category:
+        q = q.filter(Material.category.ilike(f"%{category}%"))
 
     items = q.order_by(Material.lab_id, Material.location, Material.name).all()
 
@@ -409,6 +417,9 @@ def render_report_view(
     all_columns=None,
     download_excel_url=None,
     download_pdf_url=None,
+    fixed_filters=None,
+    column_limit=None,
+    column_limit_message=None,
 ):
     return render_template(
         "reports/report_view.html",
@@ -423,6 +434,9 @@ def render_report_view(
         report_description=report_description,
         extra_meta=extra_meta,
         filter_fields=filter_fields or [],
+        fixed_filters=fixed_filters or {},
+        column_limit=column_limit,
+        column_limit_message=column_limit_message,
         active_page="reports",
     )
 
@@ -609,8 +623,11 @@ def report_inventory():
     career_id = request.args.get("career_id", type=int)
     status = (request.args.get("status") or "").strip()
     search = (request.args.get("search") or "").strip()
-    headers, rows = build_inventory_rows(lab_id=lab_id, status=status or None, search=search or None)
+    category = (request.args.get("category") or "").strip()
+    headers, rows = build_inventory_rows(lab_id=lab_id, status=status or None, search=search or None, category=category or None)
     selected_columns = parse_selected_columns(headers)
+    if career_id:
+        selected_columns, _ = _limit_selected_columns(selected_columns, 9)
     headers, rows = project_rows(headers, rows, selected_columns)
     if career_id:
         fname = f"inventory_career_{career_id}.csv"
@@ -628,8 +645,11 @@ def report_inventory_excel():
     career_id = request.args.get("career_id", type=int)
     status = (request.args.get("status") or "").strip()
     search = (request.args.get("search") or "").strip()
-    headers, rows = build_inventory_rows(lab_id=lab_id, status=status or None, search=search or None)
+    category = (request.args.get("category") or "").strip()
+    headers, rows = build_inventory_rows(lab_id=lab_id, status=status or None, search=search or None, category=category or None)
     selected_columns = parse_excel_selected_columns(headers)
+    if career_id:
+        selected_columns, _ = _limit_selected_columns(selected_columns, 9)
     headers, rows = project_rows(headers, rows, selected_columns)
     if career_id:
         fname = f"inventory_career_{career_id}.xlsx"
@@ -647,9 +667,13 @@ def report_inventory_view():
     career_id = request.args.get("career_id", type=int)
     status = (request.args.get("status") or "").strip()
     search = (request.args.get("search") or "").strip()
-    headers, rows = build_inventory_rows(lab_id=lab_id, status=status or None, search=search or None)
+    category = (request.args.get("category") or "").strip()
+    headers, rows = build_inventory_rows(lab_id=lab_id, status=status or None, search=search or None, category=category or None)
     all_headers = headers[:]
     selected_columns = parse_selected_columns(headers)
+    columns_trimmed = False
+    if career_id:
+        selected_columns, columns_trimmed = _limit_selected_columns(selected_columns, 9)
     headers, rows = project_rows(headers, rows, selected_columns)
 
     report_title = "Inventario general"
@@ -671,8 +695,13 @@ def report_inventory_view():
         report_description="Vista completa del inventario.",
         extra_meta=extra_meta,
         filter_fields=[
+<<<<<<< codex/implementar-buscador-de-alumno-por-matricula-o-nombre-80n7cw
+            {"name": "lab_id", "label": "Laboratorio (ID)", "type": "number", "value": lab_id or "", "placeholder": "Ejemplo: 1"},
+            {"name": "category", "label": "Categoría", "type": "text", "value": category, "placeholder": "Ejemplo: Electrónica"},
+=======
             {"name": "career_id", "label": "ID de carrera", "type": "number", "value": career_id or "", "placeholder": "Ejemplo: 3"},
             {"name": "lab_id", "label": "ID de laboratorio", "type": "number", "value": lab_id or "", "placeholder": "Ejemplo: 1"},
+>>>>>>> main
             {"name": "status", "label": "Estado", "type": "text", "value": status, "placeholder": "Ejemplo: DISPONIBLE"},
             {"name": "search", "label": "Buscar", "type": "text", "value": search, "placeholder": "Nombre, código o ubicación"},
         ],
@@ -680,6 +709,9 @@ def report_inventory_view():
         all_columns=all_headers,
         download_excel_url=build_download_url("reports.report_inventory_excel"),
         download_pdf_url=build_download_url("reports.report_inventory_pdf"),
+        fixed_filters={"career_id": career_id} if career_id else {},
+        column_limit=9 if career_id else None,
+        column_limit_message="Máximo 9 columnas para impresión/exportación." if columns_trimmed else None,
     )
 
 
@@ -997,14 +1029,26 @@ def logbook_admin_view():
 @min_role_required("ADMIN")
 def report_inventory_pdf():
     lab_id = request.args.get("lab_id", type=int)
+    career_id = request.args.get("career_id", type=int)
     status = (request.args.get("status") or "").strip()
     search = (request.args.get("search") or "").strip()
+    category = (request.args.get("category") or "").strip()
     download = request.args.get("download", default=0, type=int) == 1
-    headers, rows = build_inventory_rows(lab_id=lab_id, status=status or None, search=search or None)
+    headers, rows = build_inventory_rows(lab_id=lab_id, status=status or None, search=search or None, category=category or None)
     selected_columns = parse_pdf_selected_columns(headers)
+    if career_id:
+        selected_columns, _ = _limit_selected_columns(selected_columns, 9)
     headers, rows = project_rows(headers, rows, selected_columns)
-    filename = "inventory.pdf" if not lab_id else f"inventory_lab_{lab_id}.pdf"
-    title = "Reporte de Inventario" if not lab_id else f"Reporte de Inventario - Lab {lab_id}"
+    if career_id:
+        career = Career.query.get(career_id)
+        filename = f"inventory_career_{career_id}.pdf"
+        title = f"Reporte de Inventario - {career.name if career else f'Carrera {career_id}'}"
+    elif lab_id:
+        filename = f"inventory_lab_{lab_id}.pdf"
+        title = f"Reporte de Inventario - Lab {lab_id}"
+    else:
+        filename = "inventory.pdf"
+        title = "Reporte de Inventario"
     return pdf_response(
         filename=filename,
         report_title=title,
