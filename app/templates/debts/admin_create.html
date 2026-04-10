@@ -22,6 +22,10 @@
   margin-bottom: 12px;
 }
 
+.student-search {
+  position: relative;
+}
+
 #debtMaterialSearch {
   min-height: 54px;
 }
@@ -174,10 +178,31 @@
   <section class="table-card">
     <form method="post" id="debtCreateForm" class="form-layout">
       <div class="toolbar-group">
-        <label for="email">Email del alumno</label>
+        <label for="studentSearch">Alumno (matrícula o nombre)</label>
+        <div class="student-search">
+          <div class="search-box">
+            <i class="ph ph-user search-icon"></i>
+            <input type="text" id="studentSearch" placeholder="Buscar por matrícula o nombre" autocomplete="off" required>
+            <input type="hidden" id="debtUserId" name="user_id">
+            <input type="hidden" id="debtUserEmail" name="email">
+          </div>
+          <div id="studentAutocompleteList" class="autocomplete-list"></div>
+        </div>
+      </div>
+
+      <div class="toolbar-group">
+        <label for="studentCareer">Carrera</label>
         <div class="search-box">
-          <i class="ph ph-envelope-simple search-icon"></i>
-          <input type="email" id="email" name="email" required placeholder="alumno@correo.edu.mx">
+          <i class="ph ph-graduation-cap search-icon"></i>
+          <input type="text" id="studentCareer" placeholder="Se autocompleta al seleccionar alumno" readonly>
+        </div>
+      </div>
+
+      <div class="toolbar-group">
+        <label for="studentMatricula">Matrícula</label>
+        <div class="search-box">
+          <i class="ph ph-identification-card search-icon"></i>
+          <input type="text" id="studentMatricula" placeholder="Se autocompleta al seleccionar alumno" readonly>
         </div>
       </div>
 
@@ -223,16 +248,37 @@
       { id: {{ m.id }}, name: {{ (m.name or '')|tojson }} }{% if not loop.last %},{% endif %}
     {% endfor %}
   ];
+  const STUDENTS = [
+    {% for s in students %}
+      {
+        id: {{ s.id }},
+        full_name: {{ (s.full_name or '')|tojson }},
+        matricula: {{ (s.matricula or '')|tojson }},
+        email: {{ (s.email or '')|tojson }},
+        career: {{ ((s.career_rel.name if s.career_rel else s.career) or '')|tojson }}
+      }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ];
 
   const searchInput = document.getElementById("debtMaterialSearch");
   const autocomplete = document.getElementById("debtAutocompleteList");
+  const studentSearchInput = document.getElementById("studentSearch");
+  const studentAutocomplete = document.getElementById("studentAutocompleteList");
+  const studentIdInput = document.getElementById("debtUserId");
+  const studentEmailInput = document.getElementById("debtUserEmail");
+  const studentCareerInput = document.getElementById("studentCareer");
+  const studentMatriculaInput = document.getElementById("studentMatricula");
   const cartContainer = document.getElementById("debtCartContainer");
   const hiddenInputs = document.getElementById("debtHiddenInputs");
   const kindsEl = document.getElementById("debtCartKinds");
   const totalEl = document.getElementById("debtCartTotal");
   const form = document.getElementById("debtCreateForm");
 
-  if (!searchInput || !autocomplete || !cartContainer || !hiddenInputs || !kindsEl || !totalEl || !form) return;
+  if (
+    !searchInput || !autocomplete || !studentSearchInput || !studentAutocomplete
+    || !studentIdInput || !studentEmailInput || !studentCareerInput || !studentMatriculaInput
+    || !cartContainer || !hiddenInputs || !kindsEl || !totalEl || !form
+  ) return;
 
   const cart = new Map();
 
@@ -316,6 +362,69 @@
     renderCart();
   };
 
+  const renderStudentAutocomplete = () => {
+    const query = normalize(studentSearchInput.value);
+    if (!query) {
+      studentAutocomplete.innerHTML = "";
+      return;
+    }
+
+    const matches = STUDENTS.filter((s) => {
+      return normalize(s.full_name).includes(query)
+        || normalize(s.matricula).includes(query)
+        || normalize(s.email).includes(query);
+    }).slice(0, 8);
+
+    if (!matches.length) {
+      studentAutocomplete.innerHTML = '<div class="autocomplete-empty">Sin coincidencias</div>';
+      return;
+    }
+
+    studentAutocomplete.innerHTML = matches.map((s) => {
+      const title = s.full_name || s.email || `Usuario #${s.id}`;
+      const meta = [s.matricula || "Sin matrícula", s.career || "Sin carrera"].join(" · ");
+      return `<div class="autocomplete-item" data-student-id="${s.id}" role="button" tabindex="0">`
+        + `<span class="autocomplete-item-title">${title}</span>`
+        + `<span class="autocomplete-item-meta">${meta}</span>`
+        + `</div>`;
+    }).join("");
+  };
+
+  const selectStudent = (studentId) => {
+    const student = STUDENTS.find((s) => s.id === Number(studentId));
+    if (!student) return;
+    const displayName = student.full_name || student.email || `Usuario #${student.id}`;
+    studentSearchInput.value = displayName;
+    studentIdInput.value = String(student.id);
+    studentEmailInput.value = student.email || "";
+    studentCareerInput.value = student.career || "";
+    studentMatriculaInput.value = student.matricula || "";
+    studentAutocomplete.innerHTML = "";
+  };
+
+  studentAutocomplete.addEventListener("click", (event) => {
+    const row = event.target.closest("[data-student-id]");
+    if (!row) return;
+    selectStudent(row.getAttribute("data-student-id"));
+  });
+
+  studentAutocomplete.addEventListener("keydown", (event) => {
+    const row = event.target.closest("[data-student-id]");
+    if (!row) return;
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    selectStudent(row.getAttribute("data-student-id"));
+  });
+
+  studentSearchInput.addEventListener("input", () => {
+    studentIdInput.value = "";
+    studentEmailInput.value = "";
+    studentCareerInput.value = "";
+    studentMatriculaInput.value = "";
+    renderStudentAutocomplete();
+  });
+  studentSearchInput.addEventListener("focus", renderStudentAutocomplete);
+
   autocomplete.addEventListener("click", (event) => {
     const btn = event.target.closest("[data-material-id]");
     if (!btn) return;
@@ -366,12 +475,21 @@
   searchInput.addEventListener("focus", renderAutocomplete);
 
   document.addEventListener("click", (event) => {
+    if (!event.target.closest(".student-search")) {
+      studentAutocomplete.innerHTML = "";
+    }
     if (!event.target.closest(".material-search")) {
       autocomplete.innerHTML = "";
     }
   });
 
   form.addEventListener("submit", (event) => {
+    if (!studentIdInput.value) {
+      event.preventDefault();
+      alert("Debes seleccionar un alumno válido de la lista.");
+      studentSearchInput.focus();
+      return;
+    }
     if (!cart.size) {
       event.preventDefault();
       alert("Debes agregar al menos un material al adeudo.");
