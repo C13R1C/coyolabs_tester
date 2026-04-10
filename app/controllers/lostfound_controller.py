@@ -17,6 +17,11 @@ from app.utils.roles import is_admin_role
 lostfound_bp = Blueprint("lostfound", __name__, url_prefix="/lostfound")
 ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
 MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024
+LOSTFOUND_STATUS_UI_LABELS = {
+    "REPORTED": "Pérdida reportada",
+    "IN_STORAGE": "Hallazgo en resguardo",
+    "RETURNED": "Entregado a propietario",
+}
 
 
 def _save_evidence_image(file_storage):
@@ -52,6 +57,11 @@ def _save_evidence_image(file_storage):
     return f"{uploads_rel_dir}/{unique_name}", None
 
 
+def _lostfound_status_label(status: str | None) -> str:
+    normalized = (status or "").strip().upper()
+    return LOSTFOUND_STATUS_UI_LABELS.get(normalized, normalized or "-")
+
+
 @lostfound_bp.route("/", methods=["GET"])
 @min_role_required("STUDENT")
 def lostfound_home():
@@ -67,7 +77,9 @@ def list_items():
     status = (request.args.get("status") or "").strip().upper()
 
     q = LostFound.query
-    if status in {"REPORTED", "IN_STORAGE", "RETURNED"}:
+    if not is_admin_role(current_user.role):
+        q = q.filter(LostFound.status == "REPORTED")
+    elif status in {"REPORTED", "IN_STORAGE", "RETURNED"}:
         q = q.filter(LostFound.status == status)
 
     items = q.order_by(LostFound.created_at.desc()).all()
@@ -75,6 +87,7 @@ def list_items():
         "lostfound/list.html",
         items=items,
         status=status,
+        status_label_fn=_lostfound_status_label,
         active_page="lostfound"
     )
 
@@ -86,7 +99,12 @@ def detail(item_id: int):
     if not item:
         abort(404)
 
-    return render_template("lostfound/detail.html", item=item, active_page="lostfound")
+    return render_template(
+        "lostfound/detail.html",
+        item=item,
+        status_label_fn=_lostfound_status_label,
+        active_page="lostfound",
+    )
 
 
 @lostfound_bp.route("/admin/new", methods=["GET", "POST"])
@@ -96,11 +114,16 @@ def admin_new():
         title = (request.form.get("title") or "").strip()
         description = (request.form.get("description") or "").strip()
         location = (request.form.get("location") or "").strip()
+        report_kind = (request.form.get("report_kind") or "").strip().lower()
         evidence_file = request.files.get("evidence_file")
         material_id = request.form.get("material_id")
 
         if not title:
             flash("El título es obligatorio.", "error")
+            return redirect(url_for("lostfound.admin_new"))
+
+        if report_kind not in {"lost", "found"}:
+            flash("Debes seleccionar la categoría del registro.", "error")
             return redirect(url_for("lostfound.admin_new"))
 
         mat = None
@@ -127,7 +150,7 @@ def admin_new():
             description=description or None,
             location=location or None,
             evidence_ref=saved_image_ref,
-            status="REPORTED",
+            status="REPORTED" if report_kind == "lost" else "IN_STORAGE",
         )
 
         db.session.add(item)
@@ -139,10 +162,16 @@ def admin_new():
 
         notifications_created: list[Notification] = []
         for user in users:
+            if report_kind == "lost":
+                notif_title = "Nuevo objeto perdido registrado"
+                notif_message = f"Se registró una pérdida reportada: {item.title}"
+            else:
+                notif_title = "Nuevo hallazgo registrado"
+                notif_message = f"Se registró un hallazgo en resguardo: {item.title}"
             notif = Notification(
                 user_id=user.id,
-                title="Nuevo objeto perdido registrado",
-                message=f"Se registró un nuevo objeto: {item.title}",
+                title=notif_title,
+                message=notif_message,
                 link=url_for("lostfound.list_items"),
                 is_read=False,
             )
