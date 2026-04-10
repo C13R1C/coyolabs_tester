@@ -748,6 +748,7 @@ def admin_approved():
         if open_ticket:
             r.can_open_ticket = False
             r.open_ticket_reason = "active"
+            r.operation_state = "EN_PROGRESO"
             continue
 
         open_window_start = (datetime.combine(r.date, r.start_time) - timedelta(minutes=30)).time()
@@ -756,12 +757,15 @@ def admin_approved():
         if current_time < open_window_start:
             r.can_open_ticket = False
             r.open_ticket_reason = "too_early"
+            r.operation_state = "EN_PROGRESO"
         elif current_time > open_window_end:
             r.can_open_ticket = False
             r.open_ticket_reason = "expired"
+            r.operation_state = "FINALIZADO"
         else:
             r.can_open_ticket = True
             r.open_ticket_reason = "available"
+            r.operation_state = "EN_PROGRESO"
 
     return render_template(
         "reservations/admin_approved.html",

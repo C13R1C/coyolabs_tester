@@ -13,14 +13,34 @@
 }
 
 .reservation-admin-action-form .form-control {
-  min-height: 90px;
-  border-radius: 16px;
+  min-height: 70px;
+  border-radius: 12px;
+  padding: 8px 10px;
 }
 
 .reservation-admin-action-form .btn {
-  min-height: 54px;
-  border-radius: 16px;
-  width: 100%;
+  min-height: 42px;
+  border-radius: 12px;
+  width: auto;
+}
+
+.reservation-admin-action-form .reservation-admin-row-actions{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+#reservations-admin-queue-container .inventory-table tbody td{
+  padding: 10px 12px;
+}
+
+#reservations-admin-queue-container .inventory-table tbody tr{
+  vertical-align: top;
+}
+
+#reservations-admin-queue-container .queue-requester{
+  line-height: 1.2;
+  font-size: .9rem;
 }
 
 .signature-modal{position:fixed;inset:0;z-index:1200;align-items:center;justify-content:center}
@@ -77,7 +97,7 @@
           <tbody>
             {% for r in reservations %}
             <tr>
-              <td data-label="Solicitante">{{ (r.user.full_name or '')|trim or r.user.email }}</td>
+              <td data-label="Solicitante" class="queue-requester">{{ (r.user.full_name or '')|trim or r.user.email }}</td>
               <td data-label="Usuario">{{ r.user.email }}</td>
               <td data-label="Grupo">{{ r.group_name }}</td>
               <td data-label="Fecha">{{ r.date }}</td>
@@ -90,8 +110,10 @@
                     Nota / motivo de rechazo
                   </label>
                   <textarea id="admin-note-{{ r.id }}" name="admin_note" rows="3" placeholder="Ej. Falta evidencia, ajuste de horario, observación de aprobación..." class="form-control"></textarea>
-                  <button type="submit" formaction="{{ url_for('reservations.admin_approve', res_id=r.id) }}" class="btn btn-gold">Aprobar</button>
-                  <button type="submit" formaction="{{ url_for('reservations.admin_reject', res_id=r.id) }}" class="btn btn-ghost">Rechazar</button>
+                  <div class="reservation-admin-row-actions">
+                    <button type="submit" formaction="{{ url_for('reservations.admin_approve', res_id=r.id) }}" class="btn btn-gold">Aprobar</button>
+                    <button type="submit" formaction="{{ url_for('reservations.admin_reject', res_id=r.id) }}" class="btn btn-ghost">Rechazar</button>
+                  </div>
                 </form>
               </td>
             </tr>
