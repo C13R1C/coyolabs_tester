@@ -12,10 +12,10 @@ from werkzeug.utils import secure_filename
 from app.extensions import db
 from app.models.notification import Notification
 from app.models.print3d_job import Print3DJob
-from app.models.user import User
 from app.services.audit_service import log_event
 from app.services.email_service import send_print3d_ready_email
 from app.services.notification_realtime_service import publish_notification_created
+from app.services.notification_service import build_3d_message, notify_roles, publish_notifications_safe
 from app.utils.authz import min_role_required
 from app.utils.roles import is_admin_role
 from app.utils.statuses import Print3DJobStatus, PRINT3D_ALLOWED_STATUSES, PRINT3D_ALLOWED_TRANSITIONS
@@ -130,24 +130,30 @@ def _build_canceled_notification(job: Print3DJob) -> Notification | None:
 
 
 def _notify_admins_for_new_job(job: Print3DJob) -> list[Notification]:
-    admins = User.query.filter(User.role.in_(["ADMIN", "SUPERADMIN"])).all()
-    notifications_created: list[Notification] = []
-    requester_email = getattr(current_user, "email", "Usuario")
-    for admin in admins:
-        notif = Notification(
-            user_id=admin.id,
-            title="Nueva solicitud de impresión 3D",
-            message=f"{requester_email} creó la solicitud 3D #{job.id} ({job.original_filename or job.title}).",
-            link=url_for("print3d.admin_list"),
-        )
-        db.session.add(notif)
-        notifications_created.append(notif)
-    return notifications_created
+    requester_name = getattr(current_user, "full_name", None) or getattr(current_user, "email", "Usuario")
+    return notify_roles(
+        roles=["ADMIN", "SUPERADMIN", "STAFF"],
+        title="Nueva solicitud de impresión 3D",
+        message=build_3d_message("created", actor_name=requester_name, job_id=job.id, title=job.title),
+        link=url_for("print3d.admin_detail", job_id=job.id),
+        priority="low",
+    )
+
+
+@print3d_bp.route("/", methods=["GET"])
+@min_role_required("STUDENT")
+def print3d_home():
+    if is_admin_role(current_user.role):
+        return redirect(url_for("print3d.admin_list"))
+    return redirect(url_for("print3d.my_jobs"))
 
 
 @print3d_bp.route("/my", methods=["GET"])
 @min_role_required("STUDENT")
 def my_jobs():
+    if is_admin_role(current_user.role):
+        return redirect(url_for("print3d.admin_list"))
+
     jobs = (
         Print3DJob.query
         .filter(Print3DJob.requester_user_id == current_user.id)
@@ -165,6 +171,9 @@ def my_jobs():
 @print3d_bp.route("/new", methods=["GET", "POST"])
 @min_role_required("STUDENT")
 def new_job():
+    if is_admin_role(current_user.role):
+        return redirect(url_for("print3d.admin_list"))
+
     if request.method == "POST":
         title = (request.form.get("title") or "").strip()
         description = (request.form.get("description") or "").strip()
@@ -425,6 +434,7 @@ def admin_set_status(job_id: int):
 
     db.session.commit()
     created_user_notification: Notification | None = None
+    additional_status_notification: Notification | None = None
     if should_notify_ready:
         created_user_notification = _build_ready_notification(job)
         if created_user_notification is not None:
@@ -436,22 +446,35 @@ def admin_set_status(job_id: int):
         if created_user_notification is not None:
             db.session.add(created_user_notification)
             db.session.commit()
+    elif target_status in {Print3DJobStatus.QUOTED, Print3DJobStatus.IN_PROGRESS, Print3DJobStatus.DELIVERED}:
+        additional_status_notification = Notification(
+            user_id=job.requester_user_id,
+            title="Tu solicitud 3D fue actualizada",
+            message=build_3d_message(
+                "status",
+                actor_name=(current_user.full_name or current_user.email),
+                job_id=job.id,
+                title=job.title,
+            ),
+            link=url_for("print3d.my_jobs"),
+        )
+        setattr(additional_status_notification, "_priority", "medium")
+        db.session.add(additional_status_notification)
+        db.session.commit()
+
+    notifications_to_publish = []
+    if created_user_notification is not None:
+        notifications_to_publish.append(created_user_notification)
+    if additional_status_notification is not None:
+        notifications_to_publish.append(additional_status_notification)
+    publish_notifications_safe(
+        notifications_to_publish,
+        logger=logger,
+        event_label="print3d status update",
+        extra={"job_id": job.id, "target_status": target_status},
+    )
 
     if created_user_notification is not None:
-        try:
-            publish_notification_created(created_user_notification)
-        except Exception:
-            logger.warning(
-                "SSE publish failed after print3d user notification",
-                exc_info=True,
-                extra={
-                    "job_id": job.id,
-                    "notification_id": created_user_notification.id,
-                    "target_user_id": created_user_notification.user_id,
-                    "target_status": target_status,
-                },
-            )
-
         if target_status == Print3DJobStatus.READY_FOR_PICKUP and job.requester_user and job.requester_user.email:
             jobs_url = url_for("print3d.my_jobs", _external=True)
             email_sent = False

@@ -1,25 +1,67 @@
 {% extends "layouts/student_base.html" %}
-{% set crumbs = [("Inicio", url_for('root_home')), ("Solicitudes críticas", url_for('users.critical_action_requests'))] %}
-{% block title %}Solicitudes críticas{% endblock %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Acciones de cuenta", url_for('users.critical_action_requests'))] %}
+{% block title %}Acciones de cuenta{% endblock %}
 
 {% block content %}
 <header class="topbar">
   <div class="topbar-left">
     <p class="page-kicker">Gobernanza</p>
-    <h1>Solicitudes de acciones críticas</h1>
+    <h1>Revisión de acciones de cuenta</h1>
     <p class="page-subtitle">
-      {% if is_superadmin %}
-      El administrador principal puede aprobar o rechazar acciones críticas de administración.
-      {% else %}
-      Consulta el estado de tus solicitudes críticas enviadas a administración.
-      {% endif %}
+      Bandeja de revisión para cuentas pendientes y acciones sensibles. La tabla del panel principal solo muestra cuentas ya gestionables.
     </p>
   </div>
 </header>
 
 <section class="table-card">
+  <h3 style="margin-top:0;">Cuentas institucionales pendientes de rol ({{ pending_accounts|length }})</h3>
+  {% if pending_accounts|length == 0 %}
+    <p>No hay cuentas pendientes de decisión de rol.</p>
+  {% else %}
+  <div class="table-wrap">
+    <table class="inventory-table table-mobile-cards" style="min-width:920px;">
+      <thead>
+        <tr>
+          <th>Email</th>
+          <th>Nombre</th>
+          <th>Matrícula</th>
+          <th>Creada</th>
+          <th>Definir rol</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for user in pending_accounts %}
+        <tr>
+          <td data-label="Email">{{ user.email }}</td>
+          <td data-label="Nombre">{{ user.full_name or '-' }}</td>
+          <td data-label="Matrícula">{{ user.matricula or '-' }}</td>
+          <td data-label="Creada">{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else '-' }}</td>
+          <td data-label="Definir rol">
+            <form method="post" action="{{ url_for('users.assign_role', user_id=user.id) }}" style="display:flex; gap:8px; flex-wrap:wrap;">
+              <div class="select-wrap" style="min-width:200px;">
+                <select name="role" required>
+                  <option value="">Selecciona rol</option>
+                  {% for role_name in pending_accounts_assignable_roles %}
+                  <option value="{{ role_name }}">{{ role_name|role_label }}</option>
+                  {% endfor %}
+                </select>
+                <i class="ph ph-caret-down select-arrow"></i>
+              </div>
+              <button class="btn btn-gold" type="submit">Asignar</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</section>
+
+<section class="table-card">
+  <h3 style="margin-top:0;">Solicitudes de acciones sensibles ({{ requests|length }})</h3>
   {% if requests|length == 0 %}
-    <p>No hay solicitudes críticas registradas.</p>
+    <p>No hay acciones sensibles registradas.</p>
   {% else %}
   <div class="table-wrap">
     <table class="inventory-table" style="min-width: 1080px;">
@@ -74,5 +116,15 @@
     </table>
   </div>
   {% endif %}
+</section>
+
+<section class="table-card">
+  <h3 style="margin-top:0;">Solicitudes de perfil pendientes ({{ pending_profile_requests|length }})</h3>
+  <p class="text-dim" style="margin-top:0;">
+    Estas solicitudes se gestionan en la bandeja de perfil para mantener separada la revisión de datos personales.
+  </p>
+  <div class="toolbar-actions">
+    <a href="{{ url_for('users.profile_change_requests') }}" class="btn btn-ghost">Ir a Solicitudes de perfil</a>
+  </div>
 </section>
 {% endblock %}

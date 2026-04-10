@@ -34,25 +34,42 @@
 .users-admin-icon-btn i{
   font-size: 1.05rem;
 }
+.role-badge{
+  font-weight: 700;
+  border-radius: 999px;
+  padding: .2rem .55rem;
+  border: 1px solid transparent;
+}
+.role-badge-student{ background:#e6f0ff; color:#1d4ed8; border-color:#bfdbfe; }
+.role-badge-teacher{ background:#e8f7ed; color:#166534; border-color:#bbf7d0; }
+.role-badge-admin{ background:#ffe9e9; color:#b91c1c; border-color:#fecaca; }
+.role-badge-superadmin{ background:#fee2e2; color:#991b1b; border-color:#fca5a5; }
+.role-badge-staff{ background:#f3e8ff; color:#6d28d9; border-color:#ddd6fe; }
+.role-badge-pending{ background:#fef3c7; color:#92400e; border-color:#fde68a; }
+@media (max-width: 768px){
+  .users-admin-quick-actions{
+    justify-content: flex-start;
+  }
+}
 </style>
 
 <header class="topbar">
   <div class="topbar-left">
     <p class="page-kicker">Administración</p>
     <h1>Panel de usuarios</h1>
-    <p class="page-subtitle">Gestiona roles, estado y seguridad de cuentas.</p>
+    <p class="page-subtitle">Tabla general de cuentas ya gestionables (sin pendientes de decisión).</p>
   </div>
   {% if is_superadmin %}
   <div class="topbar-actions">
     <a href="{{ url_for('users.profile_change_requests') }}" class="btn btn-ghost">Solicitudes de perfil</a>
-    <a href="{{ url_for('users.critical_action_requests') }}" class="btn btn-ghost">Solicitudes críticas</a>
+    <a href="{{ url_for('users.critical_action_requests') }}" class="btn btn-ghost">Revisión de acciones de cuenta ({{ pending_review_count }})</a>
     <a href="{{ url_for('reports.logbook_admin_view') }}" class="btn btn-ghost">Bitácora</a>
     <a href="{{ url_for('users.create_admin_account') }}" class="btn btn-gold">Crear cuenta de administrador</a>
   </div>
   {% else %}
   <div class="topbar-actions">
     <a href="{{ url_for('users.profile_change_requests') }}" class="btn btn-ghost">Solicitudes de perfil</a>
-    <a href="{{ url_for('users.critical_action_requests') }}" class="btn btn-ghost">Mis solicitudes críticas</a>
+    <a href="{{ url_for('users.critical_action_requests') }}" class="btn btn-ghost">Revisión de acciones de cuenta ({{ pending_review_count }})</a>
     <a href="{{ url_for('reports.logbook_admin_view') }}" class="btn btn-ghost">Bitácora</a>
   </div>
   {% endif %}
@@ -96,14 +113,11 @@
 
 <section class="table-card" style="margin-top:16px;">
   <div class="table-wrap">
-    <table class="inventory-table" style="min-width: 1400px;">
+    <table class="inventory-table table-mobile-cards" style="min-width: 980px;">
       <thead>
         <tr>
-          <th>ID</th>
           <th>Email</th>
           <th>Nombre</th>
-          <th>Matrícula</th>
-          <th>Teléfono</th>
           <th>Rol</th>
           <th>Activo</th>
           <th>Bloqueado</th>
@@ -113,68 +127,24 @@
       <tbody>
         {% for user in users %}
         <tr>
-          <td>{{ user.id }}</td>
-          <td>{{ user.email }}</td>
-          <td>{{ user.full_name or '-' }}</td>
-          <td>{{ user.matricula or '-' }}</td>
-          <td>{{ user.phone or '-' }}</td>
-          <td><span class="status-badge {% if user.role in ['ADMIN','SUPERADMIN'] %}status-warn{% else %}status-ok{% endif %}" title="Rol actual">{{ user.role|role_label }}</span></td>
-          <td><span class="status-badge {% if user.is_active %}status-ok{% else %}status-bad{% endif %}" title="Estado de activación">{{ 'Sí' if user.is_active else 'No' }}</span></td>
-          <td><span class="status-badge {% if user.is_banned %}status-bad{% else %}status-ok{% endif %}" title="Estado de bloqueo">{{ 'Sí' if user.is_banned else 'No' }}</span></td>
-          <td>
-            <form method="post" action="{{ url_for('users.admin_update_user', user_id=user.id) }}" class="users-admin-edit-form">
-              <div class="search-box">
-                <i class="ph ph-envelope search-icon"></i>
-                <input type="email" name="email" value="{{ user.email }}" placeholder="usuario@utpn.edu.mx" required>
-              </div>
-
-              <div class="search-box">
-                <i class="ph ph-user search-icon"></i>
-                <input type="text" name="full_name" value="{{ user.full_name or '' }}" placeholder="Nombre">
-              </div>
-
-              <div class="search-box">
-                <i class="ph ph-identification-card search-icon"></i>
-                <input type="text" name="matricula" value="{{ user.matricula or '' }}" placeholder="Matrícula">
-              </div>
-
-              <div class="search-box">
-                <i class="ph ph-phone search-icon"></i>
-                <input type="text" name="phone" value="{{ user.phone or '' }}" placeholder="Teléfono">
-              </div>
-
-              <div class="select-wrap">
-                <select name="role">
-                  <option value="{{ user.role }}">{{ user.role|role_label }} (actual)</option>
-                  {% for role_name in assignable_roles %}
-                  <option value="{{ role_name }}">{{ role_name|role_label }}</option>
-                  {% endfor %}
-                </select>
-                <i class="ph ph-caret-down select-arrow"></i>
-              </div>
-
-              <div class="select-wrap">
-                <select name="is_active">
-                  <option value="1" {% if user.is_active %}selected{% endif %}>Activo</option>
-                  <option value="0" {% if not user.is_active %}selected{% endif %}>Inactivo</option>
-                </select>
-                <i class="ph ph-caret-down select-arrow"></i>
-              </div>
-
-              <div class="select-wrap">
-                <select name="is_banned">
-                  <option value="0" {% if not user.is_banned %}selected{% endif %}>No bloqueado</option>
-                  <option value="1" {% if user.is_banned %}selected{% endif %}>Bloqueado</option>
-                </select>
-                <i class="ph ph-caret-down select-arrow"></i>
-              </div>
-
-              <button type="submit" class="btn btn-gold" title="Guardar edición de este usuario">
-                <i class="ph ph-floppy-disk"></i>
-                <span>Guardar</span>
-              </button>
-            </form>
-
+          <td data-label="Email">{{ user.email }}</td>
+          <td data-label="Nombre">{{ user.full_name or '-' }}</td>
+          <td data-label="Rol">
+            <span
+              class="role-badge
+              {% if user.role == 'STUDENT' %}role-badge-student{% endif %}
+              {% if user.role == 'TEACHER' %}role-badge-teacher{% endif %}
+              {% if user.role == 'ADMIN' %}role-badge-admin{% endif %}
+              {% if user.role == 'SUPERADMIN' %}role-badge-superadmin{% endif %}
+              {% if user.role == 'STAFF' %}role-badge-staff{% endif %}
+              {% if user.role == 'PENDING' %}role-badge-pending{% endif %}"
+              title="Rol actual">
+              {{ user.role|role_label }}
+            </span>
+          </td>
+          <td data-label="Activo"><span class="status-badge {% if user.is_active %}status-ok{% else %}status-bad{% endif %}" title="Estado de activación">{{ 'Sí' if user.is_active else 'No' }}</span></td>
+          <td data-label="Bloqueado"><span class="status-badge {% if user.is_banned %}status-bad{% else %}status-ok{% endif %}" title="Estado de bloqueo">{{ 'Sí' if user.is_banned else 'No' }}</span></td>
+          <td data-label="Acciones">
             <div class="users-admin-quick-actions">
               <form method="post" action="{{ url_for('users.admin_enable_user', user_id=user.id) }}"><button class="btn btn-ghost users-admin-icon-btn" type="submit" title="Activar usuario" aria-label="Activar usuario"><i class="ph ph-check-circle"></i></button></form>
               <form method="post" action="{{ url_for('users.admin_disable_user', user_id=user.id) }}"><button class="btn btn-ghost users-admin-icon-btn" type="submit" title="Desactivar usuario" aria-label="Desactivar usuario"><i class="ph ph-x-circle"></i></button></form>

@@ -65,11 +65,22 @@ def notification_to_dict(notification: Notification, unread_count: int | None = 
     if unread_count is None:
         unread_count = get_unread_count(notification.user_id)
 
+    priority = getattr(notification, "_priority", None)
+    if not priority:
+        text = f"{notification.title} {notification.message}".lower()
+        if any(word in text for word in ["adeudo", "rechaz", "bloque", "cancel"]):
+            priority = "high"
+        elif any(word in text for word in ["aprob", "actualiz", "lista", "listo", "resuelto"]):
+            priority = "medium"
+        else:
+            priority = "low"
+
     return {
         "id": notification.id,
         "title": notification.title,
         "message": notification.message,
         "link": notification.link,
+        "priority": priority,
         "is_read": notification.is_read,
         "created_at": notification.created_at.isoformat() if notification.created_at else None,
         "created_at_label": notification.created_at.strftime("%d/%m/%Y %H:%M") if notification.created_at else "",
