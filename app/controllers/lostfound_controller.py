@@ -78,7 +78,7 @@ def list_items():
 
     q = LostFound.query
     if not is_admin_role(current_user.role):
-        q = q.filter(LostFound.status == "REPORTED")
+        q = q.filter(LostFound.status.in_(["REPORTED", "IN_STORAGE"]))
     elif status in {"REPORTED", "IN_STORAGE", "RETURNED"}:
         q = q.filter(LostFound.status == status)
 
