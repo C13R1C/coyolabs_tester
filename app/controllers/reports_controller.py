@@ -538,7 +538,7 @@ def pdf_response(
 
 
 @reports_bp.route("/", methods=["GET"])
-@min_role_required("ADMIN")
+@min_role_required("STAFF")
 def reports_home():
     labs = Lab.query.order_by(Lab.name).all()
     careers = Career.query.order_by(Career.name.asc()).all()
@@ -617,7 +617,7 @@ def reports_home():
 
 
 @reports_bp.route("/inventory.csv", methods=["GET"])
-@min_role_required("ADMIN")
+@min_role_required("STAFF")
 def report_inventory():
     lab_id = request.args.get("lab_id", type=int)
     career_id = request.args.get("career_id", type=int)
@@ -639,7 +639,7 @@ def report_inventory():
 
 
 @reports_bp.route("/inventory.xlsx", methods=["GET"])
-@min_role_required("ADMIN")
+@min_role_required("STAFF")
 def report_inventory_excel():
     lab_id = request.args.get("lab_id", type=int)
     career_id = request.args.get("career_id", type=int)
@@ -661,7 +661,7 @@ def report_inventory_excel():
 
 
 @reports_bp.route("/view/inventory", methods=["GET"])
-@min_role_required("ADMIN")
+@min_role_required("STAFF")
 def report_inventory_view():
     lab_id = request.args.get("lab_id", type=int)
     career_id = request.args.get("career_id", type=int)
@@ -695,6 +695,7 @@ def report_inventory_view():
         report_description="Vista completa del inventario.",
         extra_meta=extra_meta,
         filter_fields=[
+            {"name": "career_id", "label": "ID de carrera", "type": "number", "value": career_id or "", "placeholder": "Ejemplo: 3"},
             {"name": "lab_id", "label": "Laboratorio (ID)", "type": "number", "value": lab_id or "", "placeholder": "Ejemplo: 1"},
             {"name": "category", "label": "Categoría", "type": "text", "value": category, "placeholder": "Ejemplo: Electrónica"},
             {"name": "status", "label": "Estado", "type": "text", "value": status, "placeholder": "Ejemplo: DISPONIBLE"},
@@ -711,7 +712,7 @@ def report_inventory_view():
 
 
 @reports_bp.route("/debts.csv", methods=["GET"])
-@min_role_required("ADMIN")
+@min_role_required("STAFF")
 def report_debts():
     status = (request.args.get("status") or "").strip()
     user_id = request.args.get("user_id", type=int)
@@ -722,7 +723,7 @@ def report_debts():
 
 
 @reports_bp.route("/debts.xlsx", methods=["GET"])
-@min_role_required("ADMIN")
+@min_role_required("STAFF")
 def report_debts_excel():
     status = (request.args.get("status") or "").strip()
     user_id = request.args.get("user_id", type=int)
@@ -733,7 +734,7 @@ def report_debts_excel():
 
 
 @reports_bp.route("/view/debts", methods=["GET"])
-@min_role_required("ADMIN")
+@min_role_required("STAFF")
 def report_debts_view():
     status = (request.args.get("status") or "").strip()
     user_id = request.args.get("user_id", type=int)
@@ -759,7 +760,7 @@ def report_debts_view():
 
 
 @reports_bp.route("/logbook.csv", methods=["GET"])
-@min_role_required("ADMIN")
+@min_role_required("STAFF")
 def report_logbook():
     action = (request.args.get("action") or "").strip()
     module = (request.args.get("module") or "").strip()
@@ -784,7 +785,7 @@ def report_logbook():
 
 
 @reports_bp.route("/logbook.xlsx", methods=["GET"])
-@min_role_required("ADMIN")
+@min_role_required("STAFF")
 def report_logbook_excel():
     action = (request.args.get("action") or "").strip()
     module = (request.args.get("module") or "").strip()
@@ -809,7 +810,7 @@ def report_logbook_excel():
 
 
 @reports_bp.route("/view/logbook", methods=["GET"])
-@min_role_required("ADMIN")
+@min_role_required("STAFF")
 def report_logbook_view():
     action = (request.args.get("action") or "").strip()
     module = (request.args.get("module") or "").strip()
@@ -854,7 +855,7 @@ def report_logbook_view():
 
 
 @reports_bp.route("/reservations.csv", methods=["GET"])
-@min_role_required("ADMIN")
+@min_role_required("STAFF")
 def report_reservations():
     status = (request.args.get("status") or "").strip()
     room = (request.args.get("room") or "").strip()
@@ -875,7 +876,7 @@ def report_reservations():
 
 
 @reports_bp.route("/reservations.xlsx", methods=["GET"])
-@min_role_required("ADMIN")
+@min_role_required("STAFF")
 def report_reservations_excel():
     status = (request.args.get("status") or "").strip()
     room = (request.args.get("room") or "").strip()
@@ -896,7 +897,7 @@ def report_reservations_excel():
 
 
 @reports_bp.route("/view/reservations", methods=["GET"])
-@min_role_required("ADMIN")
+@min_role_required("STAFF")
 def report_reservations_view():
     status = (request.args.get("status") or "").strip()
     room = (request.args.get("room") or "").strip()
@@ -935,14 +936,14 @@ def report_reservations_view():
 
 
 @reports_bp.route("/lostfound.csv", methods=["GET"])
-@min_role_required("ADMIN")
+@min_role_required("STAFF")
 def report_lostfound():
     headers, rows = build_lostfound_rows()
     return csv_response("lostfound.csv", headers, rows)
 
 
 @reports_bp.route("/view/lostfound", methods=["GET"])
-@min_role_required("ADMIN")
+@min_role_required("STAFF")
 def report_lostfound_view():
     headers, rows = build_lostfound_rows()
     return render_report_view(
@@ -955,14 +956,14 @@ def report_lostfound_view():
 
 
 @reports_bp.route("/software.csv", methods=["GET"])
-@min_role_required("ADMIN")
+@min_role_required("STAFF")
 def report_software():
     headers, rows = build_software_rows()
     return csv_response("software.csv", headers, rows)
 
 
 @reports_bp.route("/view/software", methods=["GET"])
-@min_role_required("ADMIN")
+@min_role_required("STAFF")
 def report_software_view():
     headers, rows = build_software_rows()
     return render_report_view(
@@ -975,7 +976,7 @@ def report_software_view():
 
 
 @reports_bp.route("/logbook", methods=["GET"])
-@min_role_required("ADMIN")
+@min_role_required("STAFF")
 def logbook_admin_view():
     action = (request.args.get("action") or "").strip()
     module = (request.args.get("module") or "").strip()
@@ -1021,7 +1022,7 @@ def logbook_admin_view():
 
 
 @reports_bp.route("/inventory.pdf", methods=["GET"])
-@min_role_required("ADMIN")
+@min_role_required("STAFF")
 def report_inventory_pdf():
     lab_id = request.args.get("lab_id", type=int)
     career_id = request.args.get("career_id", type=int)
@@ -1055,7 +1056,7 @@ def report_inventory_pdf():
 
 
 @reports_bp.route("/debts.pdf", methods=["GET"])
-@min_role_required("ADMIN")
+@min_role_required("STAFF")
 def report_debts_pdf():
     status = (request.args.get("status") or "").strip()
     user_id = request.args.get("user_id", type=int)
@@ -1074,7 +1075,7 @@ def report_debts_pdf():
 
 
 @reports_bp.route("/logbook.pdf", methods=["GET"])
-@min_role_required("ADMIN")
+@min_role_required("STAFF")
 def report_logbook_pdf():
     action = (request.args.get("action") or "").strip()
     module = (request.args.get("module") or "").strip()
@@ -1107,7 +1108,7 @@ def report_logbook_pdf():
 
 
 @reports_bp.route("/reservations.pdf", methods=["GET"])
-@min_role_required("ADMIN")
+@min_role_required("STAFF")
 def report_reservations_pdf():
     status = (request.args.get("status") or "").strip()
     room = (request.args.get("room") or "").strip()

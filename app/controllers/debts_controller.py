@@ -277,7 +277,7 @@ def my_debts():
 # STAFF = SOLO VER
 # -------------------------
 @debts_bp.route("/admin", methods=["GET"])
-@min_role_required("STAFF")
+@min_role_required("ADMIN")
 @permission_required("debts.view_all")
 def admin_list():
     debts = (
@@ -417,7 +417,7 @@ def admin_create():
 
 
 @debts_bp.route("/admin/<int:debt_id>", methods=["GET"])
-@min_role_required("STAFF")
+@min_role_required("ADMIN")
 @permission_required("debts.view_all")
 def admin_detail(debt_id: int):
     debt = (
