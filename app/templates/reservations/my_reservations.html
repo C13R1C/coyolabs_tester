@@ -61,6 +61,10 @@
   .signature-preview{
     max-height: 72vh;
   }
+  #reservations-my-list-container .table-wrap{
+    border: none;
+    background: transparent;
+  }
 }
 </style>
 <header class="topbar">
@@ -90,7 +94,7 @@
   {% else %}
   <section class="table-card">
     <div class="table-wrap">
-      <table class="inventory-table" style="min-width: 1400px;">
+      <table class="inventory-table table-mobile-cards" style="min-width: 1400px;">
         <thead>
           <tr>
             <th>Salón/Lab</th>
@@ -107,13 +111,13 @@
         <tbody>
           {% for r in reservations %}
           <tr>
-            <td>{{ r.room }}</td>
-            <td>{{ r.date }}</td>
-            <td>{{ r.start_time }}</td>
-            <td>{{ r.end_time }}</td>
-            <td>{{ r.subject }}</td>
-            <td>{{ r.group_name }}</td>
-            <td>
+            <td data-label="Salón/Lab">{{ r.room }}</td>
+            <td data-label="Fecha">{{ r.date }}</td>
+            <td data-label="Inicio">{{ r.start_time }}</td>
+            <td data-label="Fin">{{ r.end_time }}</td>
+            <td data-label="Materia">{{ r.subject }}</td>
+            <td data-label="Grupo">{{ r.group_name }}</td>
+            <td data-label="Firma">
               {% if r.signature_ref %}
                 <button type="button" class="btn btn-ghost" onclick="openSignature('{{ url_for('static', filename=r.signature_ref) }}')">Ver firma</button>
               {% elif r.signed %}
@@ -123,13 +127,13 @@
               {% endif %}
             </td>
 
-            <td>
+            <td data-label="Estado">
               <span class="status-badge {% if r.status == 'APPROVED' %}status-ok{% elif r.status == 'PENDING' %}status-warn{% else %}status-bad{% endif %}">
                 {{ r.status|status_label }}
               </span>
             </td>
 
-            <td>{{ r.admin_note or '-' }}</td>
+            <td data-label="Nota admin">{{ r.admin_note or '-' }}</td>
           </tr>
           {% endfor %}
         </tbody>
