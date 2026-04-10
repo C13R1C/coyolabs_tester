@@ -32,6 +32,7 @@ class User(UserMixin, db.Model):
     career = db.Column(db.String(120), nullable=True)
     career_year = db.Column(db.Integer, nullable=True)
     phone = db.Column(db.String(30), nullable=True)
+    group_name = db.Column(db.String(80), nullable=True)
     professor_subjects = db.Column(db.Text, nullable=True)
     career_rel = db.relationship("Career", backref="users", foreign_keys=[career_id])
     academic_level_rel = db.relationship("AcademicLevel", backref="users", foreign_keys=[academic_level_id])

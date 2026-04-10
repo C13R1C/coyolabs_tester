@@ -123,6 +123,8 @@
               <div>{{ row.material_label }}</div>
               {% if row.row_type == "group" %}
                 <small style="opacity:.8;">{{ row.material_preview }}</small>
+                <br>
+                <small style="opacity:.8;">{{ row.paid_items }} / {{ row.total_items }} materiales pagados · {{ row.progress_pct }}%</small>
               {% endif %}
             </td>
 
