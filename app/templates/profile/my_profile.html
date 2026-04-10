@@ -120,6 +120,7 @@
         {% endif %}
       </div>
       <p class="profile-panel-subtitle">Información principal de tu cuenta para uso institucional.</p>
+      {% set display_career = current_user.career_rel.name if current_user.career_rel else (current_user.career or '-') %}
       <div class="profile-kv">
         <div class="profile-kv-item"><strong>Nombre completo</strong><span>{{ current_user.full_name or '-' }}</span></div>
         <div class="profile-kv-item"><strong>Correo institucional</strong><span>{{ current_user.email }}</span></div>
@@ -128,9 +129,7 @@
         {% if current_user.matricula %}
           <div class="profile-kv-item"><strong>Matrícula</strong><span>{{ current_user.matricula or '-' }}</span></div>
         {% endif %}
-        {% if current_user.career %}
-          <div class="profile-kv-item"><strong>Carrera</strong><span>{{ current_user.career or '-' }}</span></div>
-        {% endif %}
+        <div class="profile-kv-item"><strong>Carrera</strong><span>{{ display_career }}</span></div>
         {% if current_user.academic_level %}
           <div class="profile-kv-item"><strong>Nivel académico</strong><span>{{ current_user.academic_level or '-' }}</span></div>
         {% endif %}

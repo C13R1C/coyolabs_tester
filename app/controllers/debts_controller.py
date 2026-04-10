@@ -156,9 +156,6 @@ def _build_admin_debt_rows(debts: list[Debt]) -> list[dict]:
                     "paid_items": paid_items,
                     "total_items": total_items,
                     "progress_pct": progress_pct,
-                    "paid_items": paid_items,
-                    "total_items": total_items,
-                    "progress_pct": progress_pct,
                     "total_original": total_original,
                     "total_pending": total_pending,
                     "reason": next((item.reason for item in case_items_sorted if item.reason), "-"),
@@ -194,10 +191,6 @@ def _build_admin_debt_rows(debts: list[Debt]) -> list[dict]:
             "paid_items": 1 if pending == 0 else 0,
             "total_items": 1,
             "progress_pct": 100 if pending == 0 else 0,
-            "paid_items": 1 if pending == 0 else 0,
-            "total_items": 1,
-            "progress_pct": 100 if pending == 0 else 0,
-
             "total_original": original,
             "total_pending": pending,
             "reason": debt.reason or "-",
@@ -294,10 +287,13 @@ def admin_list():
 def admin_create():
     materials = Material.query.order_by(Material.name.asc()).limit(500).all()
     if request.method == "POST":
+        user_id = request.form.get("user_id", type=int)
         email = (request.form.get("email") or "").strip().lower()
         reason = (request.form.get("reason") or "").strip()
 
-        user = User.query.filter_by(email=email).first()
+        user = User.query.get(user_id) if user_id else None
+        if not user and email:
+            user = User.query.filter_by(email=email).first()
         if not user:
             flash("No existe un usuario con ese correo.", "error")
             return redirect(url_for("debts.admin_create"))
@@ -367,7 +363,20 @@ def admin_create():
         flash("Adeudo creado." if len(created_debts) == 1 else "Adeudo conjunto creado.", "success")
         return redirect(url_for("debts.admin_detail", debt_id=first_debt.id))
 
-    return render_template("debts/admin_create.html", active_page="debts", materials=materials)
+    students = (
+        User.query
+        .options(joinedload(User.career_rel))
+        .filter(User.role == "STUDENT")
+        .order_by(User.full_name.asc(), User.email.asc())
+        .limit(1000)
+        .all()
+    )
+    return render_template(
+        "debts/admin_create.html",
+        active_page="debts",
+        materials=materials,
+        students=students,
+    )
 
 
 @debts_bp.route("/admin/<int:debt_id>", methods=["GET"])
@@ -401,7 +410,6 @@ def admin_detail(debt_id: int):
     case_flow = "Conjunto" if len(case_debts) > 1 else "Singular"
     case_visible_id = _visible_case_id("ADEUDO-CJ", case_debts[0].id) if len(case_debts) > 1 else _visible_case_id("ADEUDO-SG", debt.id)
     paid_items, total_items, progress_pct = _case_item_progress(case_debts)
-    paid_items, total_items, progress_pct = _case_item_progress(case_debts)
 
 
     return render_template(
@@ -413,9 +421,6 @@ def admin_detail(debt_id: int):
         case_status=case_status,
         case_flow=case_flow,
         case_visible_id=case_visible_id,
-        paid_items=paid_items,
-        total_items=total_items,
-        progress_pct=progress_pct,
         paid_items=paid_items,
         total_items=total_items,
         progress_pct=progress_pct,
