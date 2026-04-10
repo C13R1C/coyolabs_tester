@@ -1,0 +1,93 @@
+{% extends "layouts/student_base.html" %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Adeudos", url_for('debts.admin_list')), ("Detalle", url_for('debts.admin_detail', debt_id=debt.id))] %}
+{% block title %}Detalle de adeudo{% endblock %}
+
+{% block content %}
+<header class="topbar">
+  <div class="topbar-left">
+    <p class="page-kicker">Adeudos</p>
+    <h1>Detalle de adeudo{% if debt.case_code %} compuesto{% endif %}</h1>
+    <p class="page-subtitle">Flujo administrativo por material, compatible con adeudos legacy.</p>
+  </div>
+  <div class="topbar-actions">
+    <a href="{{ url_for('debts.admin_list') }}" class="btn btn-ghost">Volver a listado</a>
+  </div>
+</header>
+
+<section class="stats-row">
+  <article class="stat-card">
+    <span class="stat-label">Usuario</span>
+    <strong>{{ debt.user.email if debt.user else '-' }}</strong>
+  </article>
+  <article class="stat-card">
+    <span class="stat-label">Estado global</span>
+    <strong>
+      <span class="status-badge {% if case_status == 'PENDING' %}status-bad{% else %}status-ok{% endif %}">{{ case_status|status_label }}</span>
+    </strong>
+  </article>
+  <article class="stat-card">
+    <span class="stat-label">Total original</span>
+    <strong>{{ total_original }}</strong>
+  </article>
+  <article class="stat-card">
+    <span class="stat-label">Total pendiente</span>
+    <strong>{{ total_pending }}</strong>
+  </article>
+</section>
+
+<section class="table-card" style="margin-top:16px;">
+  <h3 style="margin:0 0 12px 0;">Materiales del adeudo</h3>
+  <div class="table-wrap">
+    <table class="inventory-table" style="min-width: 940px;">
+      <thead>
+        <tr>
+          <th>Adeudo</th>
+          <th>Material</th>
+          <th>Cant. original</th>
+          <th>Cant. pendiente</th>
+          <th>Estado</th>
+          <th>Razón</th>
+          <th>Abono parcial</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for item in case_debts %}
+        <tr>
+          <td>#{{ item.id }}</td>
+          <td>{{ item.material.name if item.material else '-' }}</td>
+          <td>{{ ((item.original_amount if item.original_amount is not none else item.amount) or 0)|int }}</td>
+          <td>{{ ((item.remaining_amount if item.remaining_amount is not none else item.amount) or 0)|int }}</td>
+          <td>
+            <span class="status-badge {% if item.status == 'PENDING' %}status-warn{% else %}status-ok{% endif %}">{{ item.status|status_label }}</span>
+          </td>
+          <td>{{ item.reason or '-' }}</td>
+          <td>
+            {% if item.status == 'PENDING' %}
+            <form method="post" action="{{ url_for('debts.admin_close', debt_id=item.id) }}">
+              <input type="hidden" name="return_to" value="detail">
+              <div style="display:flex; gap:6px; align-items:center;">
+                <input
+                  type="number"
+                  name="payment_amount"
+                  min="1"
+                  step="1"
+                  max="{{ ((item.remaining_amount if item.remaining_amount is not none else item.amount) or 0)|int }}"
+                  value="{{ ((item.remaining_amount if item.remaining_amount is not none else item.amount) or 0)|int }}"
+                  class="form-control"
+                  style="max-width:120px;"
+                  required
+                >
+                <button type="submit" class="btn btn-gold">Registrar</button>
+              </div>
+            </form>
+            {% else %}
+            <span class="status-badge status-neutral">Saldado</span>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

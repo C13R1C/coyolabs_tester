@@ -16,6 +16,7 @@ class Debt(db.Model):
     material = db.relationship("Material", backref="debts")
     ticket_id = db.Column(db.Integer, db.ForeignKey("lab_tickets.id"), nullable=True, index=True)
     ticket = db.relationship("LabTicket", back_populates="debts")
+    case_code = db.Column(db.String(36), nullable=True, index=True)
 
     # Estado del adeudo
     status = db.Column(db.String(20), nullable=False, default=DebtStatus.PENDING)
