@@ -67,6 +67,132 @@ def _parse_debt_items_from_form() -> list[dict]:
     return parsed_items
 
 
+def _debt_amounts(debt: Debt) -> tuple[int, int]:
+    original = int((debt.original_amount if debt.original_amount is not None else debt.amount) or 0)
+    pending = int((debt.remaining_amount if debt.remaining_amount is not None else debt.amount) or 0)
+    return original, pending
+
+
+def _case_status_from_items(items: list[Debt]) -> str:
+    """
+    Regla de negocio: un caso conjunto solo está pagado cuando TODOS los items
+    tienen pendiente 0. Si al menos uno conserva pendiente > 0, el caso sigue pendiente.
+    """
+    total_pending = sum(_debt_amounts(item)[1] for item in items)
+    return DebtStatus.PENDING if total_pending > 0 else DebtStatus.PAID
+
+
+def _visible_case_id(prefix: str, seed_id: int) -> str:
+    return f"{prefix}-{seed_id:04d}"
+
+
+def _build_material_preview(items: list[Debt], preview_limit: int = 2) -> str:
+    chunks: list[str] = []
+    for item in items[:preview_limit]:
+        _, pending = _debt_amounts(item)
+        material_name = item.material.name if item.material else "Material sin catálogo"
+        chunks.append(f"{material_name} x{pending}")
+    remaining_count = len(items) - preview_limit
+    if remaining_count > 0:
+        chunks.append(f"+{remaining_count} más")
+    return " · ".join(chunks) if chunks else "-"
+
+
+def _build_admin_debt_rows(debts: list[Debt]) -> list[dict]:
+    grouped_by_case: dict[tuple[str, int], list[Debt]] = {}
+    for debt in debts:
+        if debt.case_code:
+            grouped_by_case.setdefault((debt.case_code, debt.user_id), []).append(debt)
+
+    rows: list[dict] = []
+    consumed_ids: set[int] = set()
+
+    for debt in debts:
+        if debt.id in consumed_ids:
+            continue
+
+        if debt.case_code:
+            case_key = (debt.case_code, debt.user_id)
+            case_items = grouped_by_case.get(case_key, [])
+            if len(case_items) > 1:
+                for item in case_items:
+                    consumed_ids.add(item.id)
+
+                case_items_sorted = sorted(case_items, key=lambda x: x.id)
+                total_original = 0
+                total_pending = 0
+                for item in case_items_sorted:
+                    item_original, item_pending = _debt_amounts(item)
+                    total_original += item_original
+                    total_pending += item_pending
+
+                case_status = _case_status_from_items(case_items_sorted)
+                case_visible_id = _visible_case_id("ADEUDO-CJ", case_items_sorted[0].id)
+                case_material_names = " ".join(
+                    (item.material.name if item.material else "").lower()
+                    for item in case_items_sorted
+                ).strip()
+                rows.append({
+                    "row_type": "group",
+                    "id_label": case_visible_id,
+                    "detail_debt_id": case_items_sorted[0].id,
+                    "user": case_items_sorted[0].user,
+                    "status": case_status,
+                    "materials_count": len(case_items_sorted),
+                    "material_label": f"{len(case_items_sorted)} materiales",
+                    "material_preview": _build_material_preview(case_items_sorted),
+                    "total_original": total_original,
+                    "total_pending": total_pending,
+                    "reason": next((item.reason for item in case_items_sorted if item.reason), "-"),
+                    "flow_label": "Conjunto",
+                    "can_pay_from_list": False,
+                    "payment_debt_id": None,
+                    "payment_max": 0,
+                    "search_blob": " ".join([
+                        case_visible_id.lower(),
+                        (case_items_sorted[0].user.email if case_items_sorted[0].user else "").lower(),
+                        case_status.lower(),
+                        "conjunto",
+                        case_material_names,
+                        next((item.reason for item in case_items_sorted if item.reason), "").lower(),
+                    ]).strip(),
+                })
+                continue
+
+        consumed_ids.add(debt.id)
+        original, pending = _debt_amounts(debt)
+        visible_id = _visible_case_id("ADEUDO-SG", debt.id)
+        singular_material = debt.material.name if debt.material else "-"
+        singular_status = _case_status_from_items([debt])
+        rows.append({
+            "row_type": "single",
+            "id_label": visible_id,
+            "detail_debt_id": debt.id,
+            "user": debt.user,
+            "status": singular_status,
+            "materials_count": 1,
+            "material_label": f"{singular_material} ({debt.material.id})" if debt.material else "-",
+            "material_preview": singular_material,
+            "total_original": original,
+            "total_pending": pending,
+            "reason": debt.reason or "-",
+            "flow_label": "Singular",
+            "can_pay_from_list": pending > 0,
+            "payment_debt_id": debt.id,
+            "payment_max": pending,
+            "search_blob": " ".join([
+                visible_id.lower(),
+                (debt.user.email if debt.user else "").lower(),
+                singular_status.lower(),
+                "singular",
+                singular_material.lower(),
+                (debt.reason or "").lower(),
+            ]).strip(),
+        })
+
+    return rows
+
+
 # -------------------------
 # HOME
 # -------------------------
@@ -117,9 +243,19 @@ def admin_list():
         .all()
     )
 
+    debt_rows = _build_admin_debt_rows(debts)
+
+    users_with_debts = len({row["user"].id for row in debt_rows if row.get("user")})
+    debt_records_count = len(debts)
+    case_count = len(debt_rows)
+
     return render_template(
         "debts/admin_list.html",
         debts=debts,
+        debt_rows=debt_rows,
+        users_with_debts=users_with_debts,
+        debt_records_count=debt_records_count,
+        case_count=case_count,
         active_page="debts"
     )
 
@@ -185,7 +321,7 @@ def admin_create():
         total_pending = sum(int(d.remaining_amount or d.amount or 0) for d in created_debts)
         user_notification = Notification(
             user_id=user.id,
-            title="Se generó un adeudo" if len(created_debts) == 1 else "Se generó un adeudo compuesto",
+            title="Se generó un adeudo" if len(created_debts) == 1 else "Se generó un adeudo conjunto",
             message=(
                 f"Se registró {'un adeudo' if len(created_debts) == 1 else f'un adeudo de {len(created_debts)} materiales'} "
                 f"({total_pending} pendiente total)."
@@ -203,7 +339,7 @@ def admin_create():
                 extra={"debt_id": first_debt.id, "notification_id": user_notification.id, "target_user_id": user_notification.user_id},
             )
 
-        flash("Adeudo creado." if len(created_debts) == 1 else "Adeudo multi-material creado.", "success")
+        flash("Adeudo creado." if len(created_debts) == 1 else "Adeudo conjunto creado.", "success")
         return redirect(url_for("debts.admin_detail", debt_id=first_debt.id))
 
     return render_template("debts/admin_create.html", active_page="debts", materials=materials)
@@ -236,7 +372,9 @@ def admin_detail(debt_id: int):
 
     total_original = sum(int((d.original_amount if d.original_amount is not None else d.amount) or 0) for d in case_debts)
     total_pending = sum(int((d.remaining_amount if d.remaining_amount is not None else d.amount) or 0) for d in case_debts)
-    case_status = DebtStatus.PAID if total_pending == 0 else DebtStatus.PENDING
+    case_status = _case_status_from_items(case_debts)
+    case_flow = "Conjunto" if len(case_debts) > 1 else "Singular"
+    case_visible_id = _visible_case_id("ADEUDO-CJ", case_debts[0].id) if len(case_debts) > 1 else _visible_case_id("ADEUDO-SG", debt.id)
 
     return render_template(
         "debts/admin_detail.html",
@@ -245,6 +383,8 @@ def admin_detail(debt_id: int):
         total_original=total_original,
         total_pending=total_pending,
         case_status=case_status,
+        case_flow=case_flow,
+        case_visible_id=case_visible_id,
         active_page="debts",
     )
 
