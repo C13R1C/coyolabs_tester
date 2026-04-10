@@ -38,15 +38,35 @@
   box-shadow: 0 10px 20px rgba(0,0,0,0.1);
   z-index: 20;
   border: 1px solid rgba(0,0,0,0.08);
+  padding: 6px;
 }
 
 .autocomplete-item {
-  padding: 10px 12px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  padding: 11px 12px;
   cursor: pointer;
   transition: background .15s ease;
-  display:flex;
-  justify-content:space-between;
-  gap:8px;
+  display: grid;
+  gap: 2px;
+  border-radius: 8px;
+}
+
+.autocomplete-item + .autocomplete-item {
+  margin-top: 4px;
+}
+
+.autocomplete-item-title {
+  font-weight: 650;
+  color: #1f2e25;
+  line-height: 1.25;
+}
+
+.autocomplete-item-meta {
+  font-size: 12px;
+  color: var(--text-dim, #728078);
 }
 
 .autocomplete-item:hover {
@@ -235,9 +255,10 @@
     }
 
     autocomplete.innerHTML = matches.map((m) => {
-      return `<button type="button" class="autocomplete-item" data-material-id="${m.id}">`
-        + `<span>${m.name}</span><small>ID ${m.id}</small>`
-        + `</button>`;
+      return `<div class="autocomplete-item" data-material-id="${m.id}" role="button" tabindex="0">`
+        + `<span class="autocomplete-item-title">${m.name}</span>`
+        + `<span class="autocomplete-item-meta">ID ${m.id}</span>`
+        + `</div>`;
     }).join("");
   };
 
@@ -299,6 +320,17 @@
     const btn = event.target.closest("[data-material-id]");
     if (!btn) return;
     addMaterial(btn.getAttribute("data-material-id"));
+    searchInput.value = "";
+    autocomplete.innerHTML = "";
+    searchInput.focus();
+  });
+
+  autocomplete.addEventListener("keydown", (event) => {
+    const item = event.target.closest("[data-material-id]");
+    if (!item) return;
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    addMaterial(item.getAttribute("data-material-id"));
     searchInput.value = "";
     autocomplete.innerHTML = "";
     searchInput.focus();
