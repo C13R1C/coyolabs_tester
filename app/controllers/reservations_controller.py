@@ -638,6 +638,7 @@ def request_reservation():
         calendar_now=datetime.now(),
         prev_week=prev_week,
         next_week=next_week,
+        student_group_name=(current_user.group_name or "").strip() if _is_student_role(current_user.role) else "",
     )
 
     if request.args.get("calendar_partial") == "1" or request.headers.get("X-Requested-With") == "XMLHttpRequest":

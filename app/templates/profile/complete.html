@@ -405,6 +405,17 @@
                 {% endfor %}
               </select>
             </div>
+
+            <div class="field field-full">
+              <label for="group_name">Grupo</label>
+              <input
+                id="group_name"
+                name="group_name"
+                placeholder="Ejemplo: 3A"
+                maxlength="80"
+              >
+              <span class="field-hint">Opcional, se reutilizará para autocompletar reservaciones.</span>
+            </div>
             {% endif %}
 
             <div class="field field-full">

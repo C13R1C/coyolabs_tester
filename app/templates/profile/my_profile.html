@@ -134,6 +134,9 @@
         {% if current_user.academic_level %}
           <div class="profile-kv-item"><strong>Nivel académico</strong><span>{{ current_user.academic_level or '-' }}</span></div>
         {% endif %}
+        {% if current_user.group_name %}
+          <div class="profile-kv-item"><strong>Grupo</strong><span>{{ current_user.group_name }}</span></div>
+        {% endif %}
         <div class="profile-kv-item"><strong>Correo verificado</strong><span>{{ 'Sí' if current_user.is_verified else 'No' }}</span></div>
       </div>
     </div>

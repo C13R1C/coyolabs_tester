@@ -83,6 +83,15 @@ def _has_min_real_chars(value: str, minimum: int = 3) -> bool:
     return len(normalized) >= minimum
 
 
+def _normalize_group_name(raw_group_name: str | None) -> tuple[str | None, str | None]:
+    group_name = (raw_group_name or "").strip()
+    if not group_name:
+        return None, None
+    if len(group_name) > 80:
+        return None, "El grupo no puede exceder 80 caracteres."
+    return group_name, None
+
+
 def _normalize_and_validate_matricula(raw_matricula: str | None, role: str | None, email: str | None) -> tuple[str | None, str | None]:
     normalized_role = normalize_role(role)
     if normalized_role != ROLE_STUDENT:
@@ -576,6 +585,7 @@ def complete_profile():
         career_id = request.form.get("career_id", type=int)
         academic_level_id = request.form.get("academic_level_id", type=int)
         phone = (request.form.get("phone") or "").strip()
+        group_name_raw = request.form.get("group_name")
         confirm_data = request.form.get("confirm_data") == "1"
 
         if not full_name or not _has_min_real_chars(full_name, minimum=3):
@@ -597,6 +607,11 @@ def complete_profile():
 
         if not phone:
             flash("El teléfono es obligatorio.")
+            return redirect(url_for("profile.complete_profile"))
+
+        group_name, group_name_error = _normalize_group_name(group_name_raw)
+        if group_name_error:
+            flash(group_name_error)
             return redirect(url_for("profile.complete_profile"))
 
         if not confirm_data:
@@ -644,11 +659,13 @@ def complete_profile():
             current_user.matricula = matricula
             current_user.academic_level_id = level_obj.id if level_obj else None
             current_user.academic_level = level_obj.code if level_obj else None
+            current_user.group_name = group_name
             current_user.professor_subjects = None
         else:
             current_user.matricula = None
             current_user.academic_level_id = level_obj.id if level_obj else None
             current_user.academic_level = level_obj.code if level_obj else None
+            current_user.group_name = None
 
         current_user.profile_completed = True
         current_user.profile_data_confirmed = True
