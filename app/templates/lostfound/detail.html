@@ -102,7 +102,7 @@
     <table class="inventory-table" style="min-width:800px;">
       <tbody>
         <tr><td><strong>Nombre</strong></td><td>{{ item.title }}</td></tr>
-        <tr><td><strong>Estado</strong></td><td>{{ item.status|status_label }}</td></tr>
+        <tr><td><strong>Estado del caso</strong></td><td>{{ status_label_fn(item.status) }}</td></tr>
         <tr><td><strong>Descripción</strong></td><td>{{ item.description or '-' }}</td></tr>
         <tr><td><strong>Fecha</strong></td><td>{{ item.created_at }}</td></tr>
         <tr><td><strong>Nota admin</strong></td><td>{{ item.admin_note or '-' }}</td></tr>
@@ -111,9 +111,9 @@
   </div>
   <div class="lostfound-cta {% if is_found %}lostfound-cta--found{% else %}lostfound-cta--reported{% endif %}">
     {% if is_found %}
-        ¿Es tuyo? Contacta con administración.
+      Caso bajo resguardo administrativo. Si reconoces el objeto, contacta a administración.
     {% else %}
-      ¿Lo encontraste? repórtalo.
+      Caso abierto de pérdida reportada. Si tienes información, repórtala a administración.
     {% endif %}
   </div>
 </section>
@@ -126,9 +126,9 @@
       <label for="status">Nuevo estado</label>
       <div class="select-wrap">
         <select id="status" name="status" required>
-          <option value="REPORTED" {% if item.status == 'REPORTED' %}selected{% endif %}>Reportado</option>
-          <option value="IN_STORAGE" {% if item.status == 'IN_STORAGE' %}selected{% endif %}>En resguardo</option>
-          <option value="RETURNED" {% if item.status == 'RETURNED' %}selected{% endif %}>Devuelto</option>
+          <option value="REPORTED" {% if item.status == 'REPORTED' %}selected{% endif %}>Pérdida reportada</option>
+          <option value="IN_STORAGE" {% if item.status == 'IN_STORAGE' %}selected{% endif %}>Hallazgo en resguardo</option>
+          <option value="RETURNED" {% if item.status == 'RETURNED' %}selected{% endif %}>Entregado a propietario</option>
         </select>
         <i class="ph ph-caret-down select-arrow"></i>
       </div>

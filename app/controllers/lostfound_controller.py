@@ -17,6 +17,11 @@ from app.utils.roles import is_admin_role
 lostfound_bp = Blueprint("lostfound", __name__, url_prefix="/lostfound")
 ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
 MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024
+LOSTFOUND_STATUS_UI_LABELS = {
+    "REPORTED": "Pérdida reportada",
+    "IN_STORAGE": "Hallazgo en resguardo",
+    "RETURNED": "Entregado a propietario",
+}
 
 
 def _save_evidence_image(file_storage):
@@ -52,6 +57,11 @@ def _save_evidence_image(file_storage):
     return f"{uploads_rel_dir}/{unique_name}", None
 
 
+def _lostfound_status_label(status: str | None) -> str:
+    normalized = (status or "").strip().upper()
+    return LOSTFOUND_STATUS_UI_LABELS.get(normalized, normalized or "-")
+
+
 @lostfound_bp.route("/", methods=["GET"])
 @min_role_required("STUDENT")
 def lostfound_home():
@@ -77,6 +87,7 @@ def list_items():
         "lostfound/list.html",
         items=items,
         status=status,
+        status_label_fn=_lostfound_status_label,
         active_page="lostfound"
     )
 
@@ -88,7 +99,12 @@ def detail(item_id: int):
     if not item:
         abort(404)
 
-    return render_template("lostfound/detail.html", item=item, active_page="lostfound")
+    return render_template(
+        "lostfound/detail.html",
+        item=item,
+        status_label_fn=_lostfound_status_label,
+        active_page="lostfound",
+    )
 
 
 @lostfound_bp.route("/admin/new", methods=["GET", "POST"])
@@ -148,10 +164,10 @@ def admin_new():
         for user in users:
             if report_kind == "lost":
                 notif_title = "Nuevo objeto perdido registrado"
-                notif_message = f"Se reportó un objeto perdido: {item.title}"
+                notif_message = f"Se registró una pérdida reportada: {item.title}"
             else:
-                notif_title = "Nuevo objeto encontrado registrado"
-                notif_message = f"Se registró un objeto encontrado: {item.title}"
+                notif_title = "Nuevo hallazgo registrado"
+                notif_message = f"Se registró un hallazgo en resguardo: {item.title}"
             notif = Notification(
                 user_id=user.id,
                 title=notif_title,
