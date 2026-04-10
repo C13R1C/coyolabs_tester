@@ -164,6 +164,48 @@
   display:grid;
   gap:14px;
 }
+
+.readonly-field-clean {
+  background: #f1f3f5 !important;
+  border: 1px solid rgba(31, 46, 37, 0.14) !important;
+  color: #1f2e25 !important;
+  cursor: default;
+}
+
+.readonly-field-clean:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  border: 1px solid rgba(31, 46, 37, 0.14) !important;
+}
+
+.readonly-wrapper-clean {
+  background: #f1f3f5 !important;
+  border: 1px solid rgba(31, 46, 37, 0.14) !important;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  box-shadow: none !important;
+}
+
+.readonly-wrapper-clean .search-icon {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.readonly-wrapper-clean .readonly-field-clean {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  width: 100%;
+}
+
+.readonly-wrapper-clean .readonly-field-clean:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  border: 0 !important;
+}
 </style>
 
 <div class="debt-create-shell">
@@ -192,17 +234,17 @@
 
       <div class="toolbar-group">
         <label for="studentCareer">Carrera</label>
-        <div class="search-box">
+        <div class="search-box readonly-wrapper-clean">
           <i class="ph ph-graduation-cap search-icon"></i>
-          <input type="text" id="studentCareer" placeholder="Se autocompleta al seleccionar alumno" readonly>
+          <input type="text" id="studentCareer" class="readonly-field-clean" placeholder="Se autocompleta al seleccionar alumno" readonly>
         </div>
       </div>
 
       <div class="toolbar-group">
         <label for="studentMatricula">Matrícula</label>
-        <div class="search-box">
+        <div class="search-box readonly-wrapper-clean">
           <i class="ph ph-identification-card search-icon"></i>
-          <input type="text" id="studentMatricula" placeholder="Se autocompleta al seleccionar alumno" readonly>
+          <input type="text" id="studentMatricula" class="readonly-field-clean" placeholder="Se autocompleta al seleccionar alumno" readonly>
         </div>
       </div>
 
@@ -245,20 +287,28 @@
 (() => {
   const MATERIALS = [
     {% for m in materials %}
-      { id: {{ m.id }}, name: {{ (m.name or '')|tojson }} }{% if not loop.last %},{% endif %}
+      {
+        id: {{ m.id }},
+        name: {{ (m.name or '')|tojson }},
+        career_id: {{ m.career_id if m.career_id is not none else 'null' }},
+        career: {{ (m.career.name if m.career else 'Global')|tojson }}
+      }{% if not loop.last %},{% endif %}
     {% endfor %}
   ];
   const STUDENTS = [
-    {% for s in students %}
+    {% for s in debt_receivers %}
       {
         id: {{ s.id }},
         full_name: {{ (s.full_name or '')|tojson }},
         matricula: {{ (s.matricula or '')|tojson }},
         email: {{ (s.email or '')|tojson }},
+        role: {{ (s.role or '')|tojson }},
+        career_id: {{ s.career_id if s.career_id is not none else 'null' }},
         career: {{ ((s.career_rel.name if s.career_rel else s.career) or '')|tojson }}
       }{% if not loop.last %},{% endif %}
     {% endfor %}
   ];
+  const MATERIALS_BY_ID = new Map(MATERIALS.map((m) => [m.id, m]));
 
   const searchInput = document.getElementById("debtMaterialSearch");
   const autocomplete = document.getElementById("debtAutocompleteList");
@@ -281,18 +331,28 @@
   ) return;
 
   const cart = new Map();
+  let selectedStudent = null;
 
   const normalize = (value) => (value || "").toString().toLowerCase().trim();
 
   const renderAutocomplete = () => {
     const query = normalize(searchInput.value);
-    if (!query) {
-      autocomplete.innerHTML = "";
+    if (!selectedStudent) {
+      autocomplete.innerHTML = '<div class="autocomplete-empty">Selecciona un alumno primero</div>';
       return;
     }
 
     const matches = MATERIALS
-      .filter((m) => normalize(m.name).includes(query) || String(m.id).includes(query))
+      .filter((m) => {
+        if (!selectedStudent) return false;
+        const role = normalize(selectedStudent.role).toUpperCase();
+        if (role === "STUDENT") {
+          if (m.career_id === null || m.career_id === undefined) return true;
+          return Number(m.career_id) === Number(selectedStudent.career_id);
+        }
+        return true;
+      })
+      .filter((m) => !query || normalize(m.name).includes(query) || String(m.id).includes(query))
       .slice(0, 8);
 
     if (!matches.length) {
@@ -303,7 +363,7 @@
     autocomplete.innerHTML = matches.map((m) => {
       return `<div class="autocomplete-item" data-material-id="${m.id}" role="button" tabindex="0">`
         + `<span class="autocomplete-item-title">${m.name}</span>`
-        + `<span class="autocomplete-item-meta">ID ${m.id}</span>`
+        + `<span class="autocomplete-item-meta">ID ${m.id} · ${(m.career || "Global").toString()}</span>`
         + `</div>`;
     }).join("");
   };
@@ -349,7 +409,7 @@
   };
 
   const addMaterial = (materialId) => {
-    const material = MATERIALS.find((m) => m.id === Number(materialId));
+    const material = MATERIALS_BY_ID.get(Number(materialId));
     if (!material) return;
 
     const current = cart.get(material.id);
@@ -372,7 +432,6 @@
     const matches = STUDENTS.filter((s) => {
       return normalize(s.full_name).includes(query)
         || normalize(s.matricula).includes(query)
-        || normalize(s.email).includes(query);
     }).slice(0, 8);
 
     if (!matches.length) {
@@ -381,8 +440,8 @@
     }
 
     studentAutocomplete.innerHTML = matches.map((s) => {
-      const title = s.full_name || s.email || `Usuario #${s.id}`;
-      const meta = [s.matricula || "Sin matrícula", s.career || "Sin carrera"].join(" · ");
+      const title = `${s.matricula || "Sin matrícula"} / ${s.full_name || s.email || `Usuario #${s.id}`}`;
+      const meta = s.career || "Sin carrera";
       return `<div class="autocomplete-item" data-student-id="${s.id}" role="button" tabindex="0">`
         + `<span class="autocomplete-item-title">${title}</span>`
         + `<span class="autocomplete-item-meta">${meta}</span>`
@@ -393,12 +452,20 @@
   const selectStudent = (studentId) => {
     const student = STUDENTS.find((s) => s.id === Number(studentId));
     if (!student) return;
-    const displayName = student.full_name || student.email || `Usuario #${student.id}`;
+    const selectedIdChanged = !selectedStudent || Number(selectedStudent.id) !== Number(student.id);
+    const displayName = `${student.matricula || "Sin matrícula"} / ${student.full_name || student.email || `Usuario #${student.id}`}`;
     studentSearchInput.value = displayName;
     studentIdInput.value = String(student.id);
     studentEmailInput.value = student.email || "";
     studentCareerInput.value = student.career || "";
     studentMatriculaInput.value = student.matricula || "";
+    selectedStudent = student;
+    if (selectedIdChanged) {
+      cart.clear();
+      renderCart();
+      searchInput.value = "";
+      autocomplete.innerHTML = "";
+    }
     studentAutocomplete.innerHTML = "";
   };
 
@@ -421,6 +488,11 @@
     studentEmailInput.value = "";
     studentCareerInput.value = "";
     studentMatriculaInput.value = "";
+    selectedStudent = null;
+    cart.clear();
+    renderCart();
+    searchInput.value = "";
+    autocomplete.innerHTML = "";
     renderStudentAutocomplete();
   });
   studentSearchInput.addEventListener("focus", renderStudentAutocomplete);
@@ -473,6 +545,7 @@
 
   searchInput.addEventListener("input", renderAutocomplete);
   searchInput.addEventListener("focus", renderAutocomplete);
+  searchInput.addEventListener("click", renderAutocomplete);
 
   document.addEventListener("click", (event) => {
     if (!event.target.closest(".student-search")) {
@@ -493,6 +566,11 @@
     if (!cart.size) {
       event.preventDefault();
       alert("Debes agregar al menos un material al adeudo.");
+      return;
+    }
+    if (searchInput.value.trim() && !selectedStudent) {
+      event.preventDefault();
+      alert("Selecciona un alumno antes de buscar materiales.");
     }
   });
 })();

@@ -111,6 +111,8 @@
 
             <td>
               <strong>{{ row.user.email }}</strong>
+              <br>
+              <small style="opacity:.8;">{{ row.user.matricula or 'Sin matrícula' }} · {{ row.user.full_name or '-' }}</small>
             </td>
 
             <td>

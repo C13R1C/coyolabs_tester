@@ -359,25 +359,27 @@
       <section class="report-panel">
         <div class="report-panel-header">
           <div class="report-panel-title">
-            <i class="ph ph-buildings"></i>
-            <h3>Inventario por laboratorio</h3>
+            <i class="ph ph-graduation-cap"></i>
+            <h3>Inventario por carrera</h3>
           </div>
-          <div class="report-panel-meta">{{ labs|length }} laboratorios</div>
+          <div class="report-panel-meta">{{ careers|length }} carreras</div>
         </div>
 
         <div class="report-panel-body">
-          {% for lab in labs %}
+          {% for career in careers %}
           <div class="lab-row">
-            <div class="lab-name">{{ lab.name }}</div>
+            <div class="lab-name">{{ career.name }}</div>
             <div class="lab-actions">
-              <a class="btn btn-ghost" href="{{ url_for('reports.report_inventory_view', lab_id=lab.id) }}">
+              <a class="btn btn-ghost" href="{{ url_for('reports.report_inventory_view', career_id=career.id) }}">
                 Ver
               </a>
-              <a class="btn btn-ghost" href="{{ url_for('reports.report_inventory', lab_id=lab.id) }}">
+              <a class="btn btn-ghost" href="{{ url_for('reports.report_inventory', career_id=career.id) }}">
                 Descargar
               </a>
             </div>
           </div>
+          {% else %}
+          <div class="report-note">No hay carreras disponibles para reportes.</div>
           {% endfor %}
         </div>
       </section>
