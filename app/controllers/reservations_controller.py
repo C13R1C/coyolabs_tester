@@ -16,16 +16,14 @@ from app.models.reservation_item import ReservationItem
 from app.models.material import Material
 from app.models.lab_ticket import LabTicket
 from app.models.ticket_item import TicketItem
-from app.models.notification import Notification
 from app.models.subject import Subject
 from app.models.teacher_academic_load import TeacherAcademicLoad
-from app.models.user import User
 
 from app.extensions import db
 from app.models.reservation import Reservation
 from app.services.audit_service import log_event
 from app.services.debt_service import user_has_open_debts
-from app.services.notification_realtime_service import publish_notification_created
+from app.services.notification_service import notify_roles, publish_notifications_safe
 from app.services.reservation_service import approve_reservation, reject_reservation
 from app.services.ticket_service import (
     add_material_to_ticket,
@@ -585,18 +583,12 @@ def request_reservation():
         db.session.add(r)
         db.session.flush()
 
-        admins = User.query.filter(User.role.in_(["ADMIN", "SUPERADMIN"])).all()
-        admin_notifications: list[Notification] = []
-
-        for admin in admins:
-            notif = Notification(
-                user_id=admin.id,
-                title="Nueva reserva pendiente",
-                message=f"El usuario {current_user.email} creó la reserva #{r.id} para {room} el {date_}.",
-                link="/reservations/admin"
-            )
-            db.session.add(notif)
-            admin_notifications.append(notif)
+        admin_notifications = notify_roles(
+            roles=["ADMIN", "SUPERADMIN", "STAFF"],
+            title="Nueva reservación recibida",
+            message=f"{current_user.email} creó la reservación #{r.id} para {room} el {date_}.",
+            link=url_for("reservations.admin_queue"),
+        )
 
         log_event(
             module="RESERVATIONS",
@@ -608,14 +600,12 @@ def request_reservation():
         )
 
         db.session.commit()
-        for notification in admin_notifications:
-            try:
-                publish_notification_created(notification)
-            except Exception:
-                logger.warning(
-                    "SSE publish failed after reservation request",
-                    extra={"reservation_id": r.id, "notification_id": notification.id, "target_user_id": notification.user_id},
-                )
+        publish_notifications_safe(
+            admin_notifications,
+            logger=logger,
+            event_label="reservation request",
+            extra={"reservation_id": r.id},
+        )
 
         flash("Solicitud enviada. Queda pendiente de aprobación.", "success")
         return redirect(url_for("reservations.my_reservations"))
@@ -849,14 +839,12 @@ def admin_approve(res_id: int):
         admin_user=current_user,
         admin_note=request.form.get("admin_note"),
     )
-    try:
-        publish_notification_created(approval_notification)
-    except Exception:
-        logger.warning(
-            "SSE publish failed after reservation approval",
-            exc_info=True,
-            extra={"reservation_id": r.id, "notification_id": approval_notification.id},
-        )
+    publish_notifications_safe(
+        [approval_notification],
+        logger=logger,
+        event_label="reservation approval",
+        extra={"reservation_id": r.id},
+    )
 
     flash("Reserva aprobada.", "success")
     return redirect(url_for("reservations.admin_queue"))
@@ -909,14 +897,12 @@ def admin_reject(res_id: int):
         admin_user=current_user,
         admin_note=request.form.get("admin_note"),
     )
-    try:
-        publish_notification_created(rejection_notification)
-    except Exception:
-        logger.warning(
-            "SSE publish failed after reservation rejection",
-            exc_info=True,
-            extra={"reservation_id": r.id, "notification_id": rejection_notification.id},
-        )
+    publish_notifications_safe(
+        [rejection_notification],
+        logger=logger,
+        event_label="reservation rejection",
+        extra={"reservation_id": r.id},
+    )
 
     flash("Reserva rechazada.", "success")
     return redirect(url_for("reservations.admin_queue"))
