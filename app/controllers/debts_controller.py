@@ -1,4 +1,5 @@
 import logging
+import uuid
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import current_user
@@ -42,6 +43,28 @@ def _log_debt_event(action: str, debt: Debt, description: str, metadata: dict | 
         metadata=payload,
         material_id=debt.material_id,
     )
+
+
+def _parse_debt_items_from_form() -> list[dict]:
+    material_ids = request.form.getlist("item_material_id")
+    quantities = request.form.getlist("item_amount")
+    parsed_items: list[dict] = []
+
+    for index, (material_raw, qty_raw) in enumerate(zip(material_ids, quantities), start=1):
+        if not (material_raw or "").strip() and not (qty_raw or "").strip():
+            continue
+        try:
+            material_id = int(material_raw)
+            amount = int(qty_raw)
+        except (TypeError, ValueError):
+            raise ValueError(f"Item {index}: material y cantidad deben ser números enteros.")
+        if amount < 1:
+            raise ValueError(f"Item {index}: la cantidad debe ser mayor o igual a 1.")
+        material = Material.query.get(material_id)
+        if not material:
+            raise ValueError(f"Item {index}: material_id no existe.")
+        parsed_items.append({"material": material, "amount": amount})
+    return parsed_items
 
 
 # -------------------------
@@ -108,52 +131,65 @@ def admin_list():
 @min_role_required("ADMIN")
 @permission_required("debts.create")
 def admin_create():
+    materials = Material.query.order_by(Material.name.asc()).limit(500).all()
     if request.method == "POST":
-        pending_notifications: list[Notification] = []
         email = (request.form.get("email") or "").strip().lower()
-        material_id = request.form.get("material_id", type=int)
         reason = (request.form.get("reason") or "").strip()
-        amount = request.form.get("amount", type=int)
 
         user = User.query.filter_by(email=email).first()
         if not user:
             flash("No existe un usuario con ese correo.", "error")
             return redirect(url_for("debts.admin_create"))
 
-        material = None
-        if material_id:
-            material = Material.query.get(material_id)
-            if not material:
-                flash("material_id no existe.", "error")
-                return redirect(url_for("debts.admin_create"))
+        try:
+            parsed_items = _parse_debt_items_from_form()
+        except ValueError as exc:
+            flash(str(exc), "error")
+            return redirect(url_for("debts.admin_create"))
 
-        debt = Debt(
-            user_id=user.id,
-            material_id=material.id if material else None,
-            status=DebtStatus.PENDING,
-            reason=reason or None,
-            amount=amount if amount is not None else 1,
-            original_amount=amount if amount is not None else 1,
-            remaining_amount=amount if amount is not None else 1,
-        )
+        if not parsed_items:
+            material_id = request.form.get("material_id", type=int)
+            amount = request.form.get("amount", type=int)
+            material = None
+            if material_id:
+                material = Material.query.get(material_id)
+                if not material:
+                    flash("material_id no existe.", "error")
+                    return redirect(url_for("debts.admin_create"))
+            parsed_items = [{"material": material, "amount": amount if amount is not None else 1}]
 
-        db.session.add(debt)
-        db.session.flush()
+        case_code = str(uuid.uuid4()) if len(parsed_items) > 1 else None
+        created_debts: list[Debt] = []
+        for item in parsed_items:
+            debt = Debt(
+                user_id=user.id,
+                material_id=item["material"].id if item["material"] else None,
+                status=DebtStatus.PENDING,
+                reason=reason or None,
+                amount=item["amount"],
+                original_amount=item["amount"],
+                remaining_amount=item["amount"],
+                case_code=case_code,
+            )
+            db.session.add(debt)
+            db.session.flush()
+            created_debts.append(debt)
+            _log_debt_event(
+                action="DEBT_CREATED",
+                debt=debt,
+                description=f"Adeudo creado para {user.email}",
+                metadata={"reason": debt.reason, "case_code": case_code},
+            )
 
-        _log_debt_event(
-            action="DEBT_CREATED",
-            debt=debt,
-            description=f"Adeudo creado para {user.email}",
-            metadata={"reason": debt.reason},
-        )
+        first_debt = created_debts[0]
+        total_pending = sum(int(d.remaining_amount or d.amount or 0) for d in created_debts)
         user_notification = Notification(
             user_id=user.id,
-            title="Se generó un adeudo",
+            title="Se generó un adeudo" if len(created_debts) == 1 else "Se generó un adeudo compuesto",
             message=(
-                f"Se registró un adeudo de "
-                f"{material.name if material else 'material no especificado'} "
-                f"({int(debt.remaining_amount or debt.amount or 0)} pendiente)."
-                f"{f' Motivo: {debt.reason}.' if debt.reason else ''}"
+                f"Se registró {'un adeudo' if len(created_debts) == 1 else f'un adeudo de {len(created_debts)} materiales'} "
+                f"({total_pending} pendiente total)."
+                f"{f' Motivo: {reason}.' if reason else ''}"
             ),
             link=url_for("debts.my_debts"),
         )
@@ -164,13 +200,53 @@ def admin_create():
         except Exception:
             logger.warning(
                 "SSE publish failed after debt creation",
-                extra={"debt_id": debt.id, "notification_id": user_notification.id, "target_user_id": user_notification.user_id},
+                extra={"debt_id": first_debt.id, "notification_id": user_notification.id, "target_user_id": user_notification.user_id},
             )
 
-        flash("Adeudo creado.", "success")
+        flash("Adeudo creado." if len(created_debts) == 1 else "Adeudo multi-material creado.", "success")
+        return redirect(url_for("debts.admin_detail", debt_id=first_debt.id))
+
+    return render_template("debts/admin_create.html", active_page="debts", materials=materials)
+
+
+@debts_bp.route("/admin/<int:debt_id>", methods=["GET"])
+@min_role_required("STAFF")
+@permission_required("debts.view_all")
+def admin_detail(debt_id: int):
+    debt = (
+        Debt.query
+        .options(joinedload(Debt.user), joinedload(Debt.material))
+        .get(debt_id)
+    )
+    if not debt:
+        flash("Adeudo no encontrado.", "error")
         return redirect(url_for("debts.admin_list"))
 
-    return render_template("debts/admin_create.html", active_page="debts")
+    case_debts: list[Debt]
+    if debt.case_code:
+        case_debts = (
+            Debt.query
+            .options(joinedload(Debt.user), joinedload(Debt.material))
+            .filter(Debt.case_code == debt.case_code, Debt.user_id == debt.user_id)
+            .order_by(Debt.id.asc())
+            .all()
+        )
+    else:
+        case_debts = [debt]
+
+    total_original = sum(int((d.original_amount if d.original_amount is not None else d.amount) or 0) for d in case_debts)
+    total_pending = sum(int((d.remaining_amount if d.remaining_amount is not None else d.amount) or 0) for d in case_debts)
+    case_status = DebtStatus.PAID if total_pending == 0 else DebtStatus.PENDING
+
+    return render_template(
+        "debts/admin_detail.html",
+        debt=debt,
+        case_debts=case_debts,
+        total_original=total_original,
+        total_pending=total_pending,
+        case_status=case_status,
+        active_page="debts",
+    )
 
 
 # -------------------------
@@ -220,4 +296,7 @@ def admin_close(debt_id: int):
             f"Abono registrado. Pendiente actual: {int(result.data.get('remaining_amount'))}.",
             "success",
         )
+    return_to = (request.form.get("return_to") or "").strip().lower()
+    if return_to == "detail":
+        return redirect(url_for("debts.admin_detail", debt_id=debt.id))
     return redirect(url_for("debts.admin_list"))

@@ -3,40 +3,380 @@
 {% block title %}Crear adeudo{% endblock %}
 
 {% block content %}
-<header class="topbar">
-  <div class="topbar-left">
-    <p class="page-kicker">Adeudos</p>
-    <h1>Crear adeudo</h1>
-    <p class="page-subtitle">Registra un adeudo para un alumno a partir de su correo.</p>
-  </div>
-</header>
+<style>
+.debt-create-shell .topbar h1{
+  font-size: clamp(1.55rem, 2.2vw, 2rem);
+}
+.debt-create-shell .page-subtitle{
+  color: #526357;
+  max-width: 70ch;
+}
 
-<section class="toolbar-card">
-  <form method="post" class="toolbar" style="grid-template-columns: repeat(2, minmax(280px, 1fr));">
-    <div class="toolbar-group">
-      <label for="email">Email del alumno</label>
-      <div class="search-box"><i class="ph ph-envelope-simple search-icon"></i><input type="email" id="email" name="email" required placeholder="alumno@correo.edu.mx"></div>
-    </div>
+.debt-create-shell .table-card{
+  border: 1px solid rgba(33, 76, 54, .16);
+  box-shadow: 0 14px 28px rgba(17, 38, 27, .07);
+}
 
-    <div class="toolbar-group">
-      <label for="material_id">ID de material (opcional)</label>
-      <div class="search-box"><i class="ph ph-hash search-icon"></i><input type="number" id="material_id" name="material_id" placeholder="Ej. 152"></div>
-    </div>
+.material-search {
+  position: relative;
+  margin-bottom: 12px;
+}
 
-    <div class="toolbar-group">
-      <label for="amount">Cantidad adeudada</label>
-      <div class="search-box"><i class="ph ph-number-circle-one search-icon"></i><input type="number" id="amount" name="amount" min="1" step="1" value="1"></div>
-    </div>
+#debtMaterialSearch {
+  min-height: 54px;
+}
 
-    <div class="toolbar-group" style="grid-column: 1 / -1;">
-      <label for="reason">Razón / comentario</label>
-      <textarea class="form-control" id="reason" name="reason" rows="4" placeholder="Describe el motivo del adeudo"></textarea>
-    </div>
+.autocomplete-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 100%;
+  background: #fff;
+  border-radius: 10px;
+  max-height: 220px;
+  overflow: auto;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+  z-index: 20;
+  border: 1px solid rgba(0,0,0,0.08);
+  padding: 6px;
+}
 
-    <div class="toolbar-actions" style="grid-column: 1 / -1;">
-      <button type="submit" class="btn btn-gold"><i class="ph ph-plus-circle"></i><span>Crear adeudo</span></button>
-      <a href="{{ url_for('debts.admin_list') }}" class="btn btn-ghost"><i class="ph ph-arrow-left"></i><span>Volver</span></a>
+.autocomplete-item {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  padding: 11px 12px;
+  cursor: pointer;
+  transition: background .15s ease;
+  display: grid;
+  gap: 2px;
+  border-radius: 8px;
+}
+
+.autocomplete-item + .autocomplete-item {
+  margin-top: 4px;
+}
+
+.autocomplete-item-title {
+  font-weight: 650;
+  color: #1f2e25;
+  line-height: 1.25;
+}
+
+.autocomplete-item-meta {
+  font-size: 12px;
+  color: var(--text-dim, #728078);
+}
+
+.autocomplete-item:hover {
+  background: #f1ede4;
+}
+
+.autocomplete-empty {
+  padding: 10px 12px;
+  color: var(--text-dim, #728078);
+  font-size: 13px;
+}
+
+.cart-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cart-empty {
+  padding: 14px;
+  border: 1px dashed rgba(0,0,0,0.12);
+  border-radius: 10px;
+  color: var(--text-dim, #728078);
+  background: rgba(255,255,255,0.65);
+}
+
+.cart-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 10px;
+  background: #f7f4ec;
+  border: 1px solid rgba(0,0,0,0.05);
+}
+
+.cart-item-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.cart-item-name {
+  font-weight: 700;
+  color: var(--text);
+  word-break: break-word;
+}
+
+.cart-item-meta {
+  font-size: 12px;
+  color: var(--text-dim, #728078);
+}
+
+.cart-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.qty-btn {
+  width: 32px;
+  min-height: 32px;
+  height: 32px;
+  border-radius: 10px;
+  padding: 0;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.qty-value {
+  min-width: 24px;
+  text-align: center;
+  font-weight: 700;
+}
+
+.cart-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.72);
+  border: 1px solid rgba(0,0,0,0.05);
+}
+
+.form-layout {
+  display:grid;
+  gap:14px;
+}
+</style>
+
+<div class="debt-create-shell">
+  <header class="topbar">
+    <div class="topbar-left">
+      <p class="page-kicker">Adeudos</p>
+      <h1>Crear adeudo compuesto</h1>
+      <p class="page-subtitle">Captura varios materiales adeudados en un solo flujo administrativo, sin afectar inventario operativo.</p>
     </div>
-  </form>
-</section>
+  </header>
+
+  <section class="table-card">
+    <form method="post" id="debtCreateForm" class="form-layout">
+      <div class="toolbar-group">
+        <label for="email">Email del alumno</label>
+        <div class="search-box">
+          <i class="ph ph-envelope-simple search-icon"></i>
+          <input type="email" id="email" name="email" required placeholder="alumno@correo.edu.mx">
+        </div>
+      </div>
+
+      <div class="toolbar-group">
+        <label for="reason">Razón / comentario general del adeudo</label>
+        <textarea class="form-control" id="reason" name="reason" rows="4" placeholder="Describe el contexto del adeudo" required></textarea>
+      </div>
+
+      <div class="toolbar-group">
+        <label>Materiales adeudados</label>
+        <div class="material-search">
+          <div class="search-box">
+            <i class="ph ph-magnifying-glass search-icon"></i>
+            <input type="text" id="debtMaterialSearch" placeholder="Buscar material por nombre o ID">
+          </div>
+          <div id="debtAutocompleteList" class="autocomplete-list"></div>
+        </div>
+
+        <div id="debtCartContainer" class="cart-container">
+          <div class="cart-empty">Aún no agregas materiales al adeudo.</div>
+        </div>
+
+        <div class="cart-summary">
+          <span><strong id="debtCartKinds">0</strong> materiales distintos</span>
+          <strong id="debtCartTotal">0 piezas adeudadas</strong>
+        </div>
+      </div>
+
+      <div class="toolbar-actions" style="justify-content:space-between; flex-wrap:wrap; gap:8px;">
+        <a href="{{ url_for('debts.admin_list') }}" class="btn btn-ghost"><i class="ph ph-arrow-left"></i><span>Volver</span></a>
+        <button type="submit" class="btn btn-gold"><i class="ph ph-plus-circle"></i><span>Crear adeudo</span></button>
+      </div>
+
+      <div id="debtHiddenInputs"></div>
+    </form>
+  </section>
+</div>
+
+<script>
+(() => {
+  const MATERIALS = [
+    {% for m in materials %}
+      { id: {{ m.id }}, name: {{ (m.name or '')|tojson }} }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ];
+
+  const searchInput = document.getElementById("debtMaterialSearch");
+  const autocomplete = document.getElementById("debtAutocompleteList");
+  const cartContainer = document.getElementById("debtCartContainer");
+  const hiddenInputs = document.getElementById("debtHiddenInputs");
+  const kindsEl = document.getElementById("debtCartKinds");
+  const totalEl = document.getElementById("debtCartTotal");
+  const form = document.getElementById("debtCreateForm");
+
+  if (!searchInput || !autocomplete || !cartContainer || !hiddenInputs || !kindsEl || !totalEl || !form) return;
+
+  const cart = new Map();
+
+  const normalize = (value) => (value || "").toString().toLowerCase().trim();
+
+  const renderAutocomplete = () => {
+    const query = normalize(searchInput.value);
+    if (!query) {
+      autocomplete.innerHTML = "";
+      return;
+    }
+
+    const matches = MATERIALS
+      .filter((m) => normalize(m.name).includes(query) || String(m.id).includes(query))
+      .slice(0, 8);
+
+    if (!matches.length) {
+      autocomplete.innerHTML = '<div class="autocomplete-empty">Sin coincidencias</div>';
+      return;
+    }
+
+    autocomplete.innerHTML = matches.map((m) => {
+      return `<div class="autocomplete-item" data-material-id="${m.id}" role="button" tabindex="0">`
+        + `<span class="autocomplete-item-title">${m.name}</span>`
+        + `<span class="autocomplete-item-meta">ID ${m.id}</span>`
+        + `</div>`;
+    }).join("");
+  };
+
+  const renderCart = () => {
+    if (!cart.size) {
+      cartContainer.innerHTML = '<div class="cart-empty">Aún no agregas materiales al adeudo.</div>';
+      hiddenInputs.innerHTML = "";
+      kindsEl.textContent = "0";
+      totalEl.textContent = "0 piezas adeudadas";
+      return;
+    }
+
+    const rows = [];
+    const hidden = [];
+    let totalQty = 0;
+
+    cart.forEach((entry) => {
+      totalQty += entry.qty;
+      rows.push(`
+        <article class="cart-item" data-material-id="${entry.id}">
+          <div class="cart-item-left">
+            <span class="cart-item-name">${entry.name}</span>
+            <span class="cart-item-meta">Material ID ${entry.id}</span>
+          </div>
+          <div class="cart-controls">
+            <button type="button" class="btn btn-ghost qty-btn" data-action="minus">-</button>
+            <span class="qty-value">${entry.qty}</span>
+            <button type="button" class="btn btn-ghost qty-btn" data-action="plus">+</button>
+            <button type="button" class="btn btn-ghost" data-action="remove">Quitar</button>
+          </div>
+        </article>
+      `);
+
+      hidden.push(`<input type="hidden" name="item_material_id" value="${entry.id}">`);
+      hidden.push(`<input type="hidden" name="item_amount" value="${entry.qty}">`);
+    });
+
+    cartContainer.innerHTML = rows.join("");
+    hiddenInputs.innerHTML = hidden.join("");
+    kindsEl.textContent = String(cart.size);
+    totalEl.textContent = `${totalQty} pieza${totalQty === 1 ? '' : 's'} adeudadas`;
+  };
+
+  const addMaterial = (materialId) => {
+    const material = MATERIALS.find((m) => m.id === Number(materialId));
+    if (!material) return;
+
+    const current = cart.get(material.id);
+    if (current) {
+      current.qty += 1;
+      cart.set(material.id, current);
+    } else {
+      cart.set(material.id, { id: material.id, name: material.name, qty: 1 });
+    }
+    renderCart();
+  };
+
+  autocomplete.addEventListener("click", (event) => {
+    const btn = event.target.closest("[data-material-id]");
+    if (!btn) return;
+    addMaterial(btn.getAttribute("data-material-id"));
+    searchInput.value = "";
+    autocomplete.innerHTML = "";
+    searchInput.focus();
+  });
+
+  autocomplete.addEventListener("keydown", (event) => {
+    const item = event.target.closest("[data-material-id]");
+    if (!item) return;
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    addMaterial(item.getAttribute("data-material-id"));
+    searchInput.value = "";
+    autocomplete.innerHTML = "";
+    searchInput.focus();
+  });
+
+  cartContainer.addEventListener("click", (event) => {
+    const actionBtn = event.target.closest("[data-action]");
+    if (!actionBtn) return;
+    const itemRow = actionBtn.closest("[data-material-id]");
+    if (!itemRow) return;
+
+    const materialId = Number(itemRow.getAttribute("data-material-id"));
+    const entry = cart.get(materialId);
+    if (!entry) return;
+
+    const action = actionBtn.getAttribute("data-action");
+    if (action === "plus") {
+      entry.qty += 1;
+      cart.set(materialId, entry);
+    }
+    if (action === "minus") {
+      entry.qty = Math.max(1, entry.qty - 1);
+      cart.set(materialId, entry);
+    }
+    if (action === "remove") {
+      cart.delete(materialId);
+    }
+
+    renderCart();
+  });
+
+  searchInput.addEventListener("input", renderAutocomplete);
+  searchInput.addEventListener("focus", renderAutocomplete);
+
+  document.addEventListener("click", (event) => {
+    if (!event.target.closest(".material-search")) {
+      autocomplete.innerHTML = "";
+    }
+  });
+
+  form.addEventListener("submit", (event) => {
+    if (!cart.size) {
+      event.preventDefault();
+      alert("Debes agregar al menos un material al adeudo.");
+    }
+  });
+})();
+</script>
 {% endblock %}
