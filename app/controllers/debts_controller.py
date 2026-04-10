@@ -416,9 +416,6 @@ def admin_detail(debt_id: int):
         paid_items=paid_items,
         total_items=total_items,
         progress_pct=progress_pct,
-        paid_items=paid_items,
-        total_items=total_items,
-        progress_pct=progress_pct,
         active_page="debts",
     )
 
