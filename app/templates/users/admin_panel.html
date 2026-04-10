@@ -53,14 +53,14 @@
   {% if is_superadmin %}
   <div class="topbar-actions">
     <a href="{{ url_for('users.profile_change_requests') }}" class="btn btn-ghost">Solicitudes de perfil</a>
-    <a href="{{ url_for('users.critical_action_requests') }}" class="btn btn-ghost">Solicitudes críticas</a>
+    <a href="{{ url_for('users.critical_action_requests') }}" class="btn btn-ghost">Revisión de acciones de cuenta</a>
     <a href="{{ url_for('reports.logbook_admin_view') }}" class="btn btn-ghost">Bitácora</a>
     <a href="{{ url_for('users.create_admin_account') }}" class="btn btn-gold">Crear cuenta de administrador</a>
   </div>
   {% else %}
   <div class="topbar-actions">
     <a href="{{ url_for('users.profile_change_requests') }}" class="btn btn-ghost">Solicitudes de perfil</a>
-    <a href="{{ url_for('users.critical_action_requests') }}" class="btn btn-ghost">Mis solicitudes críticas</a>
+    <a href="{{ url_for('users.critical_action_requests') }}" class="btn btn-ghost">Mis acciones de cuenta</a>
     <a href="{{ url_for('reports.logbook_admin_view') }}" class="btn btn-ghost">Bitácora</a>
   </div>
   {% endif %}
