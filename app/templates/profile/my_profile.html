@@ -209,6 +209,25 @@
             Solicitar cambio de teléfono
           </button>
         </form>
+        {% if current_user.role|upper == 'STUDENT' %}
+        <hr style="margin:16px 0; border:none; border-top:1px solid var(--stroke);">
+        <p style="margin-top:0; color:var(--text-dim);">
+          Puedes actualizar tu grupo cuando cambie tu asignación académica.
+        </p>
+        <form method="post" action="{{ url_for('profile.update_group_name') }}" class="toolbar" style="grid-template-columns:1fr auto;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <div class="toolbar-group">
+            <label>Grupo</label>
+            <div class="search-box">
+              <i class="ph ph-users search-icon"></i>
+              <input type="text" name="group_name" value="{{ current_user.group_name or '' }}" placeholder="Ej. TIDSM31 / REDES-3A / etc." maxlength="80">
+            </div>
+          </div>
+          <div class="toolbar-actions" style="align-self:end;">
+            <button type="submit" class="btn btn-gold">Actualizar grupo</button>
+          </div>
+        </form>
+        {% endif %}
       {% endif %}
 
       <hr style="margin:16px 0; border:none; border-top:1px solid var(--stroke);">
