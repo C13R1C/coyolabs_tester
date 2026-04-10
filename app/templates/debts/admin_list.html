@@ -38,6 +38,14 @@
       {{ users_with_debts }}
     </strong>
   </article>
+  <article class="stat-card">
+    <span class="stat-label">Casos visibles</span>
+    <strong>{{ case_count }}</strong>
+  </article>
+  <article class="stat-card">
+    <span class="stat-label">Registros Debt</span>
+    <strong>{{ debt_records_count }}</strong>
+  </article>
 </section>
 
 <!-- 🔥 ACCIONES -->
@@ -59,6 +67,21 @@
     <button class="btn btn-ghost" onclick="filterTable('ALL')">Todos</button>
     <button class="btn btn-ghost" onclick="filterTable('PENDING')">Abiertos</button>
     <button class="btn btn-ghost" onclick="filterTable('PAID')">Pagados</button>
+  </div>
+  <div class="toolbar-actions" style="margin-top:10px; gap:10px;">
+    <input
+      type="text"
+      id="debtSearchInput"
+      class="form-control"
+      style="max-width:340px;"
+      placeholder="Buscar por caso, usuario, material o razón"
+      oninput="applyDebtFilters()"
+    >
+    <select id="flowFilter" class="form-control" style="max-width:180px;" onchange="applyDebtFilters()">
+      <option value="ALL">Flujo: Todos</option>
+      <option value="Singular">Flujo: Singular</option>
+      <option value="Conjunto">Flujo: Conjunto</option>
+    </select>
   </div>
 </section>
 
@@ -83,7 +106,7 @@
 
         <tbody>
         {% for row in debt_rows %}
-          <tr data-status="{{ row.status }}">
+          <tr data-status="{{ row.status }}" data-flow="{{ row.flow_label }}" data-search="{{ row.search_blob }}">
             <td>{{ row.id_label }}</td>
 
             <td>
@@ -96,7 +119,12 @@
               </span>
             </td>
 
-            <td>{{ row.material_label }}</td>
+            <td>
+              <div>{{ row.material_label }}</div>
+              {% if row.row_type == "group" %}
+                <small style="opacity:.8;">{{ row.material_preview }}</small>
+              {% endif %}
+            </td>
 
             <td>{{ row.total_original }}</td>
             <td>{{ row.total_pending }}</td>
@@ -151,13 +179,22 @@
 
 <!-- 🔥 SCRIPT FILTRO -->
 <script>
+let activeStatusFilter = "ALL";
+
 function filterTable(status) {
+  activeStatusFilter = status;
+  applyDebtFilters();
+}
+
+function applyDebtFilters() {
+  const query = (document.getElementById("debtSearchInput")?.value || "").toLowerCase().trim();
+  const flow = document.getElementById("flowFilter")?.value || "ALL";
   document.querySelectorAll("#debtTable tbody tr").forEach(row => {
-    if (status === "ALL") {
-      row.style.display = "";
-    } else {
-      row.style.display = row.dataset.status === status ? "" : "none";
-    }
+    const matchesStatus = activeStatusFilter === "ALL" || row.dataset.status === activeStatusFilter;
+    const matchesFlow = flow === "ALL" || row.dataset.flow === flow;
+    const searchBlob = (row.dataset.search || "").toLowerCase();
+    const matchesSearch = !query || searchBlob.includes(query);
+    row.style.display = matchesStatus && matchesFlow && matchesSearch ? "" : "none";
   });
 }
 </script>

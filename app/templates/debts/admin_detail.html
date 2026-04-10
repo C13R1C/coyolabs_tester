@@ -17,7 +17,7 @@
 <section class="stats-row">
   <article class="stat-card">
     <span class="stat-label">Caso</span>
-    <strong>{{ ('CASO-' ~ debt.case_code[:8]) if debt.case_code and case_debts|length > 1 else ('ADEUDO-' ~ debt.id) }}</strong>
+    <strong>{{ case_visible_id }}</strong>
   </article>
   <article class="stat-card">
     <span class="stat-label">Usuario</span>
@@ -49,6 +49,11 @@
 
 <section class="toolbar-card" style="margin-top:16px;">
   <div><strong>Razón general:</strong> {{ debt.reason or '-' }}</div>
+  <div style="margin-top:6px;">
+    <span class="status-badge status-neutral">
+      El caso permanece pendiente mientras exista al menos un material con saldo pendiente.
+    </span>
+  </div>
 </section>
 
 <section class="table-card" style="margin-top:16px;">
