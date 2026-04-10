@@ -4,12 +4,35 @@
 
 {% block content %}
 <style>
-.commenter-tone-1{ color:#3d5a80; }
-.commenter-tone-2{ color:#5b4b8a; }
-.commenter-tone-3{ color:#2f6f5f; }
-.commenter-tone-4{ color:#7a5b3a; }
-.commenter-tone-5{ color:#6a3f58; }
-.commenter-tone-6{ color:#4f5d75; }
+.commenter-tone-1{ color:#0f766e; } /* teal */
+.commenter-tone-2{ color:#1d4ed8; } /* blue */
+.commenter-tone-3{ color:#6d28d9; } /* violet */
+.commenter-tone-4{ color:#b45309; } /* amber */
+.commenter-tone-5{ color:#be185d; } /* rose */
+.commenter-tone-6{ color:#166534; } /* green */
+.forum-post-row{display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap;}
+.forum-post-meta{display:flex; gap:8px; align-items:center; margin-bottom:6px; flex-wrap:wrap;}
+.forum-post-title{
+  font-size: clamp(1.08rem, 1.6vw, 1.24rem);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+.forum-post-content{
+  margin-top: 8px;
+  color: #2f3a34;
+  font-size: .98rem;
+  line-height: 1.55;
+}
+.forum-post-meta-bottom{
+  margin-top: 10px;
+  font-size: .84rem;
+  color: var(--text-dim);
+}
+@media (max-width: 768px){
+  .forum-filters .btn,
+  .forum-topbar-actions .btn{width:100%;}
+}
 </style>
 <header class="topbar">
   <div class="topbar-left">
@@ -17,13 +40,13 @@
     <h1>Foro de discusión</h1>
     <p class="page-subtitle">Comparte dudas y recomendaciones sobre laboratorios, materiales y software.</p>
   </div>
-  <div class="topbar-actions" style="display:flex; gap:8px;">
+  <div class="topbar-actions forum-topbar-actions" style="display:flex; gap:8px;">
     <a class="btn btn-ghost" href="{{ url_for('forum.forum_home') }}">Todas</a>
     <a class="btn btn-gold" href="{{ url_for('forum.create_post') }}">Nueva publicación</a>
   </div>
 </header>
 
-<section class="toolbar-card" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+<section class="toolbar-card forum-filters" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
   <span class="text-dim">Categorías:</span>
   {% for c in categories %}
     <a class="btn {% if selected_category == c %}btn-gold{% else %}btn-ghost{% endif %}" href="{{ url_for('forum.forum_home', category=c) }}">{{ c }}</a>
@@ -34,16 +57,16 @@
 <section class="table-card" style="display:flex; flex-direction:column; gap:12px;">
   {% for post in posts %}
     <a class="toolbar-card" href="{{ url_for('forum.post_detail', post_id=post.id) }}" style="text-decoration:none; margin-bottom:0; {% if post.is_hidden %}opacity:.65;{% endif %}">
-      <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap;">
+      <div class="forum-post-row">
         <div>
-          <div style="display:flex; gap:8px; align-items:center; margin-bottom:6px;">
-            <strong>{{ post.title }}</strong>
+          <div class="forum-post-meta">
+            <strong class="forum-post-title">{{ post.title }}</strong>
             <span class="status-badge status-neutral">{{ post.category }}</span>
             <span class="status-badge status-neutral">{{ comment_counts.get(post.id, 0) }} comentario(s)</span>
             {% if post.is_anonymous %}<span class="status-badge status-warn">ANÓNIMO</span>{% endif %}
             {% if post.is_hidden %}<span class="status-badge status-danger">OCULTA</span>{% endif %}
           </div>
-          <div class="text-dim">{{ post.content[:180] }}{% if post.content|length > 180 %}...{% endif %}</div>
+          <div class="forum-post-content">{{ post.content[:220] }}{% if post.content|length > 220 %}...{% endif %}</div>
           {% set preview_comments = comment_previews_by_post.get(post.id, []) %}
           {% if preview_comments %}
           <div style="margin-top:10px; display:grid; gap:6px;">
@@ -61,7 +84,7 @@
             {% endif %}
           </div>
           {% endif %}
-          <div class="text-dim" style="margin-top:6px;">Autor: {{ author_label_fn(post.author, post.is_anonymous) }} · {{ post.created_at }}</div>
+          <div class="forum-post-meta-bottom">Autor: {{ author_label_fn(post.author, post.is_anonymous) }} · {{ post.created_at }}</div>
         </div>
       </div>
     </a>

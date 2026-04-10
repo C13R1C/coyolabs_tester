@@ -444,6 +444,7 @@ textarea{
 .mobile-topbar{
   display: none;
   margin-bottom: 14px;
+  justify-content: flex-start;
 }
 
 .mobile-menu-btn{
@@ -1251,7 +1252,34 @@ textarea.form-control{
   }
 
   .main-content{
+    padding: 12px;
+  }
+
+  .page-shell{
+    max-width: 100%;
+  }
+
+  .toolbar-card,
+  .table-card{
     padding: 14px;
+    border-radius: 16px;
+  }
+
+  .topbar h1{
+    font-size: clamp(1.45rem, 7vw, 1.9rem);
+    line-height: 1.2;
+  }
+
+  .page-subtitle{
+    font-size: 0.92rem;
+  }
+
+  .topbar-actions{
+    width: 100%;
+  }
+
+  .topbar-actions .btn{
+    flex: 1 1 180px;
   }
 
   .toolbar{
@@ -1265,6 +1293,13 @@ textarea.form-control{
 
   .toolbar-actions .btn{
     width: 100%;
+  }
+
+  .btn{
+    min-height: 50px;
+    height: auto;
+    padding-top: 10px;
+    padding-bottom: 10px;
   }
 
   .user-chip{
@@ -1281,6 +1316,82 @@ textarea.form-control{
 
   .sidebar-collapse-btn{
     display: none;
+  }
+}
+
+@media (max-width: 430px){
+  .main-content{
+    padding: 10px;
+  }
+
+  .mobile-menu-btn{
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+  }
+
+  .crumbs{
+    font-size: 0.85rem;
+    gap: 6px;
+  }
+
+  .toolbar-card,
+  .table-card{
+    padding: 12px;
+    border-radius: 14px;
+  }
+
+  .status-badge{
+    font-size: 0.76rem;
+    padding: 6px 10px;
+  }
+}
+
+@media (max-width: 768px){
+  .table-mobile-cards{
+    min-width: 0 !important;
+    width: 100%;
+  }
+
+  .table-mobile-cards thead{
+    display: none;
+  }
+
+  .table-mobile-cards tbody{
+    display: grid;
+    gap: 12px;
+  }
+
+  .table-mobile-cards tbody tr{
+    display: block;
+    border: 1px solid var(--stroke);
+    border-radius: 14px;
+    background: rgba(255,255,255,0.5);
+    padding: 10px;
+  }
+
+  .table-mobile-cards tbody td{
+    display: grid;
+    grid-template-columns: minmax(94px, 36%) 1fr;
+    gap: 8px;
+    padding: 8px 6px;
+    border-bottom: 1px dashed rgba(102,81,45,0.12);
+    background: transparent !important;
+    text-align: left !important;
+  }
+
+  .table-mobile-cards tbody td:last-child{
+    border-bottom: 0;
+    padding-bottom: 4px;
+  }
+
+  .table-mobile-cards tbody td::before{
+    content: attr(data-label);
+    color: var(--text-dim);
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
   }
 }
 .topbar{

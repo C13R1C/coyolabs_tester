@@ -108,8 +108,8 @@
 </section>
 
 <section class="table-card" style="margin-top:16px;">
-  <h3 style="margin-top:0;">Costo estimado</h3>
-  <p class="page-subtitle" style="margin-top:0;">Tarifa institucional fija: <strong>$3.00 por gramo</strong>. El total es estimado para demo.</p>
+  <h3 style="margin-top:0;">Cotización (costo estimado)</h3>
+  <p class="page-subtitle" style="margin-top:0;">Primero se cotiza (gramos y costo estimado), luego continúa a proceso, listo y entregado.</p>
   <form method="post" action="{{ url_for('print3d.admin_set_status', job_id=job.id) }}" class="toolbar" style="grid-template-columns: repeat(2, minmax(220px,1fr)); gap:10px;">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="status" value="{{ job.status }}">
@@ -122,7 +122,7 @@
       <input class="form-control" type="text" value="{{ ('$' ~ ('%.2f'|format(job.total_estimated))) if job.total_estimated is not none else 'Se calcula automáticamente' }}" readonly>
     </div>
     <div class="toolbar-actions" style="grid-column:1/-1;">
-      <button type="submit" class="btn btn-gold">Guardar estimación</button>
+      <button type="submit" class="btn btn-gold">Guardar cotización</button>
     </div>
   </form>
 </section>
@@ -135,7 +135,7 @@
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <input type="hidden" name="status" value="QUOTED">
       <input type="hidden" name="estimated_grams" value="{{ ('%.2f'|format(job.grams_estimated)) if job.grams_estimated is not none else '' }}">
-      <button type="submit" class="btn btn-gold">Aceptar</button>
+      <button type="submit" class="btn btn-gold">Marcar como cotizado</button>
     </form>
     {% endif %}
 
