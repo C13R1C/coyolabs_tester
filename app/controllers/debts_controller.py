@@ -98,7 +98,6 @@ def _build_material_preview(items: list[Debt], preview_limit: int = 2) -> str:
     return " · ".join(chunks) if chunks else "-"
 
 
-<<<<<<< codex/update-naming-and-group-debt-listings-hsqauw
 def _case_item_progress(items: list[Debt]) -> tuple[int, int, int]:
     total_items = len(items)
     if total_items <= 0:
@@ -108,8 +107,6 @@ def _case_item_progress(items: list[Debt]) -> tuple[int, int, int]:
     return paid_items, total_items, progress_pct
 
 
-=======
->>>>>>> main
 def _build_admin_debt_rows(debts: list[Debt]) -> list[dict]:
     grouped_by_case: dict[tuple[str, int], list[Debt]] = {}
     for debt in debts:
@@ -140,10 +137,9 @@ def _build_admin_debt_rows(debts: list[Debt]) -> list[dict]:
 
                 case_status = _case_status_from_items(case_items_sorted)
                 case_visible_id = _visible_case_id("ADEUDO-CJ", case_items_sorted[0].id)
-<<<<<<< codex/update-naming-and-group-debt-listings-hsqauw
                 paid_items, total_items, progress_pct = _case_item_progress(case_items_sorted)
-=======
->>>>>>> main
+                paid_items, total_items, progress_pct = _case_item_progress(case_items_sorted)
+
                 case_material_names = " ".join(
                     (item.material.name if item.material else "").lower()
                     for item in case_items_sorted
@@ -157,12 +153,12 @@ def _build_admin_debt_rows(debts: list[Debt]) -> list[dict]:
                     "materials_count": len(case_items_sorted),
                     "material_label": f"{len(case_items_sorted)} materiales",
                     "material_preview": _build_material_preview(case_items_sorted),
-<<<<<<< codex/update-naming-and-group-debt-listings-hsqauw
                     "paid_items": paid_items,
                     "total_items": total_items,
                     "progress_pct": progress_pct,
-=======
->>>>>>> main
+                    "paid_items": paid_items,
+                    "total_items": total_items,
+                    "progress_pct": progress_pct,
                     "total_original": total_original,
                     "total_pending": total_pending,
                     "reason": next((item.reason for item in case_items_sorted if item.reason), "-"),
@@ -195,12 +191,13 @@ def _build_admin_debt_rows(debts: list[Debt]) -> list[dict]:
             "materials_count": 1,
             "material_label": f"{singular_material} ({debt.material.id})" if debt.material else "-",
             "material_preview": singular_material,
-<<<<<<< codex/update-naming-and-group-debt-listings-hsqauw
             "paid_items": 1 if pending == 0 else 0,
             "total_items": 1,
             "progress_pct": 100 if pending == 0 else 0,
-=======
->>>>>>> main
+            "paid_items": 1 if pending == 0 else 0,
+            "total_items": 1,
+            "progress_pct": 100 if pending == 0 else 0,
+
             "total_original": original,
             "total_pending": pending,
             "reason": debt.reason or "-",
@@ -403,10 +400,9 @@ def admin_detail(debt_id: int):
     case_status = _case_status_from_items(case_debts)
     case_flow = "Conjunto" if len(case_debts) > 1 else "Singular"
     case_visible_id = _visible_case_id("ADEUDO-CJ", case_debts[0].id) if len(case_debts) > 1 else _visible_case_id("ADEUDO-SG", debt.id)
-<<<<<<< codex/update-naming-and-group-debt-listings-hsqauw
     paid_items, total_items, progress_pct = _case_item_progress(case_debts)
-=======
->>>>>>> main
+    paid_items, total_items, progress_pct = _case_item_progress(case_debts)
+
 
     return render_template(
         "debts/admin_detail.html",
@@ -417,12 +413,12 @@ def admin_detail(debt_id: int):
         case_status=case_status,
         case_flow=case_flow,
         case_visible_id=case_visible_id,
-<<<<<<< codex/update-naming-and-group-debt-listings-hsqauw
         paid_items=paid_items,
         total_items=total_items,
         progress_pct=progress_pct,
-=======
->>>>>>> main
+        paid_items=paid_items,
+        total_items=total_items,
+        progress_pct=progress_pct,
         active_page="debts",
     )
 
