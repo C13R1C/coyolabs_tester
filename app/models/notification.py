@@ -24,8 +24,6 @@ class Notification(db.Model):
         "User",
         foreign_keys=[related_user_id]
     )
-    user = db.relationship("User", foreign_keys=[user_id], backref="notifications")
-    related_user = db.relationship("User", foreign_keys=[related_user_id])
 
     def __repr__(self) -> str:
         return f"<Notification {self.id} user={self.user_id} read={self.is_read}>"
