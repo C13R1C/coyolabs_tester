@@ -180,15 +180,6 @@
   from { opacity: 0; transform: translateY(5px); }
   to { opacity: 1; transform: translateY(0); }
 }
-
-@media (max-width: 768px) {
-  .table-mobile-cards thead { display: none; }
-  .table-mobile-cards tbody tr { display: block; margin-bottom: 1rem; border: 1px solid var(--stroke, #e5e7eb); border-radius: 8px; padding: 0.75rem; background: var(--panel-2, #fff); }
-  .table-mobile-cards tbody td { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid var(--stroke, #e5e7eb) !important; }
-  .table-mobile-cards tbody td:last-child { border-bottom: none !important; }
-  .table-mobile-cards tbody td::before { content: attr(data-label); font-weight: 600; font-size: 0.85em; margin-right: 1rem; color: var(--text-dim, #6b7280); white-space: nowrap; }
-}
-
 </style>
 
 <section class="table-card">
@@ -200,9 +191,11 @@
         <input type="text" id="materialSearch" placeholder="Buscar material por nombre, código o ubicación">
       </div>
       <div id="autocompleteList" class="autocomplete-list"></div>
+    </div>
 
     <div id="cartContainer" class="cart-container">
       <div class="cart-empty">Aún no agregas materiales.</div>
+    </div>
 
     <div class="toolbar-group" style="margin:10px 0 12px;">
       <label for="request_reason">Materia o motivo de la solicitud *</label>
@@ -237,8 +230,7 @@
     <p><strong>Nota administrativa:</strong> {{ today_ticket_meta.partial_delivery_note }}</p>
     {% endif %}
     <div class="table-wrap">
-      <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-<table class="inventory-table table-mobile-cards" style="min-width: 700px;">
+      <table class="inventory-table" style="min-width:700px;">
         <thead>
           <tr>
             <th>Material</th>
@@ -248,13 +240,13 @@
         <tbody>
           {% for item in today_ticket.items %}
           <tr>
-            <td data-label="Material">{{ item.material.name if item.material else ('ID ' ~ item.material_id) }}</td>
-            <td data-label="Cantidad solicitada">{{ item.quantity_requested }}</td>
+            <td>{{ item.material.name if item.material else ('ID ' ~ item.material_id) }}</td>
+            <td>{{ item.quantity_requested }}</td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
-</div>
+    </div>
   {% endif %}
 </section>
 
@@ -264,8 +256,7 @@
     <p>Sin historial de solicitudes.</p>
   {% else %}
     <div class="table-wrap">
-      <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-<table class="inventory-table table-mobile-cards" style="min-width: 850px;">
+      <table class="inventory-table" style="min-width:850px;">
         <thead>
           <tr>
             <th>Solicitud</th>
@@ -279,22 +270,22 @@
         <tbody>
           {% for t in history %}
           <tr>
-            <td data-label="Solicitud">#{{ t.id }}</td>
-            <td data-label="Fecha">{{ t.request_date }}</td>
+            <td>#{{ t.id }}</td>
+            <td>{{ t.request_date }}</td>
             {% set m = history_meta.get(t.id) %}
-            <td data-label="Estado">
+            <td>
               <span class="status-badge {% if m and m.rejected %}status-bad{% elif m and m.closed_with_debt %}status-warn{% elif t.status == 'READY' %}status-ok{% elif t.status == 'OPEN' %}status-warn{% else %}status-neutral{% endif %}">{{ m.status_label if m else (t.status|status_label) }}</span>
             </td>
-            <td data-label="Motivo">{{ m.base_reason if m else '-' }}</td>
-            <td data-label="Items">{{ t.items|length }}</td>
-            <td data-label="Acción">
+            <td>{{ m.base_reason if m else '-' }}</td>
+            <td>{{ t.items|length }}</td>
+            <td>
               <a href="{{ url_for('inventory_requests.my_ticket_detail', ticket_id=t.id) }}" class="btn btn-ghost" style="min-height:34px; padding:6px 10px;">Consultar</a>
             </td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
-</div>
+    </div>
   {% endif %}
 </section>
 
@@ -347,9 +338,11 @@ function renderSuggestions(query = "") {
           <div style="font-size:12px; opacity:.7;">
             ${available} disponibles${inCart > 0 ? ` · en carrito: ${inCart}` : ""}
           </div>
+        </div>
         <div style="font-size:12px; font-weight:600; ${isOut ? 'color:#cf4d4d;' : 'opacity:.7;'}">
           ${isOut ? 'Sin stock' : 'Agregar'}
         </div>
+      </div>
     `;
 
     if (!isOut) {
@@ -460,6 +453,7 @@ function renderCart() {
       <div class="cart-item-left">
         <div class="cart-item-name">${item.name}</div>
         <div class="cart-item-meta">Disponibles: ${item.pieces_qty}</div>
+      </div>
       <div class="cart-controls">
         <button type="button" class="btn btn-ghost qty-btn" data-action="dec" data-id="${id}">-</button>
         <span class="qty-value">${item.qty}</span>

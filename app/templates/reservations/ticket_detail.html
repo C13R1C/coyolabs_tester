@@ -39,15 +39,6 @@
 @media (max-width: 768px) {
   .input-notes { width: 100%; min-width: 180px; }
 }
-
-@media (max-width: 768px) {
-  .table-mobile-cards thead { display: none; }
-  .table-mobile-cards tbody tr { display: block; margin-bottom: 1rem; border: 1px solid var(--stroke, #e5e7eb); border-radius: 8px; padding: 0.75rem; background: var(--panel-2, #fff); }
-  .table-mobile-cards tbody td { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid var(--stroke, #e5e7eb) !important; }
-  .table-mobile-cards tbody td:last-child { border-bottom: none !important; }
-  .table-mobile-cards tbody td::before { content: attr(data-label); font-weight: 600; font-size: 0.85em; margin-right: 1rem; color: var(--text-dim, #6b7280); white-space: nowrap; }
-}
-
 </style>
 
 <header class="topbar">
@@ -97,6 +88,7 @@
       Sin firma
     {% endif %}
   </div>
+      </div>
     </div>
   </section>
 
@@ -105,8 +97,7 @@
 
     <form id="mainForm" method="POST" action="{{ url_for('reservations.admin_ticket_update_all', ticket_id=ticket.id) }}">
 
-      <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-<table class="inventory-table table-mobile-cards">
+      <table class="inventory-table">
         <thead>
           <tr>
             <th>Material</th>
@@ -122,35 +113,35 @@
         <tbody>
           {% for item in ticket.items %}
           <tr class="fade-in">
-            <td data-label="Material">
+            <td>
               {{ item.material.name if item.material else ('ID ' ~ item.material_id) }}
               <input type="hidden" name="item_id[]" value="{{ item.id }}">
             </td>
 
-            <td data-label="Solicitado">{{ item.quantity_requested }}</td>
+            <td>{{ item.quantity_requested }}</td>
 
-            <td data-label="Entregado">
+            <td>
               <div class="input-mini">
                 <input type="number" name="quantity_delivered[]" value="{{ item.quantity_delivered }}" placeholder="0">
               </div>
             </td>
 
-            <td data-label="Devuelto">
+            <td>
               <div class="input-mini">
                 <input type="number" name="quantity_returned[]" value="{{ item.quantity_returned }}" placeholder="0">
               </div>
             </td>
 
-            <td data-label="Estado">
+            <td>
               <span class="status-badge">{{ item.status|status_label }}</span>
               <div class="missing-label" style="font-size:12px; color:#D32F2F; display:none;"></div>
             </td>
 
-            <td data-label="Notas">
+            <td>
               <input class="input-notes" name="notes[]" value="{{ item.notes or '' }}" placeholder="Notas del material">
             </td>
 
-            <td data-label="Operación">
+            <td>
               {% if ticket.status in ['OPEN', 'READY_FOR_PICKUP'] and item.quantity_requested > item.quantity_delivered %}
                 <button
                   type="submit"
@@ -168,14 +159,13 @@
           {% endfor %}
           {% if ticket.items|length == 0 %}
           <tr>
-            <td data-label="Material" colspan="7" style="text-align:center; opacity:.8;">
+            <td colspan="7" style="text-align:center; opacity:.8;">
               Este ticket no tiene materiales registrados. Puedes cerrarlo si no requiere préstamo.
             </td>
           </tr>
           {% endif %}
         </tbody>
       </table>
-</div>
 
       <div style="padding:16px; display:flex; justify-content:space-between;">
         <div id="debtWarning" style="display:none; padding:10px; background:#fff3cd; border-radius:8px;">

@@ -258,15 +258,6 @@
 @media (max-width: 1200px){
   .ops-grid{ grid-template-columns: 1fr; }
 }
-
-@media (max-width: 768px) {
-  .table-mobile-cards thead { display: none; }
-  .table-mobile-cards tbody tr { display: block; margin-bottom: 1rem; border: 1px solid var(--stroke, #e5e7eb); border-radius: 8px; padding: 0.75rem; background: var(--panel-2, #fff); }
-  .table-mobile-cards tbody td { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid var(--stroke, #e5e7eb) !important; }
-  .table-mobile-cards tbody td:last-child { border-bottom: none !important; }
-  .table-mobile-cards tbody td::before { content: attr(data-label); font-weight: 600; font-size: 0.85em; margin-right: 1rem; color: var(--text-dim, #6b7280); white-space: nowrap; }
-}
-
 </style>
 
 <header class="topbar">
@@ -286,6 +277,7 @@
       <h2 style="font-size:1.4rem; margin-bottom:0;">Tablero operativo del laboratorio</h2>
       <p class="page-subtitle" style="margin-top:6px;">Se actualiza automáticamente con eventos críticos.</p>
     </div>
+  </div>
 
   <div class="ops-grid">
     <article class="ops-card">
@@ -420,6 +412,7 @@
     <div class="kpi-head">
       <span class="kpi-label">Inventario total</span>
       <div class="kpi-icon gold"><i class="ph ph-package"></i></div>
+    </div>
     <div class="kpi-value" id="kpiTotalInventory">{{ total_inventory }}</div>
     <div class="kpi-sub">Materiales registrados en el sistema</div>
   </article>
@@ -428,6 +421,7 @@
     <div class="kpi-head">
       <span class="kpi-label">Reservas hoy</span>
       <div class="kpi-icon blue"><i class="ph ph-calendar-check"></i></div>
+    </div>
     <div class="kpi-value" id="kpiReservationsToday">{{ reservations_today }}</div>
     <div class="kpi-sub" id="kpiReservationsSub">{{ approved_today }} aprobadas · {{ pending_today }} pendientes</div>
   </article>
@@ -436,6 +430,7 @@
     <div class="kpi-head">
       <span class="kpi-label">Solicitudes de material</span>
       <div class="kpi-icon gold"><i class="ph ph-clipboard-text"></i></div>
+    </div>
     <div class="kpi-value" id="kpiOpenTickets">{{ open_material_requests }}</div>
     <div class="kpi-sub" id="kpiTicketsSub">{{ ready_material_requests }} listas para recoger</div>
   </article>
@@ -444,6 +439,7 @@
     <div class="kpi-head">
       <span class="kpi-label">Adeudos activos</span>
       <div class="kpi-icon red"><i class="ph ph-warning-circle"></i></div>
+    </div>
     <div class="kpi-value" id="kpiOpenDebts">{{ open_debts }}</div>
     <div class="kpi-sub" id="kpiDebtsSub">{{ low_stock_count }} materiales con stock bajo</div>
   </article>
@@ -455,6 +451,7 @@
       <p class="page-kicker">Navegación rápida</p>
       <h2 style="font-size:1.4rem; margin-bottom:0;">Accesos directos</h2>
     </div>
+  </div>
 
   <div class="quick-grid" style="margin-top:16px;">
     <a class="quick-link" href="{{ url_for('inventory.inventory_list') }}">
@@ -507,6 +504,7 @@
           <p class="page-kicker">Actividad</p>
           <h2 style="font-size:1.4rem; margin-bottom:0;">Reservas de hoy y ayer</h2>
         </div>
+      </div>
 
       {% if recent_reservations %}
       <div class="mini-list">
@@ -525,6 +523,7 @@
           <div class="mini-meta">
             {{ r.user.email if r.user else '-' }} · {{ r.date }} · {{ r.start_time }} - {{ r.end_time }}
           </div>
+        </div>
         {% endfor %}
       </div>
       {% else %}
@@ -542,10 +541,11 @@
           <p class="page-kicker">Ranking</p>
           <h2 style="font-size:1.4rem; margin-bottom:0;">Materiales más usados</h2>
         </div>
+      </div>
 
       {% if top_materials %}
       <div class="table-wrap" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-        <table class="inventory-table table-mobile-cards" style="min-width: 620px;">
+        <table class="inventory-table table-mobile-cards" style="min-width:620px;">
           <thead>
             <tr>
               <th>Material</th>
@@ -561,7 +561,7 @@
             {% endfor %}
           </tbody>
         </table>
-</div>
+      </div>
       {% else %}
       <section class="empty-state">
         <i class="ph ph-package empty-icon"></i>
@@ -579,6 +579,7 @@
           <p class="page-kicker">Solicitudes de material</p>
           <h2 style="font-size:1.4rem; margin-bottom:0;">Hoy y ayer</h2>
         </div>
+      </div>
 
       {% if recent_material_requests %}
       <div class="mini-list">
@@ -597,6 +598,7 @@
           <div class="mini-meta">
             {{ request_item.user.email if request_item.user else '-' }} · {{ request_item.request_date }} · {{ request_item.created_at }}
           </div>
+        </div>
         {% endfor %}
       </div>
       {% else %}
@@ -614,10 +616,11 @@
           <p class="page-kicker">Riesgo</p>
           <h2 style="font-size:1.4rem; margin-bottom:0;">Usuarios con más adeudos</h2>
         </div>
+      </div>
 
       {% if top_debtors %}
       <div class="table-wrap" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-        <table class="inventory-table table-mobile-cards" style="min-width: 620px;">
+        <table class="inventory-table table-mobile-cards" style="min-width:620px;">
           <thead>
             <tr>
               <th>Usuario</th>
@@ -633,7 +636,7 @@
             {% endfor %}
           </tbody>
         </table>
-</div>
+      </div>
       {% else %}
       <section class="empty-state">
         <i class="ph ph-warning-circle empty-icon"></i>
@@ -649,10 +652,11 @@
           <p class="page-kicker">Uso</p>
           <h2 style="font-size:1.4rem; margin-bottom:0;">Laboratorios más usados</h2>
         </div>
+      </div>
 
       {% if top_rooms %}
       <div class="table-wrap" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-        <table class="inventory-table table-mobile-cards" style="min-width: 620px;">
+        <table class="inventory-table table-mobile-cards" style="min-width:620px;">
           <thead>
             <tr>
               <th>Salón/Lab</th>
@@ -668,7 +672,7 @@
             {% endfor %}
           </tbody>
         </table>
-</div>
+      </div>
       {% else %}
       <section class="empty-state">
         <i class="ph ph-buildings empty-icon"></i>
@@ -686,10 +690,11 @@
       <p class="page-kicker">Adeudos</p>
       <h2 style="font-size:1.4rem; margin-bottom:0;">Hoy y ayer</h2>
     </div>
+  </div>
 
   {% if recent_debts %}
   <div class="table-wrap" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-    <table class="inventory-table table-mobile-cards" style="min-width: 980px;">
+    <table class="inventory-table table-mobile-cards" style="min-width:980px;">
       <thead>
         <tr>
           <th>ID</th>
@@ -717,7 +722,7 @@
         {% endfor %}
       </tbody>
     </table>
-</div>
+  </div>
   {% else %}
   <section class="empty-state">
     <i class="ph ph-warning empty-icon"></i>

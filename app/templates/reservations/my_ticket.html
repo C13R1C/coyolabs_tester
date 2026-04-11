@@ -26,6 +26,7 @@
           </span>
         </div>
         <div><strong>Abierto:</strong> {{ ticket.opened_at or '-' }}</div>
+      </div>
     </div>
   </section>
 
@@ -43,6 +44,7 @@
           </select>
           <i class="ph ph-caret-down select-arrow"></i>
         </div>
+      </div>
 
       <div class="toolbar-group" style="margin:0;">
         <label>Cantidad</label>
@@ -50,6 +52,7 @@
           <i class="ph ph-hash search-icon"></i>
           <input type="number" name="quantity" min="1" value="1" required>
         </div>
+      </div>
 
       <div class="toolbar-actions" style="align-items:flex-end;">
         <button type="submit" class="btn btn-gold">Agregar al ticket</button>
@@ -76,8 +79,7 @@
 
   <section class="table-card" style="margin-top:18px;">
     <div class="table-wrap">
-      <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-<table class="inventory-table table-mobile-cards">
+      <table class="inventory-table">
         <thead>
           <tr>
             <th>Material</th>
@@ -91,21 +93,21 @@
         <tbody>
           {% for item in ticket.items %}
           <tr>
-            <td data-label="Material">{{ item.material.name if item.material else ('ID ' ~ item.material_id) }}</td>
-            <td data-label="Solicitado">{{ item.quantity_requested }}</td>
-            <td data-label="Entregado">{{ item.quantity_delivered }}</td>
-            <td data-label="Devuelto">{{ item.quantity_returned }}</td>
-            <td data-label="Estado">
+            <td>{{ item.material.name if item.material else ('ID ' ~ item.material_id) }}</td>
+            <td>{{ item.quantity_requested }}</td>
+            <td>{{ item.quantity_delivered }}</td>
+            <td>{{ item.quantity_returned }}</td>
+            <td>
               <span class="status-badge {% if item.status == 'READY_FOR_PICKUP' %}status-ok{% elif item.status in ['PENDING', 'REQUESTED', 'DELIVERED'] %}status-warn{% else %}status-bad{% endif %}">
                 {{ item.status|status_label }}
               </span>
             </td>
-            <td data-label="Notas">{{ item.notes or '-' }}</td>
+            <td>{{ item.notes or '-' }}</td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
-</div>
+    </div>
   </section>
 
   <section class="toolbar-card" style="margin-top:18px;">

@@ -72,15 +72,6 @@
     background: transparent;
   }
 }
-
-@media (max-width: 768px) {
-  .table-mobile-cards thead { display: none; }
-  .table-mobile-cards tbody tr { display: block; margin-bottom: 1rem; border: 1px solid var(--stroke, #e5e7eb); border-radius: 8px; padding: 0.75rem; background: var(--panel-2, #fff); }
-  .table-mobile-cards tbody td { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid var(--stroke, #e5e7eb) !important; }
-  .table-mobile-cards tbody td:last-child { border-bottom: none !important; }
-  .table-mobile-cards tbody td::before { content: attr(data-label); font-weight: 600; font-size: 0.85em; margin-right: 1rem; color: var(--text-dim, #6b7280); white-space: nowrap; }
-}
-
 </style>
 <header class="topbar">
   <div class="topbar-left">
@@ -109,8 +100,7 @@
   {% else %}
   <section class="table-card">
     <div class="table-wrap">
-      <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-<table class="inventory-table table-mobile-cards" style="min-width: 1400px;">
+      <table class="inventory-table table-mobile-cards" style="min-width: 1400px;">
         <thead>
           <tr>
             <th>Salón/Lab</th>
@@ -155,7 +145,7 @@
           {% endfor %}
         </tbody>
       </table>
-</div>
+    </div>
   </section>
   {% endif %}
 </div>
@@ -170,7 +160,9 @@
     <div class="signature-preview-wrap">
       <img id="signaturePreview" class="signature-preview" src="" alt="Firma digital">
       <div id="signatureEmpty" class="signature-empty">Firma no disponible</div>
+    </div>
   </div>
+</div>
 
 <script>
 let signatureEscHandler = null;

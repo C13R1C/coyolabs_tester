@@ -4,16 +4,7 @@
 
 
 {% block content %}
-<style>.always-uppercase{text-transform:uppercase;}
-@media (max-width: 768px) {
-  .table-mobile-cards thead { display: none; }
-  .table-mobile-cards tbody tr { display: block; margin-bottom: 1rem; border: 1px solid var(--stroke, #e5e7eb); border-radius: 8px; padding: 0.75rem; background: var(--panel-2, #fff); }
-  .table-mobile-cards tbody td { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid var(--stroke, #e5e7eb) !important; }
-  .table-mobile-cards tbody td:last-child { border-bottom: none !important; }
-  .table-mobile-cards tbody td::before { content: attr(data-label); font-weight: 600; font-size: 0.85em; margin-right: 1rem; color: var(--text-dim, #6b7280); white-space: nowrap; }
-}
-
-</style>
+<style>.always-uppercase{text-transform:uppercase;}</style>
 <style>
   .profile-layout{
     display:grid;
@@ -147,6 +138,7 @@
           <div class="profile-kv-item"><strong>Grupo</strong><span>{{ current_user.group_name }}</span></div>
         {% endif %}
         <div class="profile-kv-item"><strong>Correo verificado</strong><span>{{ 'Sí' if current_user.is_verified else 'No' }}</span></div>
+      </div>
     </div>
 
     <div class="profile-panel">
@@ -164,12 +156,14 @@
               <i class="ph ph-user search-icon"></i>
               <input type="text" name="full_name" value="{{ current_user.full_name or '' }}" placeholder="Ej.: Nombre Apellido" required>
             </div>
+          </div>
           <div class="toolbar-group">
             <label>Teléfono de contacto</label>
             <div class="search-box">
               <i class="ph ph-phone search-icon"></i>
               <input type="text" name="phone" value="{{ current_user.phone or '' }}" placeholder="Ej.: 656-123-4567" required>
             </div>
+          </div>
           <div class="toolbar-actions" style="align-self:end;">
             <button type="submit" class="btn btn-gold">Guardar cambios</button>
           </div>
@@ -186,6 +180,7 @@
               <i class="ph ph-phone search-icon"></i>
               <input type="text" name="phone" value="{{ current_user.phone or '' }}" placeholder="Ej.: 656-123-4567" required>
             </div>
+          </div>
           <div class="toolbar-actions" style="align-self:end;">
             <button type="submit" class="btn btn-gold">Actualizar teléfono</button>
           </div>
@@ -202,6 +197,7 @@
               <i class="ph ph-phone search-icon"></i>
               <input type="text" name="phone" value="{{ current_user.phone or '' }}" placeholder="Ej.: 555-123-4567" required>
             </div>
+          </div>
           <div class="toolbar-actions" style="align-self:end;">
             <button type="submit" class="btn btn-gold">Actualizar teléfono</button>
           </div>
@@ -219,6 +215,7 @@
               <i class="ph ph-users search-icon"></i>
               <input type="text" name="group_name" value="{{ current_user.group_name or '' }}" placeholder="Ej. TIDSM31 / REDES-3A / etc." maxlength="80">
             </div>
+          </div>
           <div class="toolbar-actions" style="align-self:end;">
             <button type="submit" class="btn btn-gold">Actualizar grupo</button>
           </div>
@@ -237,6 +234,7 @@
               <i class="ph ph-lock search-icon"></i>
               <input type="password" name="current_password" required>
             </div>
+          </div>
 
           <div class="toolbar-group">
             <label>Nueva contraseña</label>
@@ -244,6 +242,7 @@
               <i class="ph ph-key search-icon"></i>
               <input type="password" name="new_password" minlength="6" required>
             </div>
+          </div>
 
           <div class="toolbar-group">
             <label>Confirmar nueva contraseña</label>
@@ -251,12 +250,14 @@
               <i class="ph ph-key search-icon"></i>
               <input type="password" name="confirm_new_password" minlength="6" required>
             </div>
+          </div>
 
           <div class="toolbar-actions">
             <button type="submit" class="btn btn-gold">Actualizar contraseña</button>
           </div>
         </form>
       </div>
+    </div>
   </div>
 </section>
 
@@ -278,6 +279,7 @@
         <i class="ph ph-book-open search-icon"></i>
         <input type="text" name="subject_name" placeholder="Ej.: Programación Web" maxlength="160" required class="always-uppercase">
       </div>
+    </div>
 
     <div class="toolbar-group">
       <label>Grupo (en mayúsculas)</label>
@@ -285,6 +287,7 @@
         <i class="ph ph-users search-icon"></i>
         <input type="text" name="group_code" placeholder="Ej.: 3A" required class="always-uppercase">
       </div>
+    </div>
 
   <div class="toolbar-actions" style="align-self:end;">
       <button type="submit" class="btn btn-gold">Agregar asignación</button>
@@ -293,8 +296,7 @@
 
   {% if teacher_loads %}
   <div class="table-wrap" style="margin-top:12px;">
-    <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-<table class="inventory-table table-mobile-cards" style="min-width: 860px;">
+    <table class="inventory-table" style="min-width: 860px;">
       <thead>
         <tr>
           <th>Materia</th>
@@ -306,10 +308,10 @@
       <tbody>
         {% for load in teacher_loads %}
         <tr>
-          <td data-label="Materia">{{ load.subject_name or (load.subject.name if load.subject else '-') }}</td>
-          <td data-label="Grupo">{{ load.group_code }}</td>
-          <td data-label="Registro">{{ load.created_at.strftime('%Y-%m-%d') if load.created_at else '-' }}</td>
-          <td data-label="Acción">
+          <td>{{ load.subject_name or (load.subject.name if load.subject else '-') }}</td>
+          <td>{{ load.group_code }}</td>
+          <td>{{ load.created_at.strftime('%Y-%m-%d') if load.created_at else '-' }}</td>
+          <td>
             <form method="post" action="{{ url_for('profile.remove_teaching_load', load_id=load.id) }}">
               <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
               <button type="submit" class="btn btn-ghost">Quitar</button>
@@ -319,7 +321,7 @@
         {% endfor %}
       </tbody>
     </table>
-</div>
+  </div>
   {% else %}
     <p style="margin-top:10px;">Aún no registras materias ni grupos.</p>
   {% endif %}
@@ -339,8 +341,7 @@
     <p>No tienes reservaciones registradas.</p>
   {% else %}
   <div class="table-wrap">
-    <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-<table class="inventory-table table-mobile-cards" style="min-width: 900px;">
+    <table class="inventory-table" style="min-width: 900px;">
       <thead>
         <tr>
           <th>ID</th>
@@ -355,22 +356,22 @@
       <tbody>
         {% for r in reservations %}
         <tr>
-          <td data-label="ID">{{ r.id }}</td>
-          <td data-label="Salón/Laboratorio">{{ r.room }}</td>
-          <td data-label="Fecha">{{ r.date }}</td>
-          <td data-label="Inicio">{{ r.start_time }}</td>
-          <td data-label="Fin">{{ r.end_time }}</td>
-          <td data-label="Estado">
+          <td>{{ r.id }}</td>
+          <td>{{ r.room }}</td>
+          <td>{{ r.date }}</td>
+          <td>{{ r.start_time }}</td>
+          <td>{{ r.end_time }}</td>
+          <td>
             <span class="status-badge {% if r.status == 'APPROVED' %}status-ok{% elif r.status == 'PENDING' %}status-warn{% else %}status-bad{% endif %}">
               {{ r.status|status_label }}
             </span>
           </td>
-          <td data-label="Motivo">{{ r.purpose or '-' }}</td>
+          <td>{{ r.purpose or '-' }}</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
-</div>
+  </div>
   {% endif %}
 </section>
 
@@ -380,8 +381,7 @@
     <p>No tienes solicitudes de material registradas.</p>
   {% else %}
   <div class="table-wrap">
-    <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-<table class="inventory-table table-mobile-cards" style="min-width: 1000px;">
+    <table class="inventory-table" style="min-width: 1000px;">
       <thead>
         <tr>
           <th>ID de solicitud</th>
@@ -395,21 +395,21 @@
       <tbody>
         {% for request_item in material_requests %}
         <tr>
-          <td data-label="ID de solicitud">{{ request_item.id }}</td>
-          <td data-label="Fecha de solicitud">{{ request_item.request_date }}</td>
-          <td data-label="Estado">
+          <td>{{ request_item.id }}</td>
+          <td>{{ request_item.request_date }}</td>
+          <td>
             <span class="status-badge {% if request_item.status == 'OPEN' %}status-warn{% elif request_item.status == 'READY' %}status-ok{% else %}status-bad{% endif %}">
               {{ request_item.status|status_label }}
             </span>
           </td>
-          <td data-label="Creación">{{ request_item.created_at.strftime('%Y-%m-%d') if request_item.created_at else '-' }}</td>
-          <td data-label="Cierre">{{ request_item.closed_at or '-' }}</td>
-          <td data-label="Motivo">{{ request_item.notes or '-' }}</td>
+          <td>{{ request_item.created_at.strftime('%Y-%m-%d') if request_item.created_at else '-' }}</td>
+          <td>{{ request_item.closed_at or '-' }}</td>
+          <td>{{ request_item.notes or '-' }}</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
-</div>
+  </div>
   {% endif %}
 </section>
 
@@ -419,8 +419,7 @@
     <p>No tienes adeudos registrados.</p>
   {% else %}
   <div class="table-wrap">
-    <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-<table class="inventory-table table-mobile-cards" style="min-width: 1000px;">
+    <table class="inventory-table" style="min-width: 1000px;">
       <thead>
         <tr>
           <th>Material</th>
@@ -433,20 +432,20 @@
       <tbody>
         {% for d in debts %}
         <tr>
-          <td data-label="Material">{{ d.material.name if d.material else '-' }}</td>
-          <td data-label="Razón">{{ d.reason or '-' }}</td>
-          <td data-label="Estado">
+          <td>{{ d.material.name if d.material else '-' }}</td>
+          <td>{{ d.reason or '-' }}</td>
+          <td>
             <span class="status-badge {% if d.status == 'PENDING' %}status-bad{% else %}status-ok{% endif %}">
               {{ d.status|status_label }}
             </span>
           </td>
-          <td data-label="Creado">{{ d.created_at.strftime('%Y-%m-%d') if d.created_at else '-' }}</td>
-          <td data-label="Situación">{{ 'Abierto' if d.status == 'PENDING' else 'Pagado/Cerrado' }}</td>
+          <td>{{ d.created_at.strftime('%Y-%m-%d') if d.created_at else '-' }}</td>
+          <td>{{ 'Abierto' if d.status == 'PENDING' else 'Pagado/Cerrado' }}</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
-</div>
+  </div>
   {% endif %}
 </section>
 

@@ -19,8 +19,7 @@
     <p>No hay solicitudes registradas.</p>
   {% else %}
   <div class="table-wrap">
-    <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-<table class="inventory-table table-mobile-cards" style="min-width: 980px;">
+    <table class="inventory-table" style="min-width: 980px;">
       <thead>
         <tr>
           <th>ID</th>
@@ -36,18 +35,18 @@
       <tbody>
         {% for req in requests %}
         <tr>
-          <td data-label="ID">{{ req.id }}</td>
-          <td data-label="Usuario">{{ req.user.email if req.user else req.user_id }}</td>
-          <td data-label="Tipo">{{ req.request_type }}</td>
-          <td data-label="Teléfono solicitado">{{ req.requested_phone or '-' }}</td>
-          <td data-label="Razón">{{ req.reason or '-' }}</td>
-          <td data-label="Estado">
+          <td>{{ req.id }}</td>
+          <td>{{ req.user.email if req.user else req.user_id }}</td>
+          <td>{{ req.request_type }}</td>
+          <td>{{ req.requested_phone or '-' }}</td>
+          <td>{{ req.reason or '-' }}</td>
+          <td>
             <span class="status-badge {% if req.status == 'PENDING' %}status-warn{% elif req.status == 'APPROVED' %}status-ok{% else %}status-bad{% endif %}">
               {{ req.status|status_label }}
             </span>
           </td>
-          <td data-label="Creado">{{ req.created_at.strftime('%Y-%m-%d') if req.created_at else '-' }}</td>
-          <td data-label="Acciones">
+          <td>{{ req.created_at.strftime('%Y-%m-%d') if req.created_at else '-' }}</td>
+          <td>
             {% if req.status == 'PENDING' %}
             <div style="display:flex; gap:6px;">
               <form method="post" action="{{ url_for('users.approve_profile_change_request', request_id=req.id) }}">
@@ -65,7 +64,7 @@
         {% endfor %}
       </tbody>
     </table>
-</div>
+  </div>
   {% endif %}
 </section>
 {% endblock %}

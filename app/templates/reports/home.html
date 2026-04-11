@@ -26,7 +26,7 @@
     color: var(--text-dim);
     font-size: 0.96rem;
     margin-top: 10px;
-    max-width: 100%; max-width: 920px;
+    max-width: 920px;
   }
 
   .reports-grid{
@@ -235,15 +235,6 @@
       justify-content: center;
     }
   }
-
-@media (max-width: 768px) {
-  .table-mobile-cards thead { display: none; }
-  .table-mobile-cards tbody tr { display: block; margin-bottom: 1rem; border: 1px solid var(--stroke, #e5e7eb); border-radius: 8px; padding: 0.75rem; background: var(--panel-2, #fff); }
-  .table-mobile-cards tbody td { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid var(--stroke, #e5e7eb) !important; }
-  .table-mobile-cards tbody td:last-child { border-bottom: none !important; }
-  .table-mobile-cards tbody td::before { content: attr(data-label); font-weight: 600; font-size: 0.85em; margin-right: 1rem; color: var(--text-dim, #6b7280); white-space: nowrap; }
-}
-
 </style>
 {% endblock %}
 
@@ -273,6 +264,7 @@
             <h3>Reportes generales</h3>
           </div>
           <div class="report-panel-meta">6 reportes</div>
+        </div>
 
         <div class="report-panel-body">
           <div class="report-row">
@@ -287,6 +279,7 @@
                 Descargar
               </a>
             </div>
+          </div>
 
           <div class="report-row">
             <div class="report-row-title">
@@ -300,6 +293,7 @@
                 Descargar
               </a>
             </div>
+          </div>
 
           <div class="report-row">
             <div class="report-row-title">
@@ -313,6 +307,7 @@
                 Descargar
               </a>
             </div>
+          </div>
 
           <div class="report-row">
             <div class="report-row-title">
@@ -326,6 +321,7 @@
                 Descargar
               </a>
             </div>
+          </div>
 
           <div class="report-row">
             <div class="report-row-title">
@@ -339,6 +335,7 @@
                 Descargar
               </a>
             </div>
+          </div>
 
           <div class="report-row">
             <div class="report-row-title">
@@ -352,6 +349,7 @@
                 Descargar
               </a>
             </div>
+          </div>
         </div>
       </section>
     </div>
@@ -365,6 +363,7 @@
             <h3>Inventario por carrera</h3>
           </div>
           <div class="report-panel-meta">{{ careers|length }} carreras</div>
+        </div>
 
         <div class="report-panel-body">
           {% for career in careers %}
@@ -378,6 +377,7 @@
                 Descargar
               </a>
             </div>
+          </div>
           {% else %}
           <div class="report-note">No hay carreras disponibles para reportes.</div>
           {% endfor %}
@@ -393,98 +393,97 @@
         <h3>Métricas administrativas</h3>
       </div>
       <div class="report-panel-meta">Resumen operativo</div>
+    </div>
     <div class="report-panel-body" style="gap:14px;">
       <div class="metrics-grid">
         <div class="metric-card">
           <div class="metric-label">Reservaciones registradas</div>
           <div class="metric-value">{{ reservations_total }}</div>
+        </div>
         <div class="metric-card">
           <div class="metric-label">Solicitudes de material registradas</div>
           <div class="metric-value">{{ inventory_daily_total }}</div>
+        </div>
         <div class="metric-card">
           <div class="metric-label">Adeudos abiertos</div>
           <div class="metric-value">{{ open_debts_count }}</div>
+        </div>
       </div>
 
       <div class="reports-grid reports-metrics-grid">
         <div class="report-note">
           <strong>Reservaciones por estado</strong>
-          <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-<table class="mini-table table-mobile-cards" style="margin-top:8px;">
+          <table class="mini-table" style="margin-top:8px;">
             <thead><tr><th>Estado</th><th>Total</th></tr></thead>
             <tbody>
               {% for status, total in reservations_by_status %}
-              <tr><td data-label="Estado">{{ status }}</td><td data-label="Total">{{ total }}</td></tr>
+              <tr><td>{{ status }}</td><td>{{ total }}</td></tr>
               {% endfor %}
             </tbody>
           </table>
-</div>
+        </div>
 
         <div class="report-note">
           <strong>Uso de laboratorios (top)</strong>
-          <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-<table class="mini-table table-mobile-cards" style="margin-top:8px;">
+          <table class="mini-table" style="margin-top:8px;">
             <thead><tr><th>Laboratorio</th><th>Total</th></tr></thead>
             <tbody>
               {% for room, total in room_usage %}
-              <tr><td data-label="Laboratorio">{{ room }}</td><td data-label="Total">{{ total }}</td></tr>
+              <tr><td>{{ room }}</td><td>{{ total }}</td></tr>
               {% endfor %}
             </tbody>
           </table>
-</div>
+        </div>
 
         <div class="report-note">
           <strong>Solicitudes de material de inventario</strong>
-          <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-<table class="mini-table table-mobile-cards" style="margin-top:8px;">
+          <table class="mini-table" style="margin-top:8px;">
             <thead><tr><th>Estado</th><th>Total</th></tr></thead>
             <tbody>
               {% for status, total in inventory_daily_by_status %}
-              <tr><td data-label="Estado">{{ status }}</td><td data-label="Total">{{ total }}</td></tr>
+              <tr><td>{{ status }}</td><td>{{ total }}</td></tr>
               {% endfor %}
             </tbody>
           </table>
-</div>
+        </div>
 
         <div class="report-note">
           <strong>Adeudos abiertos por usuario (top)</strong>
-          <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-<table class="mini-table table-mobile-cards" style="margin-top:8px;">
+          <table class="mini-table" style="margin-top:8px;">
             <thead><tr><th>User ID</th><th>Total</th></tr></thead>
             <tbody>
               {% for user_id, total in open_debts_by_user %}
-              <tr><td data-label="User ID">{{ user_id }}</td><td data-label="Total">{{ total }}</td></tr>
+              <tr><td>{{ user_id }}</td><td>{{ total }}</td></tr>
               {% endfor %}
             </tbody>
           </table>
-</div>
+        </div>
 
         <div class="report-note">
           <strong>Acciones críticas por estado</strong>
-          <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-<table class="mini-table table-mobile-cards" style="margin-top:8px;">
+          <table class="mini-table" style="margin-top:8px;">
             <thead><tr><th>Estado</th><th>Total</th></tr></thead>
             <tbody>
               {% for status, total in critical_actions_by_status %}
-              <tr><td data-label="Estado">{{ status }}</td><td data-label="Total">{{ total }}</td></tr>
+              <tr><td>{{ status }}</td><td>{{ total }}</td></tr>
               {% endfor %}
             </tbody>
           </table>
-</div>
+        </div>
 
         <div class="report-note">
           <strong>Eventos de bitácora por módulo</strong>
-          <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-<table class="mini-table table-mobile-cards" style="margin-top:8px;">
+          <table class="mini-table" style="margin-top:8px;">
             <thead><tr><th>Módulo</th><th>Total</th></tr></thead>
             <tbody>
               {% for module_name, total in logbook_by_module %}
-              <tr><td data-label="Módulo">{{ module_name }}</td><td data-label="Total">{{ total }}</td></tr>
+              <tr><td>{{ module_name }}</td><td>{{ total }}</td></tr>
               {% endfor %}
             </tbody>
           </table>
-</div>
+        </div>
       </div>
+    </div>
   </section>
 </section>
 {% endblock %}
