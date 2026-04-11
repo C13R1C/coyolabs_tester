@@ -51,7 +51,7 @@
     <p class="page-kicker">Foro</p>
     <h1>{{ post.title }}</h1>
     <p class="page-subtitle forum-post-detail-meta">
-      Autor: {{ author_label_fn(post.author, post.is_anonymous) }} · {{ post.created_at }}
+      Autor: {{ author_label_fn(post.author, post.is_anonymous) }} · {{ format_forum_datetime(post.created_at) }}
       {% if post.is_anonymous %}<span class="status-badge status-warn">ANÓNIMO</span>{% endif %}
     </p>
   </div>
@@ -89,10 +89,10 @@
     <article class="toolbar-card" style="margin-bottom:0; {% if c.is_hidden %}opacity:.6;{% endif %}">
       <div style="display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap; align-items:center;">
         <strong class="{{ author_tone_fn(c.author, c.is_anonymous) }}">{{ author_label_fn(c.author, c.is_anonymous) }}</strong>
-        <span class="text-dim">{{ c.created_at }}</span>
+        <span class="text-dim">{{ format_forum_datetime(c.created_at) }}</span>
       </div>
       {% if c.is_anonymous %}<span class="status-badge status-warn">ANÓNIMO</span>{% endif %}
-      <p style="margin:8px 0 0 0; white-space:pre-wrap;">{{ c.content }}</p>
+      <p style="margin:10px 0 0 0; white-space:pre-wrap; padding:10px 12px; background:rgba(255,255,255,.45); border-radius:10px;">{{ c.content }}</p>
       {% if is_admin %}
         <form method="post" action="{{ url_for('forum.toggle_comment_hidden', comment_id=c.id) }}" style="margin-top:8px;">
           <button type="submit" class="btn btn-ghost">{% if c.is_hidden %}Mostrar{% else %}Ocultar{% endif %} comentario</button>

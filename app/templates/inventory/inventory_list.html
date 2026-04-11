@@ -87,7 +87,7 @@
     <table class="inventory-table">
       <thead>
         <tr>
-          <th>Nombre</th>
+          <th>Nombre</th><th>Imagen</th>
           <th>Carrera</th>
           <th>Estado</th>
           <th class="td-center">Cantidad</th>
@@ -101,9 +101,8 @@
           {% set active_state = status_parts[0] if status_parts|length > 1 else ('Baja' if ('baja' in status_value|lower or 'inactivo' in status_value|lower) else 'Alta') %}
           {% set condition = status_parts[1] if status_parts|length > 1 else ('Regular' if 'frágil' in status_value|lower else 'Bueno') %}
           <tr class="inventory-row">
-            <td>
-              <a href="{{ url_for('inventory.material_detail', material_id=m.id) }}" class="item-link material-name">{{ m.name | smart_title }}</a>
-            </td>
+            <td><a href="{{ url_for('inventory.material_detail', material_id=m.id) }}" class="item-link material-name">{{ m.name | smart_title }}</a></td>
+            <td>{% if m.image_url %}<img src="{{ m.image_url }}" alt="{{ m.name }}" style="width:44px;height:44px;object-fit:cover;border-radius:8px;">{% else %}-{% endif %}</td>
             <td>{{ m.career.name if m.career else 'Sin carrera' }}</td>
             <td class="td-center">
               <span class="status-badge {% if active_state|lower == 'alta' and condition|lower == 'bueno' %}status-ok{% elif active_state|lower == 'baja' %}status-bad{% else %}status-warn{% endif %}">

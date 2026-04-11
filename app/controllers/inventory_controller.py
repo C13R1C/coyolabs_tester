@@ -161,8 +161,11 @@ def _material_payload_from_form(material: Material | None = None) -> tuple[dict,
         return {}, "Selecciona una categoría válida."
 
     tutorial_url = normalize_spaces(request.form.get("tutorial_url") or "")
+    image_url = normalize_spaces(request.form.get("image_url") or "")
     if tutorial_url and not (tutorial_url.startswith("http://") or tutorial_url.startswith("https://")):
         return {}, "La URL del tutorial debe iniciar con http:// o https://."
+    if image_url and not (image_url.startswith("http://") or image_url.startswith("https://")):
+        return {}, "La URL de imagen debe iniciar con http:// o https://."
 
     selected_location = normalize_spaces(request.form.get("location_choice") or "")
     if selected_location == NEW_LOCATION_SENTINEL:
@@ -187,6 +190,7 @@ def _material_payload_from_form(material: Material | None = None) -> tuple[dict,
         "code": normalize_spaces(request.form.get("code") or "") or None,
         "serial": normalize_spaces(request.form.get("serial") or "") or None,
         "tutorial_url": tutorial_url or None,
+        "image_url": image_url or None,
         "notes": normalize_spaces(request.form.get("notes") or "") or None,
     }
     if material is None and _is_inactive_status(status):

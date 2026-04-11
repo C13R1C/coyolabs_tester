@@ -25,8 +25,19 @@ def _is_superadmin() -> bool:
 def _author_label(user, is_anonymous: bool) -> str:
     if is_anonymous and not _is_superadmin():
         return "Anónimo"
-    return user.email if user else "N/A"
+    if not user:
+        return "N/A"
+    full_name = (getattr(user, "full_name", "") or "").strip()
+    matricula = (getattr(user, "matricula", "") or "").strip()
+    if full_name and matricula:
+        return f"{full_name} ({matricula})"
+    return full_name or user.email
 
+
+def _format_forum_datetime(value) -> str:
+    if not value:
+        return "-"
+    return value.strftime("%d/%m/%Y %H:%M")
 
 def _author_tone_class(user, is_anonymous: bool) -> str:
     if is_anonymous and not _is_superadmin():
@@ -105,6 +116,7 @@ def forum_home():
         is_superadmin=_is_superadmin(),
         author_label_fn=_author_label,
         author_tone_fn=_author_tone_class,
+        format_forum_datetime=_format_forum_datetime,
         active_page="forum",
     )
 
@@ -159,6 +171,7 @@ def create_post():
     return render_template(
         "forum/new.html",
         categories=FORUM_CATEGORIES,
+        format_forum_datetime=_format_forum_datetime,
         active_page="forum",
     )
 
@@ -228,6 +241,7 @@ def post_detail(post_id: int):
         is_superadmin=_is_superadmin(),
         author_label_fn=_author_label,
         author_tone_fn=_author_tone_class,
+        format_forum_datetime=_format_forum_datetime,
         active_page="forum",
     )
 
@@ -282,6 +296,7 @@ def edit_post(post_id: int):
         "forum/edit.html",
         post=post,
         categories=FORUM_CATEGORIES,
+        format_forum_datetime=_format_forum_datetime,
         active_page="forum",
     )
 

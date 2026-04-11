@@ -29,12 +29,14 @@
   <div class="table-wrap">
     <table class="inventory-table" style="min-width: 800px;">
       <tbody>
+        <tr><td><strong>ID interno</strong></td><td>{{ material.id }}</td></tr>
         <tr><td><strong>Ubicación</strong></td><td>{{ material.location | smart_title }}</td></tr>
         <tr><td><strong>Marca</strong></td><td>{{ material.brand or '-' }}</td></tr>
         <tr><td><strong>Modelo</strong></td><td>{{ material.model or '-' }}</td></tr>
         <tr><td><strong>Código</strong></td><td>{{ material.code or '-' }}</td></tr>
         <tr><td><strong>Serie</strong></td><td>{{ material.serial or '-' }}</td></tr>
         <tr><td><strong>Observaciones</strong></td><td>{{ material.notes or 'Sin observaciones' }}</td></tr>
+        {% if material.image_url %}<tr><td><strong>Imagen</strong></td><td><img src="{{ material.image_url }}" alt="{{ material.name }}" style="max-width:340px;width:100%;border-radius:10px;"></td></tr>{% endif %}
         {% if material.tutorial_url %}
           <tr><td><strong>Manual</strong></td><td><a class="item-link" target="_blank" rel="noopener noreferrer" href="{{ material.tutorial_url }}">{{ material.tutorial_url }}</a></td></tr>
         {% endif %}
