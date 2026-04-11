@@ -412,7 +412,7 @@
               <i class="ph ph-clipboard-text nav-subicon"></i>
               <span>Solicitud de material</span>
             </a>
-            {% if current_user.is_authenticated and is_admin_role(current_user.role) %}
+            {% if current_user.is_authenticated and current_user.role in ["STUDENT", "TEACHER", "ADMIN", "SUPERADMIN"] %}
             <a href="{{ url_for('inventory.inventory_list') }}" class="nav-subitem {% if active_page == 'inventory' %}active{% endif %}">
               <i class="ph ph-package nav-subicon"></i>
               <span>Inventario</span>
@@ -426,7 +426,7 @@
 
           <p class="nav-section-title">Servicios</p>
           <div class="nav-submenu nav-submenu-static">
-            <a href="{% if current_user.is_authenticated and is_admin_role(current_user.role) %}{{ url_for('print3d.admin_list') }}{% else %}{{ url_for('print3d.my_jobs') }}{% endif %}" class="nav-subitem {% if active_page == 'prints3d' %}active{% endif %}">
+            <a href="{% if current_user.is_authenticated and current_user.role in ["STUDENT", "TEACHER", "ADMIN", "SUPERADMIN"] %}{{ url_for('print3d.admin_list') }}{% else %}{{ url_for('print3d.my_jobs') }}{% endif %}" class="nav-subitem {% if active_page == 'prints3d' %}active{% endif %}">
               <i class="ph ph-cube nav-subicon"></i>
               <span>Impresiones 3D</span>
             </a>
@@ -442,17 +442,17 @@
               <i class="ph ph-app-window nav-subicon"></i>
               <span>Software</span>
             </a>
-            {% if current_user.is_authenticated and is_admin_role(current_user.role) %}
+            {% if current_user.is_authenticated and current_user.role in ["STUDENT", "TEACHER", "ADMIN", "SUPERADMIN"] %}
             <a href="{{ url_for('ra_client.ra_client_home') }}" class="nav-subitem {% if active_page == 'ra_client' %}active{% endif %}">
               <i class="ph ph-qr-code nav-subicon"></i>
-              <span>RA Cliente (Experimental)</span>
+              <span>RA Cliente</span>
             </a>
             {% endif %}
           </div>
 
           <p class="nav-section-title">Gestión</p>
           <div class="nav-submenu nav-submenu-static">
-            {% if current_user.is_authenticated and is_admin_role(current_user.role) %}
+            {% if current_user.is_authenticated and current_user.role in ["STUDENT", "TEACHER", "ADMIN", "SUPERADMIN"] %}
             <a href="{{ url_for('reports.reports_home') }}" class="nav-subitem {% if active_page == 'reports' %}active{% endif %}">
               <i class="ph ph-chart-bar nav-subicon"></i>
               <span>Reportes</span>
