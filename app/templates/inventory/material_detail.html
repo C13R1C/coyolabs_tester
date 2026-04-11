@@ -36,7 +36,8 @@
         <tr><td><strong>Código</strong></td><td>{{ material.code or '-' }}</td></tr>
         <tr><td><strong>Serie</strong></td><td>{{ material.serial or '-' }}</td></tr>
         <tr><td><strong>Observaciones</strong></td><td>{{ material.notes or 'Sin observaciones' }}</td></tr>
-        {% if material.image_url %}<tr><td><strong>Imagen</strong></td><td><img src="{{ material.image_url }}" alt="{{ material.name }}" style="max-width:340px;width:100%;border-radius:10px;"></td></tr>{% endif %}
+        {% set detail_img = material.image_url or (url_for('static', filename=material.image_ref) if material.image_ref and not material.image_ref.startswith('http') and not material.image_ref.startswith('/') else material.image_ref) %}
+        {% if detail_img %}<tr><td><strong>Imagen</strong></td><td><img src="{{ detail_img }}" alt="{{ material.name }}" style="max-width:340px;width:100%;border-radius:10px;"></td></tr>{% endif %}
         {% if material.tutorial_url %}
           <tr><td><strong>Manual</strong></td><td><a class="item-link" target="_blank" rel="noopener noreferrer" href="{{ material.tutorial_url }}">{{ material.tutorial_url }}</a></td></tr>
         {% endif %}

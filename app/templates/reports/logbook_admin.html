@@ -56,7 +56,7 @@
           {% for col in all_columns %}
             <label class="form-control" style="display:flex; align-items:center; gap:8px; min-height:unset;">
               <input type="checkbox" name="cols" value="{{ col }}" {% if col in selected_columns %}checked{% endif %}>
-              <span>{{ col }}</span>
+              <span>{{ report_column_labels.get(col, col|replace('_', ' ')|title) }}</span>
             </label>
           {% endfor %}
         </div>
@@ -81,7 +81,7 @@
       <thead>
         <tr>
           {% for col in columns %}
-            <th>{{ col }}</th>
+            <th>{{ report_column_labels.get(col, col|replace('_', ' ')|title) }}</th>
           {% endfor %}
         </tr>
       </thead>

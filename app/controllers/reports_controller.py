@@ -73,8 +73,8 @@ DEFAULT_XLSX_CURATED_COLUMNS = DEFAULT_PDF_CURATED_COLUMNS[:]
 REPORT_COLUMN_LABELS = {
     "id": "ID",
     "lab_id": "Laboratorio",
-    "user_id": "Usuario",
-    "material_id": "Material",
+    "user_id": "ID de usuario",
+    "material_id": "ID de material",
     "name": "Nombre",
     "pieces_qty": "Cantidad",
     "brand": "Marca",
@@ -1008,6 +1008,7 @@ def logbook_admin_view():
         rows=visible_rows[:500],
         all_columns=headers,
         selected_columns=selected_columns,
+        report_column_labels=REPORT_COLUMN_LABELS,
         export_url=export_url,
         export_excel_url=export_excel_url,
         export_pdf_url=export_pdf_url,

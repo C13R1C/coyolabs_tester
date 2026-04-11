@@ -48,17 +48,87 @@
   <h3 style="margin-top:0;">Cambios de rol</h3>
   <form method="post" class="toolbar" style="grid-template-columns: 1fr 1fr auto; margin-top:12px;">
     <input type="hidden" name="action" value="change_role">
-    <div class="toolbar-group"><label>Cuenta existente</label><div class="select-wrap"><select name="user_id" required>
-      <option value="">Selecciona una cuenta</option>
-      {% for user in eligible_users %}
-      <option value="{{ user.id }}">{{ user.email }}{% if user.full_name %} · {{ user.full_name }}{% endif %} · {{ user.role|role_label }}</option>
-      {% endfor %}
-    </select><i class="ph ph-caret-down select-arrow"></i></div></div>
+    <div class="toolbar-group" style="position:relative;">
+      <label for="roleUserSearch">Buscar usuario (correo o nombre)</label>
+      <div class="search-box">
+        <i class="ph ph-user search-icon"></i>
+        <input id="roleUserSearch" type="text" placeholder="Escribe correo o nombre" autocomplete="off" required>
+        <input type="hidden" id="roleUserId" name="user_id" required>
+      </div>
+      <div id="roleUserAutocomplete" class="autocomplete-list" style="position:absolute; top:100%; left:0; right:0; z-index:30; background:#fff; border:1px solid rgba(0,0,0,.08); border-radius:10px; margin-top:6px; max-height:220px; overflow:auto;"></div>
+    </div>
     <div class="toolbar-group"><label>Nuevo rol</label><div class="select-wrap"><select name="role" required>
       <option value="STUDENT">Estudiante</option><option value="TEACHER">Profesor</option><option value="STAFF">Staff</option><option value="ADMIN">Administrador</option>
     </select><i class="ph ph-caret-down select-arrow"></i></div></div>
     <div class="toolbar-actions" style="align-self:end;"><button type="submit" class="btn btn-gold">Cambiar rol</button></div>
   </form>
 </section>
+
+<script>
+(() => {
+  const USERS = [
+    {% for user in eligible_users %}
+    {
+      id: {{ user.id }},
+      email: {{ (user.email or '')|tojson }},
+      full_name: {{ (user.full_name or '')|tojson }},
+      role: {{ (user.role or '')|tojson }}
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ];
+
+  const input = document.getElementById("roleUserSearch");
+  const hidden = document.getElementById("roleUserId");
+  const list = document.getElementById("roleUserAutocomplete");
+  if (!input || !hidden || !list) return;
+
+  function render(matches) {
+    if (!matches.length) {
+      list.innerHTML = '<div style="padding:10px 12px; color:var(--text-dim);">Sin coincidencias</div>';
+      return;
+    }
+    list.innerHTML = matches.map((u) => {
+      const title = (u.full_name || '').trim() || u.email;
+      const subtitle = `${u.email} · ${u.role}`;
+      return `<button type="button" class="autocomplete-item" data-user-id="${u.id}" style="width:100%; text-align:left; border:0; background:transparent; padding:10px 12px;">`
+        + `<strong style="display:block;">${title}</strong>`
+        + `<span style="font-size:.83rem; color:var(--text-dim);">${subtitle}</span>`
+        + `</button>`;
+    }).join("");
+  }
+
+  function searchUsers() {
+    const q = (input.value || '').trim().toLowerCase();
+    hidden.value = '';
+    if (!q) {
+      list.innerHTML = '';
+      return;
+    }
+    const matches = USERS.filter((u) => {
+      const email = (u.email || '').toLowerCase();
+      const name = (u.full_name || '').toLowerCase();
+      return email.includes(q) || name.includes(q);
+    }).slice(0, 12);
+    render(matches);
+  }
+
+  list.addEventListener('click', (event) => {
+    const btn = event.target.closest('[data-user-id]');
+    if (!btn) return;
+    const userId = btn.getAttribute('data-user-id');
+    const user = USERS.find((item) => String(item.id) === String(userId));
+    if (!user) return;
+    hidden.value = user.id;
+    input.value = (user.full_name || '').trim() ? `${user.full_name} · ${user.email}` : user.email;
+    list.innerHTML = '';
+  });
+
+  input.addEventListener('input', searchUsers);
+  document.addEventListener('click', (event) => {
+    if (event.target.closest('#roleUserAutocomplete') || event.target === input) return;
+    list.innerHTML = '';
+  });
+})();
+</script>
 {% endif %}
 {% endblock %}

@@ -469,8 +469,7 @@ def create_admin_account():
     if _is_superadmin():
         eligible_users = (
             User.query
-            .filter(User.role.notin_([ROLE_PENDING, ROLE_SUPERADMIN]))
-            .order_by(User.email.asc())
+            .order_by(User.full_name.asc(), User.email.asc())
             .all()
         )
     pending_accounts = (

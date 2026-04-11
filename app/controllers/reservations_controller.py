@@ -18,6 +18,7 @@ from app.models.lab_ticket import LabTicket
 from app.models.ticket_item import TicketItem
 from app.models.subject import Subject
 from app.models.teacher_academic_load import TeacherAcademicLoad
+from app.models.user import User
 
 from app.extensions import db
 from app.models.reservation import Reservation
@@ -799,23 +800,37 @@ def admin_ticket_closure_requests():
 @min_role_required("ADMIN")
 def admin_approved_history():
     today = datetime.now().date()
+    user_filter = (request.args.get("user") or "").strip()
+    requester_filter = (request.args.get("requester") or "").strip()
 
-    reservations = (
+    query = (
         Reservation.query
         .options(
             joinedload(Reservation.items).joinedload(ReservationItem.material),
             joinedload(Reservation.lab_tickets),
             joinedload(Reservation.user)
         )
+        .outerjoin(User, Reservation.user_id == User.id)
         .filter(Reservation.status == ReservationStatus.APPROVED)
         .filter(Reservation.date < today)
-        .order_by(Reservation.date.desc(), Reservation.start_time.desc())
-        .all()
     )
+    if user_filter:
+        like_user = f"%{user_filter}%"
+        query = query.filter(
+            db.or_(
+                User.email.ilike(like_user),
+                db.func.coalesce(User.full_name, "").ilike(like_user),
+            )
+        )
+    if requester_filter:
+        query = query.filter(db.func.coalesce(Reservation.teacher_name, "").ilike(f"%{requester_filter}%"))
+    reservations = query.order_by(Reservation.date.desc(), Reservation.start_time.desc()).all()
 
     return render_template(
         "reservations/admin_approved_history.html",
         reservations=reservations,
+        user_filter=user_filter,
+        requester_filter=requester_filter,
         active_page="reservations"
     )
 

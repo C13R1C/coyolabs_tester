@@ -102,7 +102,10 @@
           {% set condition = status_parts[1] if status_parts|length > 1 else ('Regular' if 'frágil' in status_value|lower else 'Bueno') %}
           <tr class="inventory-row">
             <td><a href="{{ url_for('inventory.material_detail', material_id=m.id) }}" class="item-link material-name">{{ m.name | smart_title }}</a></td>
-            <td>{% if m.image_url %}<img src="{{ m.image_url }}" alt="{{ m.name }}" style="width:44px;height:44px;object-fit:cover;border-radius:8px;">{% else %}-{% endif %}</td>
+            <td>
+              {% set preview_img = m.image_url or (url_for('static', filename=m.image_ref) if m.image_ref and not m.image_ref.startswith('http') and not m.image_ref.startswith('/') else m.image_ref) %}
+              {% if preview_img %}<img src="{{ preview_img }}" alt="{{ m.name }}" style="width:44px;height:44px;object-fit:cover;border-radius:8px;">{% else %}-{% endif %}
+            </td>
             <td>{{ m.career.name if m.career else 'Sin carrera' }}</td>
             <td class="td-center">
               <span class="status-badge {% if active_state|lower == 'alta' and condition|lower == 'bueno' %}status-ok{% elif active_state|lower == 'baja' %}status-bad{% else %}status-warn{% endif %}">

@@ -1,8 +1,11 @@
+import os
 from math import ceil
+from uuid import uuid4
 
 from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user
 from sqlalchemy import func
+from werkzeug.utils import secure_filename
 
 from app.extensions import db
 from app.models.career import Career
@@ -30,6 +33,46 @@ MATERIAL_CATEGORIES = (
 
 
 NEW_LOCATION_SENTINEL = "__new__"
+ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "webp", "gif"}
+
+
+def _is_allowed_image(filename: str) -> bool:
+    if "." not in (filename or ""):
+        return False
+    ext = filename.rsplit(".", 1)[1].lower()
+    return ext in ALLOWED_IMAGE_EXTENSIONS
+
+
+def _save_material_image(file_storage) -> tuple[str | None, str | None]:
+    if not file_storage or not file_storage.filename:
+        return None, None
+    if not _is_allowed_image(file_storage.filename):
+        return None, "Formato de imagen inválido. Usa PNG, JPG, JPEG, WEBP o GIF."
+
+    safe_name = secure_filename(file_storage.filename)
+    ext = safe_name.rsplit(".", 1)[1].lower()
+    rel_dir = os.path.join("uploads", "materials")
+    abs_dir = os.path.join(current_app.root_path, "static", rel_dir)
+    os.makedirs(abs_dir, exist_ok=True)
+
+    filename = f"{uuid4().hex}.{ext}"
+    abs_path = os.path.join(abs_dir, filename)
+    file_storage.save(abs_path)
+    return f"{rel_dir}/{filename}", None
+
+
+def _material_image_src(material: Material | None) -> str | None:
+    if not material:
+        return None
+    image_url = (material.image_url or "").strip()
+    if image_url:
+        return image_url
+    image_ref = (material.image_ref or "").strip()
+    if not image_ref:
+        return None
+    if image_ref.startswith(("http://", "https://", "/")):
+        return image_ref
+    return url_for("static", filename=image_ref)
 
 
 def _normalize_location(value: str | None) -> str:
@@ -318,6 +361,9 @@ def admin_new_material():
         payload, error = _material_payload_from_form()
         form_data = dict(request.form)
         active_state_default, tool_condition_default = _status_form_defaults(None, form_data)
+        image_ref, image_error = _save_material_image(request.files.get("image_file"))
+        if not error and image_error:
+            error = image_error
         if error:
             flash(error, "error")
             return render_template(
@@ -335,10 +381,14 @@ def admin_new_material():
                 form_data=form_data,
                 active_state_default=active_state_default,
                 tool_condition_default=tool_condition_default,
+                image_preview_src=None,
                 active_page="inventory",
             )
 
         material = Material(**payload)
+        if image_ref:
+            material.image_ref = image_ref
+            material.image_url = url_for("static", filename=image_ref)
         db.session.add(material)
         db.session.flush()
         log_event(
@@ -372,6 +422,7 @@ def admin_new_material():
         form_data=form_data,
         active_state_default=active_state_default,
         tool_condition_default=tool_condition_default,
+        image_preview_src=None,
         active_page="inventory",
     )
 
@@ -388,6 +439,10 @@ def admin_edit_material(material_id: int):
         form_data = dict(request.form)
         active_state_default, tool_condition_default = _status_form_defaults(material, form_data)
         reason_value = normalize_spaces(request.form.get("status_change_reason") or "")
+        remove_image = (request.form.get("remove_image") or "").strip() == "1"
+        new_image_ref, image_error = _save_material_image(request.files.get("image_file"))
+        if not error and image_error:
+            error = image_error
 
         reason_type, reason_label = _status_change_reason_requirement(material.status, payload.get("status") if payload else None)
         if not error and reason_type and not reason_value:
@@ -411,12 +466,19 @@ def admin_edit_material(material_id: int):
                 form_data=form_data,
                 active_state_default=active_state_default,
                 tool_condition_default=tool_condition_default,
+                image_preview_src=_material_image_src(material),
                 active_page="inventory",
             )
 
         old_status = material.status
         for key, value in payload.items():
             setattr(material, key, value)
+        if remove_image:
+            material.image_ref = None
+            material.image_url = None
+        if new_image_ref:
+            material.image_ref = new_image_ref
+            material.image_url = url_for("static", filename=new_image_ref)
 
         log_event(
             module="INVENTORY",
@@ -451,6 +513,7 @@ def admin_edit_material(material_id: int):
         form_data=form_data,
         active_state_default=active_state_default,
         tool_condition_default=tool_condition_default,
+        image_preview_src=_material_image_src(material),
         active_page="inventory",
     )
 

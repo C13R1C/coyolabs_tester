@@ -1,15 +1,38 @@
 {% extends "layouts/student_base.html" %}
-{% set crumbs = [("Inicio", url_for('root_home')), ("Reservas admin", url_for('reservations.admin_queue')), ("Historial reservas en curso", url_for('reservations.admin_approved_history'))] %}
-{% block title %}Historial de reservas en curso{% endblock %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Reservas admin", url_for('reservations.admin_queue')), ("Historial de reservas", url_for('reservations.admin_approved_history'))] %}
+{% block title %}Historial de reservas{% endblock %}
 
 {% block content %}
 <header class="topbar">
   <div class="topbar-left">
     <p class="page-kicker">Reservaciones</p>
-    <h1>Historial de reservas en curso</h1>
+    <h1>Historial de reservas</h1>
     <p class="page-subtitle">Consulta reservas en curso anteriores. Esta vista es solo informativa.</p>
   </div>
 </header>
+
+<section class="toolbar-card">
+  <form method="get" class="toolbar" style="grid-template-columns: 1fr 1fr auto;">
+    <div class="toolbar-group">
+      <label>Usuario</label>
+      <div class="search-box">
+        <i class="ph ph-user search-icon"></i>
+        <input type="text" name="user" value="{{ user_filter or '' }}" placeholder="Correo o nombre de usuario">
+      </div>
+    </div>
+    <div class="toolbar-group">
+      <label>Solicitante</label>
+      <div class="search-box">
+        <i class="ph ph-identification-card search-icon"></i>
+        <input type="text" name="requester" value="{{ requester_filter or '' }}" placeholder="Nombre del solicitante">
+      </div>
+    </div>
+    <div class="toolbar-actions" style="align-self:end;">
+      <button type="submit" class="btn btn-gold">Filtrar</button>
+      <a class="btn btn-ghost" href="{{ url_for('reservations.admin_approved_history') }}">Limpiar</a>
+    </div>
+  </form>
+</section>
 
 <section class="toolbar-card">
   <div class="toolbar-actions">
@@ -35,45 +58,25 @@
       <table class="inventory-table" style="min-width: 1550px;">
       <thead>
         <tr>
-          <th>ID</th>
           <th>Usuario</th>
+          <th>Solicitante</th>
           <th>Salón/Lab</th>
           <th>Fecha</th>
           <th>Inicio</th>
           <th>Fin</th>
           <th>Motivo</th>
-          <th>Materiales</th>
         </tr>
       </thead>
       <tbody>
         {% for r in reservations %}
         <tr>
-          <td>{{ r.id }}</td>
           <td>{{ r.user.email if r.user else '-' }}</td>
+          <td>{{ r.teacher_name or '-' }}</td>
           <td>{{ r.room }}</td>
           <td>{{ r.date }}</td>
           <td>{{ r.start_time }}</td>
           <td>{{ r.end_time }}</td>
           <td>{{ r.purpose or '-' }}</td>
-
-          <td>
-            {% if r.items %}
-              <ul style="padding-left:16px; margin:0;">
-                {% for item in r.items[:3] %}
-                  <li>
-                    {{ item.material.name if item.material else ('ID ' ~ item.material_id) }}
-                    ({{ item.quantity_requested }})
-                  </li>
-                {% endfor %}
-                {% if r.items|length > 3 %}
-                  <li>+{{ r.items|length - 3 }} más...</li>
-                {% endif %}
-              </ul>
-            {% else %}
-              -
-            {% endif %}
-          </td>
-
         </tr>
         {% endfor %}
       </tbody>
