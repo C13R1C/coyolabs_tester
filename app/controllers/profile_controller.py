@@ -170,12 +170,12 @@ def add_teaching_load():
         flash(group_error, "error")
         return redirect(url_for("profile.my_profile"))
 
-    normalized_subject_name = " ".join(subject_name.split())
+    normalized_subject_name = " ".join(subject_name.split()).upper()
     existing = (
         TeacherAcademicLoad.query
         .filter(TeacherAcademicLoad.teacher_id == current_user.id)
         .filter(func.lower(TeacherAcademicLoad.subject_name) == normalized_subject_name.lower())
-        .filter(TeacherAcademicLoad.group_code == group_code)
+        .filter(TeacherAcademicLoad.group_code == (group_code or "").upper())
         .first()
     )
     if existing:
@@ -185,7 +185,7 @@ def add_teaching_load():
     load = TeacherAcademicLoad(
         teacher_id=current_user.id,
         subject_name=normalized_subject_name,
-        group_code=group_code,
+        group_code=(group_code or "").upper(),
     )
     db.session.add(load)
     db.session.commit()
