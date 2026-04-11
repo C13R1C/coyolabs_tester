@@ -2,7 +2,9 @@ from functools import wraps
 from collections import defaultdict, deque
 from threading import Lock
 from time import time
+
 from flask import request, current_app, jsonify
+from flask_login import current_user
 
 
 _API_RATE_BUCKETS: dict[str, deque] = defaultdict(deque)
@@ -36,11 +38,12 @@ def _rate_limit_exceeded() -> bool:
 def api_key_required(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
-        expected = current_app.config.get("RA_API_KEY")
-        provided = request.headers.get("X-API-Key")
+        if not current_user.is_authenticated:
+            expected = current_app.config.get("RA_API_KEY")
+            provided = request.headers.get("X-API-Key")
 
-        if not expected or not provided or provided != expected:
-            return jsonify({"error": "Unauthorized"}), 401
+            if not expected or not provided or provided != expected:
+                return jsonify({"error": "Unauthorized"}), 401
 
         if _rate_limit_exceeded():
             return jsonify({"error": "Too Many Requests"}), 429
