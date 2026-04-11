@@ -34,8 +34,8 @@
     </section>
   {% else %}
     <section class="table-card">
-      <div class="table-wrap">
-        <table class="inventory-table" style="min-width: 900px;">
+      <div class="table-wrap" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+        <table class="inventory-table table-mobile-cards" style="min-width: 900px;">
           <thead>
             <tr>
               <th>Estado</th>
@@ -47,20 +47,20 @@
           <tbody>
             {% for d in debts %}
               <tr>
-                <td>
+                <td data-label="Estado">
                   <span class="status-badge {% if d.status == 'PENDING' %}status-bad{% else %}status-ok{% endif %}">
                     {{ d.status|status_label }}
                   </span>
                 </td>
-                <td>
+                <td data-label="Material">
                   {% if d.material %}
                     {{ d.material.name | smart_title }} (ID {{ d.material.id }})
                   {% else %}
                     -
                   {% endif %}
                 </td>
-                <td>{{ d.reason or 'Sin comentario' }}</td>
-                <td>{{ d.created_at.strftime('%Y-%m-%d') if d.created_at else '-' }}</td>
+                <td data-label="Razón">{{ d.reason or 'Sin comentario' }}</td>
+                <td data-label="Creado">{{ d.created_at.strftime('%Y-%m-%d') if d.created_at else '-' }}</td>
               </tr>
             {% endfor %}
           </tbody>

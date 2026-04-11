@@ -92,19 +92,81 @@
   gap: 12px;
 }
 
-.signature-pad {
-  border: 1px dashed var(--stroke-strong, rgba(0,0,0,0.2));
-  border-radius: 12px;
-  background: rgba(255,255,255,0.7);
+.signature-sim {
   width: 100%;
-  min-height: 180px;
+  background: rgba(255,255,255,.82);
+  border-radius: 18px;
+  padding: 16px;
+  border: 1px solid var(--stroke, rgba(102, 81, 45, 0.12));
+  box-shadow: var(--shadow-sm, 0 8px 18px rgba(0,0,0,0.08));
+}
+
+.signature-title {
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: var(--text, #1f2522);
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.canvas-wrapper {
+  position: relative;
+  width: 100%;
+  height: 220px;
+  background-color: #fdfdfd;
+  border: 2px dashed var(--stroke-strong, rgba(102, 81, 45, 0.3));
+  border-radius: 14px;
+  overflow: hidden;
   touch-action: none;
+  cursor: crosshair;
+}
+
+.canvas-wrapper::after {
+  content: '';
+  position: absolute;
+  bottom: 40px;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background-color: rgba(0,0,0,0.1);
+  pointer-events: none;
+}
+
+.placeholder-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: rgba(0,0,0,0.18);
+  font-size: 1.05rem;
+  pointer-events: none;
+  user-select: none;
+}
+
+#signaturePad {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.signature-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.signature-actions .btn {
+  flex: 1;
+  min-width: 180px;
 }
 
 .signature-hint {
-  margin-top: 6px;
+  margin-top: 8px;
   font-size: .82rem;
   color: var(--text-dim, #728078);
+  text-align: center;
 }
 
 @media (max-width: 900px) {
@@ -128,12 +190,18 @@
   #reservationFormSection .toolbar-actions .btn{
     width: 100%;
   }
-  .signature-pad{
-    min-height: 150px;
-    height: 150px;
+  .canvas-wrapper{
+    height: 170px;
   }
   .calendar-toggle{
     padding: 12px 14px;
+  }
+  .signature-sim{
+    padding: 12px;
+  }
+  .signature-actions .btn{
+    min-width: 0;
+    width: 100%;
   }
 }
 </style>
@@ -274,11 +342,18 @@
 
     <div class="toolbar-group" style="grid-column:1/-1;">
       <label>Firma digital del solicitante</label>
-      <canvas id="signaturePad" class="signature-pad" width="900" height="200"></canvas>
-      <input type="hidden" id="signatureDataInput" name="signature_data">
-      <div class="toolbar-actions" style="margin-top:8px;">
-        <button type="button" id="clearSignatureBtn" class="btn btn-ghost">Limpiar firma</button>
+      <div class="signature-sim">
+        <p class="signature-title">Firma Electrónica</p>
+        <div class="canvas-wrapper" id="canvasWrapper">
+          <span class="placeholder-text" id="signaturePlaceholder">Firme aquí</span>
+          <canvas id="signaturePad"></canvas>
+        </div>
+        <div class="signature-actions">
+          <button type="button" id="clearSignatureBtn" class="btn btn-ghost">Borrar</button>
+          <button type="button" id="saveSignatureBtn" class="btn btn-gold">Guardar firma</button>
+        </div>
       </div>
+      <input type="hidden" id="signatureDataInput" name="signature_data">
       <small class="signature-hint">La reservación requiere firma digital. Dibuja tu firma antes de enviar.</small>
     </div>
 
@@ -324,8 +399,11 @@ const startTimeInput = document.getElementById("startTimeInput");
 const endTimeInput = document.getElementById("endTimeInput");
 const reservationForm = document.querySelector(".reservation-request-form");
 const signaturePad = document.getElementById("signaturePad");
+const signatureCanvasWrapper = document.getElementById("canvasWrapper");
+const signaturePlaceholder = document.getElementById("signaturePlaceholder");
 const signatureDataInput = document.getElementById("signatureDataInput");
 const clearSignatureBtn = document.getElementById("clearSignatureBtn");
+const saveSignatureBtn = document.getElementById("saveSignatureBtn");
 const submitReservationBtn = document.getElementById("submitReservationBtn");
 
 const clockPickerModal = document.getElementById("clockPickerModal");
@@ -346,7 +424,8 @@ let signatureHasStroke = false;
 
 function signaturePosition(evt) {
   const rect = signaturePad.getBoundingClientRect();
-  const source = evt.touches ? evt.touches[0] : evt;
+  const touchSource = evt.touches && evt.touches.length ? evt.touches[0] : null;
+  const source = touchSource || evt;
   return {
     x: source.clientX - rect.left,
     y: source.clientY - rect.top,
@@ -354,12 +433,44 @@ function signaturePosition(evt) {
 }
 
 function initSignaturePad() {
-  if (!signaturePad) return;
+  if (!signaturePad || !signatureCanvasWrapper) return;
   const ctx = signaturePad.getContext("2d");
-  ctx.lineWidth = 2.2;
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
-  ctx.strokeStyle = "#2c2c2c";
+
+  function setupContext() {
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = "#1f2522";
+  }
+
+  function resizeSignatureCanvas() {
+    const rect = signatureCanvasWrapper.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    const previous = signaturePad.toDataURL("image/png");
+    const hasCurrentDrawing = signatureHasStroke;
+    signaturePad.width = rect.width * dpr;
+    signaturePad.height = rect.height * dpr;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.scale(dpr, dpr);
+    setupContext();
+    if (hasCurrentDrawing) {
+      const img = new Image();
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0, rect.width, rect.height);
+      };
+      img.src = previous;
+    }
+  }
+
+  resizeSignatureCanvas();
+  window.addEventListener("resize", resizeSignatureCanvas);
+
+  function markAsSigned() {
+    if (!signatureHasStroke) {
+      signatureHasStroke = true;
+      if (signaturePlaceholder) signaturePlaceholder.style.display = "none";
+    }
+  }
 
   function startDraw(evt) {
     evt.preventDefault();
@@ -367,6 +478,7 @@ function initSignaturePad() {
     const pos = signaturePosition(evt);
     ctx.beginPath();
     ctx.moveTo(pos.x, pos.y);
+    markAsSigned();
   }
 
   function moveDraw(evt) {
@@ -375,7 +487,7 @@ function initSignaturePad() {
     const pos = signaturePosition(evt);
     ctx.lineTo(pos.x, pos.y);
     ctx.stroke();
-    signatureHasStroke = true;
+    markAsSigned();
   }
 
   function endDraw() {
@@ -393,6 +505,15 @@ function initSignaturePad() {
     ctx.clearRect(0, 0, signaturePad.width, signaturePad.height);
     signatureHasStroke = false;
     signatureDataInput.value = "";
+    if (signaturePlaceholder) signaturePlaceholder.style.display = "block";
+  });
+
+  saveSignatureBtn?.addEventListener("click", () => {
+    if (!signatureHasStroke) {
+      alert("Por favor, dibuje su firma antes de guardar.");
+      return;
+    }
+    signatureDataInput.value = signaturePad.toDataURL("image/png");
   });
 }
 
