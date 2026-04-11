@@ -109,12 +109,12 @@
   pw?.addEventListener("input", validateConfirm);
   pw2?.addEventListener("input", validateConfirm);
 
-  const institutionalEmailRe = /^(\d{8}|[a-z]+(?:\.[a-z]+)*)@utpn\.edu\.mx$/;
+  const institutionalEmailRe = /^([0-9]{8}|[A-Za-z0-9._%+-]+)@utpn\.edu\.mx$/;
   const validateRegisterEmail = () => {
     if (!registerEmail || !emailRegHint) return true;
 
     const raw = registerEmail.value || "";
-    const email = raw.trim().toLowerCase();
+    const email = raw.trim();
     if (raw !== email) {
       registerEmail.value = email;
     }
