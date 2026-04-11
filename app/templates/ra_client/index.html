@@ -124,14 +124,16 @@ html { font-size: 15px; }
 /* ===== MAIN LAYOUT ===== */
 .main-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
   gap: 1rem;
   padding: 1rem 0;
   width: 100%;
   max-width: 1180px;
   margin: 0 auto;
   min-height: 0;
+  overflow-x: clip;
 }
+.main-layout, .scanner-col, .info-col, .card, .toolbar, .tech-tools-inner { min-width: 0; }
 
 /* ===== SCANNER COLUMN ===== */
 .scanner-col {
@@ -141,11 +143,14 @@ html { font-size: 15px; }
 }
 .scanner-wrapper {
   position: relative;
+  width: 100%;
+  max-width: 100%;
   border-radius: var(--radius);
   overflow: hidden;
   background: #1e2322;
   border: 1px solid var(--border-light);
   aspect-ratio: 4/3;
+  min-height: 280px;
   box-shadow: var(--shadow);
 }
 /* placeholder cuando no hay cámara */
@@ -313,7 +318,9 @@ html { font-size: 15px; }
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
+  flex: 1 1 170px;
   padding: 0.55rem 1rem;
+  min-height: 44px;
   border-radius: var(--radius-sm);
   font-size: 0.82rem;
   font-weight: 500;
@@ -344,7 +351,7 @@ html { font-size: 15px; }
   border-radius: var(--radius);
   padding: 1rem;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.6rem;
   margin-top: 0.25rem;
 }
@@ -358,6 +365,7 @@ html { font-size: 15px; }
   letter-spacing: 0.05em;
 }
 .input-group input {
+  width: 100%;
   padding: 0.5rem 0.7rem;
   border-radius: var(--radius-xs);
   border: 1px solid var(--border);
@@ -472,7 +480,7 @@ html { font-size: 15px; }
 }
 .console-body {
   padding: 0.6rem;
-  max-height: 320px;
+  max-height: 300px;
   overflow-y: auto;
   font-family: 'Courier New', monospace;
   font-size: 0.72rem;
@@ -649,32 +657,60 @@ html { font-size: 15px; }
 }
 
 /* ===== RESPONSIVE ===== */
-@media (max-width: 980px) {
+@media (max-width: 1280px) {
+  .main-layout {
+    max-width: 1060px;
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 340px);
+  }
+}
+@media (max-width: 1024px) {
   .main-layout {
     grid-template-columns: 1fr;
     padding: 0.85rem 0;
     gap: 0.75rem;
   }
-  .scanner-wrapper { aspect-ratio: 1/1; }
+  .scanner-wrapper {
+    aspect-ratio: 16/10;
+    min-height: 260px;
+  }
   .info-col { order: 2; }
-  .console-body { max-height: 200px; }
+  .console-body { max-height: 220px; }
   .hero { padding: 0.9rem 1rem; }
-  .hero-sub { display: none; }
   .tech-tools-inner { grid-template-columns: 1fr; }
 }
-@media (max-width: 640px) {
-  .hero { padding: 0.8rem; }
-  .toolbar { display: grid; grid-template-columns: 1fr 1fr; }
-  .btn-toolbar { justify-content: center; min-height: 42px; }
-  .overlay-actions { flex-direction: column; }
+@media (max-width: 768px) {
+  .main-layout { padding: 0.7rem 0; }
+  .scanner-wrapper {
+    aspect-ratio: 1/1;
+    min-height: 240px;
+  }
+  .toolbar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .material-overlay { padding: 2rem 0.8rem 0.8rem; }
+  .overlay-grid { grid-template-columns: 1fr; gap: 0.25rem; }
 }
-
 @media (max-width: 480px) {
+  .hero { padding: 0.8rem; }
+  .main-layout { gap: 0.6rem; }
+  .scanner-wrapper {
+    aspect-ratio: 3/4;
+    min-height: 220px;
+  }
+  .toolbar { grid-template-columns: 1fr; }
+  .btn-toolbar { justify-content: center; }
+  .overlay-actions { flex-direction: column; }
   html { font-size: 14px; }
-  .scanner-wrapper { aspect-ratio: 3/4; }
-  .overlay-grid { grid-template-columns: 1fr; }
   .modal-detail-grid { grid-template-columns: 1fr; gap: 0.4rem; }
   .modal-detail-label { font-size: 0.68rem; }
+  .console-body { max-height: 180px; }
+}
+@media (max-width: 390px) {
+  .hero { padding: 0.72rem; }
+  .hero-title { font-size: 1.1rem; }
+  .status-chip { width: 100%; justify-content: center; }
+  .scanner-wrapper { min-height: 200px; }
+  .material-overlay { padding: 1.6rem 0.7rem 0.7rem; }
+  .btn-overlay { width: 100%; justify-content: center; }
+  .console-body { max-height: 150px; font-size: 0.68rem; }
 }
 
 /* ===== REDUCED MOTION ===== */
@@ -694,7 +730,7 @@ html { font-size: 15px; }
     <div class="hero-logo">CL</div>
     <div>
       <div class="hero-title">Escaneo RA</div>
-          </div>
+    </div>
   </div>
   <div class="status-chip" id="statusChip" data-state="ready">
     <span class="status-dot"></span>
