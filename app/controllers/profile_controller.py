@@ -13,7 +13,6 @@ from app.models.inventory_request_ticket import InventoryRequestTicket
 from app.models.notification import Notification
 from app.models.profile_change_request import ProfileChangeRequest
 from app.models.reservation import Reservation
-from app.models.subject import Subject
 from app.models.teacher_academic_load import TeacherAcademicLoad
 from app.models.user import User
 from app.services.audit_service import log_event
@@ -107,21 +106,6 @@ def _normalize_and_validate_matricula(raw_matricula: str | None, role: str | Non
     return matricula, None
 
 
-def _subject_allowed_for_teacher(subject: Subject, teacher: User) -> bool:
-    if not subject or not teacher:
-        return False
-
-    if teacher.career_id and subject.career_id != teacher.career_id:
-        return False
-
-    teacher_level = (teacher.academic_level or "").strip().upper()
-    subject_level = (subject.level or "").strip().upper()
-    if teacher_level and subject_level and teacher_level != subject_level:
-        return False
-
-    return True
-
-
 @profile_bp.route("/", methods=["GET"])
 @login_required
 def my_profile():
@@ -147,22 +131,13 @@ def my_profile():
         .all()
     )
 
-    available_subjects = []
     teacher_loads = []
     if _is_professor_role(current_user.role):
         teacher_loads = (
             TeacherAcademicLoad.query
-            .options(joinedload(TeacherAcademicLoad.subject).joinedload(Subject.career))
+            .options(joinedload(TeacherAcademicLoad.subject))
             .filter(TeacherAcademicLoad.teacher_id == current_user.id)
             .order_by(TeacherAcademicLoad.group_code.asc())
-            .all()
-        )
-
-        available_subjects = (
-            Subject.query
-            .options(joinedload(Subject.career), joinedload(Subject.academic_level))
-            .filter(Subject.is_active.is_(True))
-            .order_by(Subject.name.asc(), Subject.level.asc(), Subject.quarter.asc())
             .all()
         )
 
@@ -174,7 +149,6 @@ def my_profile():
         active_page="profile",
         is_professor=_is_professor_role(current_user.role),
         teacher_loads=teacher_loads,
-        available_subjects=available_subjects,
     )
 
 
@@ -185,36 +159,35 @@ def add_teaching_load():
         flash("Solo profesores pueden gestionar carga académica.", "error")
         return redirect(url_for("profile.my_profile"))
 
-    subject_id = request.form.get("subject_id", type=int)
+    subject_name = (request.form.get("subject_name") or "").strip()
     group_code, group_error = normalize_and_validate_group_code(request.form.get("group_code"))
 
-    if not subject_id:
+    if not subject_name:
         flash("La materia es obligatoria.", "error")
+        return redirect(url_for("profile.my_profile"))
+    if len(subject_name) > 160:
+        flash("La materia no puede exceder 160 caracteres.", "error")
         return redirect(url_for("profile.my_profile"))
 
     if group_error:
         flash(group_error, "error")
         return redirect(url_for("profile.my_profile"))
 
-    subject = Subject.query.get(subject_id)
-    if not subject:
-        flash("Materia no encontrada.", "error")
-        return redirect(url_for("profile.my_profile"))
-    if not subject.is_active:
-        flash("La materia seleccionada está inactiva.", "error")
-        return redirect(url_for("profile.my_profile"))
-    existing = TeacherAcademicLoad.query.filter_by(
-        teacher_id=current_user.id,
-        subject_id=subject_id,
-        group_code=group_code,
-    ).first()
+    normalized_subject_name = " ".join(subject_name.split())
+    existing = (
+        TeacherAcademicLoad.query
+        .filter(TeacherAcademicLoad.teacher_id == current_user.id)
+        .filter(func.lower(TeacherAcademicLoad.subject_name) == normalized_subject_name.lower())
+        .filter(TeacherAcademicLoad.group_code == group_code)
+        .first()
+    )
     if existing:
         flash("Esa asignación ya existe.", "warning")
         return redirect(url_for("profile.my_profile"))
 
     load = TeacherAcademicLoad(
         teacher_id=current_user.id,
-        subject_id=subject_id,
+        subject_name=normalized_subject_name,
         group_code=group_code,
     )
     db.session.add(load)
@@ -224,8 +197,8 @@ def add_teaching_load():
         action="TEACHING_LOAD_ADDED",
         user_id=current_user.id,
         entity_label=f"TeacherLoad #{load.id}",
-        description=f"Carga agregada: {subject.name} · grupo {group_code}",
-        metadata={"load_id": load.id, "subject_id": subject.id, "group_code": group_code},
+        description=f"Carga agregada: {normalized_subject_name} · grupo {group_code}",
+        metadata={"load_id": load.id, "subject_name": normalized_subject_name, "group_code": group_code},
     )
     db.session.commit()
 
@@ -245,7 +218,7 @@ def remove_teaching_load(load_id: int):
         flash("No autorizado.", "error")
         return redirect(url_for("profile.my_profile"))
 
-    subject_name = load.subject.name if load.subject else f"Materia #{load.subject_id}"
+    subject_name = load.subject_name or (load.subject.name if load.subject else f"Materia #{load.subject_id}")
     group_code = load.group_code
 
     db.session.delete(load)
@@ -256,7 +229,7 @@ def remove_teaching_load(load_id: int):
         user_id=current_user.id,
         entity_label=f"TeacherLoad #{load_id}",
         description=f"Carga eliminada: {subject_name} · grupo {group_code}",
-        metadata={"load_id": load_id, "subject_id": load.subject_id, "group_code": group_code},
+        metadata={"load_id": load_id, "subject_id": load.subject_id, "subject_name": load.subject_name, "group_code": group_code},
     )
     db.session.commit()
 
