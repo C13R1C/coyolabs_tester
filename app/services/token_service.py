@@ -28,6 +28,22 @@ def confirm_verify_token(token: str, max_age_seconds: int = 3600) -> dict[str, s
         return None
 
 
+def peek_verify_token(token: str) -> dict[str, str | int] | None:
+    """Decode verify token payload without max-age validation."""
+    s = _serializer()
+    try:
+        data = s.loads(token)
+        email = str(data.get("email") or "").strip().lower()
+        if not email:
+            return None
+        return {
+            "email": email,
+            "token_version": int(data.get("token_version", 0)),
+        }
+    except BadSignature:
+        return None
+
+
 def generate_password_reset_token(email: str, password_fingerprint: str) -> str:
     s = _serializer()
     return s.dumps(
