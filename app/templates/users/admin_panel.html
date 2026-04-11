@@ -51,6 +51,15 @@
     justify-content: flex-start;
   }
 }
+
+@media (max-width: 768px) {
+  .table-mobile-cards thead { display: none; }
+  .table-mobile-cards tbody tr { display: block; margin-bottom: 1rem; border: 1px solid var(--stroke, #e5e7eb); border-radius: 8px; padding: 0.75rem; background: var(--panel-2, #fff); }
+  .table-mobile-cards tbody td { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid var(--stroke, #e5e7eb) !important; }
+  .table-mobile-cards tbody td:last-child { border-bottom: none !important; }
+  .table-mobile-cards tbody td::before { content: attr(data-label); font-weight: 600; font-size: 0.85em; margin-right: 1rem; color: var(--text-dim, #6b7280); white-space: nowrap; }
+}
+
 </style>
 
 <header class="topbar">
@@ -80,7 +89,6 @@
         <i class="ph ph-magnifying-glass search-icon"></i>
         <input type="text" name="q" value="{{ q }}" placeholder="email, nombre o matrícula">
       </div>
-    </div>
 
     <div class="toolbar-group">
       <label>Filtrar rol</label>
@@ -93,7 +101,6 @@
         </select>
         <i class="ph ph-caret-down select-arrow"></i>
       </div>
-    </div>
 
     <div class="toolbar-actions" style="align-self:end;">
       <button type="submit" class="btn btn-ghost" title="Aplicar filtros de búsqueda y rol">
@@ -110,7 +117,8 @@
 
 <section class="table-card" style="margin-top:16px;">
   <div class="table-wrap">
-    <table class="inventory-table table-mobile-cards" style="min-width: 980px;">
+    <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+<table class="inventory-table table-mobile-cards" style="min-width: 980px;">
       <thead>
         <tr>
           <th>Email</th>
@@ -156,6 +164,6 @@
         {% endfor %}
       </tbody>
     </table>
-  </div>
+</div>
 </section>
 {% endblock %}

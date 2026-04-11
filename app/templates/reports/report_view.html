@@ -235,6 +235,15 @@
       z-index: 3;
     }
   }
+
+@media (max-width: 768px) {
+  .table-mobile-cards thead { display: none; }
+  .table-mobile-cards tbody tr { display: block; margin-bottom: 1rem; border: 1px solid var(--stroke, #e5e7eb); border-radius: 8px; padding: 0.75rem; background: var(--panel-2, #fff); }
+  .table-mobile-cards tbody td { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid var(--stroke, #e5e7eb) !important; }
+  .table-mobile-cards tbody td:last-child { border-bottom: none !important; }
+  .table-mobile-cards tbody td::before { content: attr(data-label); font-weight: 600; font-size: 0.85em; margin-right: 1rem; color: var(--text-dim, #6b7280); white-space: nowrap; }
+}
+
 </style>
 {% endblock %}
 
@@ -276,7 +285,6 @@
         <i class="ph ph-magnifying-glass search-icon"></i>
         <input class="form-control" id="reportLiveSearch" type="text" placeholder="Filtrar por texto en la tabla" autocomplete="off">
       </div>
-    </div>
     <form method="get" action="{{ request.path }}">
       {% for key, value in fixed_filters.items() %}
         <input type="hidden" name="{{ key }}" value="{{ value }}">
@@ -339,7 +347,8 @@
 
     {% if rows and columns %}
       <div class="report-table-wrap">
-        <table class="report-table">
+        <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+<table class="report-table table-mobile-cards">
           <thead>
             <tr>
               {% for col in columns %}
@@ -351,13 +360,13 @@
             {% for row in rows %}
               <tr>
                 {% for value in row %}
-                  <td>{{ value if value is not none and value != "" else "-" }}</td>
+                  <td data-label="{{ report_column_labels.get(col, col|replace('_', ' ')|title) }}">{{ value if value is not none and value != "" else "-" }}</td>
                 {% endfor %}
               </tr>
             {% endfor %}
           </tbody>
         </table>
-      </div>
+</div>
     {% else %}
       <div class="empty-report">
         <strong>Sin datos.</strong>

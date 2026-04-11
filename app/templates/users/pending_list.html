@@ -17,13 +17,13 @@
       <span class="status-badge status-warn">Pendientes</span>
       <strong style="margin-left:8px;">{{ users|length }}</strong>
     </div>
-  </div>
 </section>
 
 {% if users %}
   <section class="table-card">
     <div class="table-wrap">
-      <table class="inventory-table" style="min-width: 980px;">
+      <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+<table class="inventory-table table-mobile-cards" style="min-width: 980px;">
         <thead>
           <tr>
             <th>ID</th>
@@ -36,15 +36,15 @@
         <tbody>
           {% for user in users %}
             <tr>
-              <td>{{ user.id }}</td>
-              <td><strong>{{ user.email }}</strong></td>
-              <td>
+              <td data-label="ID">{{ user.id }}</td>
+              <td data-label="Correo"><strong>{{ user.email }}</strong></td>
+              <td data-label="Verificada">
                 <span class="status-badge {% if user.is_verified %}status-ok{% else %}status-bad{% endif %}">
                   {{ "Sí" if user.is_verified else "No" }}
                 </span>
               </td>
-              <td>{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else '-' }}</td>
-              <td>
+              <td data-label="Creada">{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else '-' }}</td>
+              <td data-label="Asignar rol">
                 <form method="post" action="{{ url_for('users.assign_role', user_id=user.id) }}" style="display:flex; gap:8px; align-items:center;">
                   <div class="select-wrap" style="min-width:180px;">
                     <select name="role" required>
@@ -61,7 +61,7 @@
           {% endfor %}
         </tbody>
       </table>
-    </div>
+</div>
   </section>
 {% else %}
   <section class="empty-state">

@@ -19,14 +19,12 @@
         <i class="ph ph-user search-icon"></i>
         <input type="text" name="user" value="{{ user_filter or '' }}" placeholder="Correo o nombre de usuario">
       </div>
-    </div>
     <div class="toolbar-group">
       <label>Solicitante</label>
       <div class="search-box">
         <i class="ph ph-identification-card search-icon"></i>
         <input type="text" name="requester" value="{{ requester_filter or '' }}" placeholder="Nombre del solicitante">
       </div>
-    </div>
     <div class="toolbar-actions" style="align-self:end;">
       <button type="submit" class="btn btn-gold">Filtrar</button>
       <a class="btn btn-ghost" href="{{ url_for('reservations.admin_approved_history') }}">Limpiar</a>
@@ -55,7 +53,8 @@
 {% else %}
   <section class="table-card">
     <div class="table-wrap">
-      <table class="inventory-table" style="min-width: 1550px;">
+      <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+<table class="inventory-table table-mobile-cards" style="min-width: 1550px;">
       <thead>
         <tr>
           <th>Usuario</th>
@@ -70,18 +69,18 @@
       <tbody>
         {% for r in reservations %}
         <tr>
-          <td>{{ r.user.email if r.user else '-' }}</td>
-          <td>{{ r.teacher_name or '-' }}</td>
-          <td>{{ r.room }}</td>
-          <td>{{ r.date }}</td>
-          <td>{{ r.start_time }}</td>
-          <td>{{ r.end_time }}</td>
-          <td>{{ r.purpose or '-' }}</td>
+          <td data-label="Usuario">{{ r.user.email if r.user else '-' }}</td>
+          <td data-label="Solicitante">{{ r.teacher_name or '-' }}</td>
+          <td data-label="Salón/Lab">{{ r.room }}</td>
+          <td data-label="Fecha">{{ r.date }}</td>
+          <td data-label="Inicio">{{ r.start_time }}</td>
+          <td data-label="Fin">{{ r.end_time }}</td>
+          <td data-label="Motivo">{{ r.purpose or '-' }}</td>
         </tr>
         {% endfor %}
       </tbody>
       </table>
-    </div>
+</div>
   </section>
 {% endif %}
 </div>
