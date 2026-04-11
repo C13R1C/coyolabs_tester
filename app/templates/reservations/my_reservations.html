@@ -49,6 +49,12 @@
   border: 1px solid rgba(0,0,0,.08);
   background: #fafafa;
 }
+.signature-empty{
+  display:none;
+  padding:24px;
+  color:var(--text-dim);
+  font-weight:600;
+}
 @media (max-width: 768px){
   .signature-modal{
     padding: 10px;
@@ -118,10 +124,11 @@
             <td data-label="Materia">{{ r.subject }}</td>
             <td data-label="Grupo">{{ r.group_name }}</td>
             <td data-label="Firma">
-              {% if r.signature_ref %}
-                <button type="button" class="btn btn-ghost" onclick="openSignature('{{ url_for('static', filename=r.signature_ref) }}')">Ver firma</button>
+              {% set sign_url = signature_url_map.get(r.id) if signature_url_map else None %}
+              {% if sign_url %}
+                <button type="button" class="btn btn-ghost" onclick="openSignature('{{ sign_url }}')">Ver firma</button>
               {% elif r.signed %}
-                <span class="status-badge status-ok">Registrada (legacy)</span>
+                <span class="status-badge status-warn">Firma no disponible</span>
               {% else %}
                 <span class="status-badge status-bad">Sin firma</span>
               {% endif %}
@@ -152,6 +159,7 @@
     </div>
     <div class="signature-preview-wrap">
       <img id="signaturePreview" class="signature-preview" src="" alt="Firma digital">
+      <div id="signatureEmpty" class="signature-empty">Firma no disponible</div>
     </div>
   </div>
 </div>
@@ -162,7 +170,19 @@ let signatureEscHandler = null;
 function openSignature(url) {
   const modal = document.getElementById("signatureModal");
   const img = document.getElementById("signaturePreview");
-  if (!modal || !img) return;
+  const empty = document.getElementById("signatureEmpty");
+  if (!modal || !img || !empty) return;
+  img.style.display = "none";
+  empty.style.display = "none";
+  img.src = "";
+  img.onload = () => {
+    img.style.display = "block";
+    empty.style.display = "none";
+  };
+  img.onerror = () => {
+    img.style.display = "none";
+    empty.style.display = "block";
+  };
   img.src = url || "";
   modal.style.display = "flex";
   modal.setAttribute("aria-hidden", "false");
@@ -178,10 +198,13 @@ function openSignature(url) {
 function closeSignature() {
   const modal = document.getElementById("signatureModal");
   const img = document.getElementById("signaturePreview");
-  if (!modal || !img) return;
+  const empty = document.getElementById("signatureEmpty");
+  if (!modal || !img || !empty) return;
   modal.style.display = "none";
   modal.setAttribute("aria-hidden", "true");
   img.src = "";
+  img.style.display = "none";
+  empty.style.display = "none";
   document.body.classList.remove("modal-open");
   document.body.style.overflow = "";
   if (signatureEscHandler) {

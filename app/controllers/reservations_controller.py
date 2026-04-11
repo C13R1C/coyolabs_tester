@@ -152,6 +152,20 @@ def _save_signature_image(signature_data_url: str) -> tuple[str | None, str | No
     return f"{uploads_rel_dir}/{filename}", None
 
 
+def _signature_asset_url(signature_ref: str | None) -> str | None:
+    value = (signature_ref or "").strip()
+    if not value:
+        return None
+    if value.startswith(("http://", "https://", "/")):
+        return value
+    if value.startswith("static/"):
+        return f"/{value}"
+    abs_path = os.path.join(current_app.root_path, "static", value)
+    if not os.path.exists(abs_path):
+        return None
+    return url_for("static", filename=value)
+
+
 def parse_date(value: str):
     return datetime.strptime(value, "%Y-%m-%d").date()
 
@@ -368,9 +382,12 @@ def my_reservations():
         .all()
     )
 
+    signature_url_map = {r.id: _signature_asset_url(getattr(r, "signature_ref", None)) for r in reservations}
+
     return render_template(
         "reservations/my_reservations.html",
         reservations=reservations,
+        signature_url_map=signature_url_map,
         active_page="reservations"
     )
 

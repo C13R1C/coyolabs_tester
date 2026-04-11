@@ -4,6 +4,15 @@
 {% block title %}{{ "Editar material" if is_edit else "Nuevo material" }}{% endblock %}
 
 {% block content %}
+<style>
+.material-image-block{display:grid;gap:10px;grid-template-columns:120px 1fr;align-items:start}
+.material-image-preview{width:110px;height:110px;border:1px dashed var(--stroke);border-radius:10px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:rgba(255,255,255,.5)}
+.material-image-preview img{width:100%;height:100%;object-fit:cover}
+.material-file-input{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
+.material-file-button{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 14px;border-radius:10px;border:1px solid var(--stroke);background:rgba(255,255,255,.75);font-weight:700;cursor:pointer}
+.material-file-meta{font-size:.85rem;color:var(--text-dim)}
+.material-remove-toggle{display:flex;gap:8px;align-items:center;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,.45);border:1px solid var(--stroke)}
+</style>
 <header class="topbar">
   <div class="topbar-left">
     <p class="page-kicker">Inventario · Administración</p>
@@ -112,8 +121,8 @@
     <div class="toolbar-group" style="grid-column:1 / -1;"><label for="tutorial_url">Enlace al manual</label><div class="search-box"><input id="tutorial_url" name="tutorial_url" placeholder="https://..." value="{{ data.get('tutorial_url', material.tutorial_url if material else '') }}"></div></div>
     <div class="toolbar-group" style="grid-column:1 / -1;">
       <label for="image_file">Imagen del material</label>
-      <div style="display:grid; gap:10px; grid-template-columns: 120px 1fr; align-items:start;">
-        <div style="width:110px; height:110px; border:1px dashed var(--stroke); border-radius:10px; display:flex; align-items:center; justify-content:center; overflow:hidden; background:rgba(255,255,255,.5);">
+      <div class="material-image-block">
+        <div class="material-image-preview">
           {% if image_preview_src %}
             <img src="{{ image_preview_src }}" alt="Imagen material" style="width:100%;height:100%;object-fit:cover;">
           {% else %}
@@ -121,10 +130,12 @@
           {% endif %}
         </div>
         <div style="display:grid; gap:8px;">
-          <input id="image_file" name="image_file" type="file" accept=".png,.jpg,.jpeg,.webp,.gif">
+          <input id="image_file" name="image_file" type="file" class="material-file-input" accept=".png,.jpg,.jpeg,.webp,.gif">
+          <label for="image_file" class="material-file-button" id="imageFileButton">{{ "Cambiar imagen" if image_preview_src else "Seleccionar imagen" }}</label>
+          <small id="imageFileName" class="material-file-meta">Ningún archivo seleccionado.</small>
           <small class="datetime-helper">Sube imagen para alta/reemplazo.</small>
           {% if is_edit and image_preview_src %}
-          <label style="display:flex; gap:8px; align-items:center;">
+          <label class="material-remove-toggle">
             <input type="checkbox" name="remove_image" value="1">
             <span>Quitar imagen actual</span>
           </label>
@@ -197,6 +208,15 @@
     if (locationChoice) {
       locationChoice.addEventListener("change", refreshLocationInput);
       refreshLocationInput();
+    }
+
+    const imageFileInput = form.querySelector("#image_file");
+    const imageFileName = form.querySelector("#imageFileName");
+    if (imageFileInput && imageFileName) {
+      imageFileInput.addEventListener("change", () => {
+        const file = imageFileInput.files && imageFileInput.files.length ? imageFileInput.files[0] : null;
+        imageFileName.textContent = file ? `Archivo: ${file.name}` : "Ningún archivo seleccionado.";
+      });
     }
 
     form.addEventListener("submit", () => {

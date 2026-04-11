@@ -66,12 +66,21 @@ def _material_image_src(material: Material | None) -> str | None:
         return None
     image_url = (material.image_url or "").strip()
     if image_url:
-        return image_url
+        if image_url.startswith(("http://", "https://")):
+            return image_url
+        if image_url.startswith("/static/"):
+            rel = image_url.replace("/static/", "", 1)
+            abs_path = os.path.join(current_app.root_path, "static", rel)
+            if os.path.exists(abs_path):
+                return image_url
     image_ref = (material.image_ref or "").strip()
     if not image_ref:
         return None
     if image_ref.startswith(("http://", "https://", "/")):
         return image_ref
+    abs_ref = os.path.join(current_app.root_path, "static", image_ref)
+    if not os.path.exists(abs_ref):
+        return None
     return url_for("static", filename=image_ref)
 
 
@@ -311,6 +320,7 @@ def inventory_list():
         page = total_pages
 
     materials = query.offset((page - 1) * PER_PAGE).limit(PER_PAGE).all()
+    material_image_map = {m.id: _material_image_src(m) for m in materials}
 
     return render_template(
         "inventory/inventory_list.html",
@@ -327,6 +337,7 @@ def inventory_list():
         total=total,
         total_pages=total_pages,
         per_page=PER_PAGE,
+        material_image_map=material_image_map,
         active_page="inventory",
     )
 
@@ -347,7 +358,12 @@ def material_detail(material_id: int):
     if normalize_role(current_user.role) == ROLE_STUDENT and m.career_id != current_user.career_id:
         flash("No tienes acceso a materiales de otra carrera.", "error")
         return redirect(url_for("inventory.inventory_list"))
-    return render_template("inventory/material_detail.html", material=m, active_page="inventory")
+    return render_template(
+        "inventory/material_detail.html",
+        material=m,
+        material_image_src=_material_image_src(m),
+        active_page="inventory",
+    )
 
 
 @inventory_bp.route("/admin/new", methods=["GET", "POST"])
