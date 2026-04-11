@@ -11,6 +11,8 @@ class Notification(db.Model):
     title = db.Column(db.String(255), nullable=False)
     message = db.Column(db.Text, nullable=False)
     link = db.Column(db.String(255))
+    event_code = db.Column(db.String(80), nullable=True, index=True)
+    is_persistent = db.Column(db.Boolean, nullable=False, default=False)
     is_read = db.Column(db.Boolean, nullable=False, default=False)
     created_at = db.Column(db.DateTime, nullable=False, server_default=func.now())
 

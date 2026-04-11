@@ -13,7 +13,7 @@
 </header>
 
 <section class="table-card">
-  <form method="post" class="toolbar" style="grid-template-columns:repeat(2, minmax(260px, 1fr));" data-single-submit {% if not is_edit %}data-form-mode="create"{% endif %}>
+  <form method="post" enctype="multipart/form-data" class="toolbar" style="grid-template-columns:repeat(2, minmax(260px, 1fr));" data-single-submit {% if not is_edit %}data-form-mode="create"{% endif %}>
     {% set data = form_data if form_data else {} %}
     {% if is_edit %}
     <input type="hidden" name="lab_id" value="{{ data.get('lab_id', material.lab_id) }}">
@@ -110,6 +110,28 @@
     <div class="toolbar-group"><label for="code">Código</label><div class="search-box"><input id="code" name="code" value="{{ data.get('code', material.code if material else '') }}"></div></div>
     <div class="toolbar-group"><label for="serial">Serie</label><div class="search-box"><input id="serial" name="serial" value="{{ data.get('serial', material.serial if material else '') }}"></div></div>
     <div class="toolbar-group" style="grid-column:1 / -1;"><label for="tutorial_url">Enlace al manual</label><div class="search-box"><input id="tutorial_url" name="tutorial_url" placeholder="https://..." value="{{ data.get('tutorial_url', material.tutorial_url if material else '') }}"></div></div>
+    <div class="toolbar-group" style="grid-column:1 / -1;">
+      <label for="image_file">Imagen del material</label>
+      <div style="display:grid; gap:10px; grid-template-columns: 120px 1fr; align-items:start;">
+        <div style="width:110px; height:110px; border:1px dashed var(--stroke); border-radius:10px; display:flex; align-items:center; justify-content:center; overflow:hidden; background:rgba(255,255,255,.5);">
+          {% if image_preview_src %}
+            <img src="{{ image_preview_src }}" alt="Imagen material" style="width:100%;height:100%;object-fit:cover;">
+          {% else %}
+            <span class="text-dim" style="font-size:.8rem;">Sin imagen</span>
+          {% endif %}
+        </div>
+        <div style="display:grid; gap:8px;">
+          <input id="image_file" name="image_file" type="file" accept=".png,.jpg,.jpeg,.webp,.gif">
+          <small class="datetime-helper">Sube imagen para alta/reemplazo.</small>
+          {% if is_edit and image_preview_src %}
+          <label style="display:flex; gap:8px; align-items:center;">
+            <input type="checkbox" name="remove_image" value="1">
+            <span>Quitar imagen actual</span>
+          </label>
+          {% endif %}
+        </div>
+      </div>
+    </div>
     <div class="toolbar-group" style="grid-column:1 / -1;"><label for="notes">Observaciones</label><textarea id="notes" name="notes" rows="4" class="form-control">{{ data.get('notes', material.notes if material else '') }}</textarea></div>
 
     <div class="toolbar-actions" style="grid-column:1 / -1;">

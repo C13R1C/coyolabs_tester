@@ -84,7 +84,7 @@
             {% endif %}
           </div>
           {% endif %}
-          <div class="forum-post-meta-bottom">Autor: {{ author_label_fn(post.author, post.is_anonymous) }} · {{ post.created_at }}</div>
+          <div class="forum-post-meta-bottom">Autor: {{ author_label_fn(post.author, post.is_anonymous) }} · {{ format_forum_datetime(post.created_at) }}</div>
         </div>
       </div>
     </a>

@@ -4,6 +4,7 @@
 
 
 {% block content %}
+<style>.always-uppercase{text-transform:uppercase;}</style>
 <style>
   .profile-layout{
     display:grid;
@@ -276,7 +277,7 @@
       <label>Materia</label>
       <div class="search-box">
         <i class="ph ph-book-open search-icon"></i>
-        <input type="text" name="subject_name" placeholder="Ej.: Programación Web" maxlength="160" required>
+        <input type="text" name="subject_name" placeholder="Ej.: Programación Web" maxlength="160" required class="always-uppercase">
       </div>
     </div>
 
@@ -284,7 +285,7 @@
       <label>Grupo (en mayúsculas)</label>
       <div class="search-box">
         <i class="ph ph-users search-icon"></i>
-        <input type="text" name="group_code" placeholder="Ej.: 3A" required>
+        <input type="text" name="group_code" placeholder="Ej.: 3A" required class="always-uppercase">
       </div>
     </div>
 

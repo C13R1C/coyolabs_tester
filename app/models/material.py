@@ -30,6 +30,7 @@ class Material(db.Model):
 
     # Evidencia / tutorial / notas
     image_ref = db.Column(db.Text, nullable=True)         # path/URL o referencia
+    image_url = db.Column(db.Text, nullable=True)
     tutorial_url = db.Column(db.Text, nullable=True)
     notes = db.Column(db.Text, nullable=True)
 

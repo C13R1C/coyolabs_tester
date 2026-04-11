@@ -18,6 +18,7 @@ from app.models.lab_ticket import LabTicket
 from app.models.ticket_item import TicketItem
 from app.models.subject import Subject
 from app.models.teacher_academic_load import TeacherAcademicLoad
+from app.models.user import User
 
 from app.extensions import db
 from app.models.reservation import Reservation
@@ -101,11 +102,11 @@ def _professor_assignments(teacher_id: int) -> list[TeacherAcademicLoad]:
 
 
 def _assignment_subject_name(assignment: TeacherAcademicLoad) -> str:
-    manual_name = (assignment.subject_name or "").strip()
+    manual_name = (assignment.subject_name or "").strip().upper()
     if manual_name:
         return manual_name
     if assignment.subject and assignment.subject.name:
-        return assignment.subject.name.strip()
+        return assignment.subject.name.strip().upper()
     return ""
 
 
@@ -481,7 +482,7 @@ def request_reservation():
         subject_name = _assignment_subject_name(assignment)
         if not subject_name:
             continue
-        professor_groups_by_subject.setdefault(subject_name, set()).add(assignment.group_code)
+        professor_groups_by_subject.setdefault(subject_name, set()).add((assignment.group_code or "").strip().upper())
     professor_groups_by_subject = {
         subject_name: sorted(groups)
         for subject_name, groups in professor_groups_by_subject.items()
@@ -501,11 +502,13 @@ def request_reservation():
         purpose = (request.form.get("purpose") or "").strip()
         group_name = (request.form.get("group_name") or "").strip()
         requester_name = _build_requester_name()
-        subject = (request.form.get("subject") or "").strip()
+        subject = (request.form.get("subject") or "").strip().upper()
         signature_data = request.form.get("signature_data") or ""
         selected_subject_id = None
 
         group_name, group_error = normalize_and_validate_group_code(group_name)
+        if group_name:
+            group_name = group_name.upper()
         if group_error:
             flash(group_error, "error")
             return redirect(url_for("reservations.request_reservation"))
@@ -525,7 +528,7 @@ def request_reservation():
             if not valid_assignment:
                 flash("La materia/grupo seleccionados no pertenecen a tu carga académica.", "error")
                 return redirect(url_for("reservations.request_reservation"))
-            subject = _assignment_subject_name(valid_assignment)
+            subject = _assignment_subject_name(valid_assignment).upper()
             selected_subject_id = valid_assignment.subject_id
 
         if (
@@ -540,7 +543,7 @@ def request_reservation():
             return redirect(url_for("reservations.request_reservation"))
 
         if not selected_subject_id:
-            matched_subject = Subject.query.filter(func.lower(Subject.name) == subject.lower()).first()
+            matched_subject = Subject.query.filter(func.upper(Subject.name) == subject.upper()).first()
             if matched_subject:
                 selected_subject_id = matched_subject.id
 
@@ -797,23 +800,37 @@ def admin_ticket_closure_requests():
 @min_role_required("ADMIN")
 def admin_approved_history():
     today = datetime.now().date()
+    user_filter = (request.args.get("user") or "").strip()
+    requester_filter = (request.args.get("requester") or "").strip()
 
-    reservations = (
+    query = (
         Reservation.query
         .options(
             joinedload(Reservation.items).joinedload(ReservationItem.material),
             joinedload(Reservation.lab_tickets),
             joinedload(Reservation.user)
         )
+        .outerjoin(User, Reservation.user_id == User.id)
         .filter(Reservation.status == ReservationStatus.APPROVED)
         .filter(Reservation.date < today)
-        .order_by(Reservation.date.desc(), Reservation.start_time.desc())
-        .all()
     )
+    if user_filter:
+        like_user = f"%{user_filter}%"
+        query = query.filter(
+            db.or_(
+                User.email.ilike(like_user),
+                db.func.coalesce(User.full_name, "").ilike(like_user),
+            )
+        )
+    if requester_filter:
+        query = query.filter(db.func.coalesce(Reservation.teacher_name, "").ilike(f"%{requester_filter}%"))
+    reservations = query.order_by(Reservation.date.desc(), Reservation.start_time.desc()).all()
 
     return render_template(
         "reservations/admin_approved_history.html",
         reservations=reservations,
+        user_filter=user_filter,
+        requester_filter=requester_filter,
         active_page="reservations"
     )
 

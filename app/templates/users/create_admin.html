@@ -13,27 +13,16 @@
 
 <section class="table-card">
   <h3 style="margin-top:0;">Perfiles pendientes ({{ pending_accounts|length }})</h3>
-  <p class="text-dim" style="margin-top:0;">Asigna rol institucional a cuentas pendientes.</p>
   {% if pending_accounts %}
   <div class="table-wrap">
     <table class="inventory-table table-mobile-cards" style="min-width:960px;">
-      <thead>
-        <tr>
-          <th>Email</th>
-          <th>Nombre</th>
-          <th>Matrícula</th>
-          <th>Creada</th>
-          <th>Asignar rol</th>
-        </tr>
-      </thead>
+      <thead><tr><th>Email</th><th>Nombre</th><th>Matrícula</th><th>Creada</th><th>Asignar rol</th></tr></thead>
       <tbody>
         {% for user in pending_accounts %}
         <tr>
-          <td data-label="Email">{{ user.email }}</td>
-          <td data-label="Nombre">{{ user.full_name or '-' }}</td>
-          <td data-label="Matrícula">{{ user.matricula or '-' }}</td>
-          <td data-label="Creada">{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else '-' }}</td>
-          <td data-label="Asignar rol">
+          <td>{{ user.email }}</td><td>{{ user.full_name or '-' }}</td><td>{{ user.matricula or '-' }}</td>
+          <td>{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else '-' }}</td>
+          <td>
             <form method="post" action="{{ url_for('users.assign_role', user_id=user.id) }}" style="display:flex; gap:8px; flex-wrap:wrap;">
               <div class="select-wrap" style="min-width:200px;">
                 <select name="role" required>
@@ -41,8 +30,7 @@
                   {% for role_name in pending_accounts_assignable_roles %}
                   <option value="{{ role_name }}">{{ role_name|role_label }}</option>
                   {% endfor %}
-                </select>
-                <i class="ph ph-caret-down select-arrow"></i>
+                </select><i class="ph ph-caret-down select-arrow"></i>
               </div>
               <button class="btn btn-gold" type="submit">Asignar</button>
             </form>
@@ -52,162 +40,95 @@
       </tbody>
     </table>
   </div>
-  {% else %}
-  <p>No hay perfiles pendientes por resolver.</p>
-  {% endif %}
+  {% else %}<p>No hay perfiles pendientes por resolver.</p>{% endif %}
 </section>
 
 {% if is_superadmin %}
 <section class="table-card">
   <h3 style="margin-top:0;">Cambios de rol</h3>
-  <p class="text-dim" style="margin-top:0;">Cambio directo de rol para cuentas existentes (sin crear SUPERADMIN).</p>
-
   <form method="post" class="toolbar" style="grid-template-columns: 1fr 1fr auto; margin-top:12px;">
     <input type="hidden" name="action" value="change_role">
-    <div class="toolbar-group">
-      <label>Cuenta existente</label>
-      <div class="select-wrap">
-        <select name="user_id" required>
-          <option value="">Selecciona una cuenta</option>
-          {% for user in eligible_users %}
-          <option value="{{ user.id }}">{{ user.email }}{% if user.full_name %} · {{ user.full_name }}{% endif %} · {{ user.role|role_label }}</option>
-          {% endfor %}
-        </select>
-        <i class="ph ph-caret-down select-arrow"></i>
+    <div class="toolbar-group" style="position:relative;">
+      <label for="roleUserSearch">Buscar usuario (correo o nombre)</label>
+      <div class="search-box">
+        <i class="ph ph-user search-icon"></i>
+        <input id="roleUserSearch" type="text" placeholder="Escribe correo o nombre" autocomplete="off" required>
+        <input type="hidden" id="roleUserId" name="user_id" required>
       </div>
+      <div id="roleUserAutocomplete" class="autocomplete-list" style="position:absolute; top:100%; left:0; right:0; z-index:30; background:#fff; border:1px solid rgba(0,0,0,.08); border-radius:10px; margin-top:6px; max-height:220px; overflow:auto;"></div>
     </div>
-
-    <div class="toolbar-group">
-      <label>Nuevo rol</label>
-      <div class="select-wrap">
-        <select name="role" required>
-          <option value="STUDENT">Estudiante</option>
-          <option value="TEACHER">Profesor</option>
-          <option value="STAFF">Staff</option>
-          <option value="ADMIN">Administrador</option>
-        </select>
-        <i class="ph ph-caret-down select-arrow"></i>
-      </div>
-      {% endif %}
-    </div>
-
-    <div class="toolbar-actions" style="align-self:end;">
-      <button type="submit" class="btn btn-gold">Cambiar rol</button>
-      <a href="{{ url_for('users.admin_panel') }}" class="btn btn-ghost">Volver</a>
-    </div>
+    <div class="toolbar-group"><label>Nuevo rol</label><div class="select-wrap"><select name="role" required>
+      <option value="STUDENT">Estudiante</option><option value="TEACHER">Profesor</option><option value="STAFF">Staff</option><option value="ADMIN">Administrador</option>
+    </select><i class="ph ph-caret-down select-arrow"></i></div></div>
+    <div class="toolbar-actions" style="align-self:end;"><button type="submit" class="btn btn-gold">Cambiar rol</button></div>
   </form>
-  {% if eligible_users|length == 0 %}
-  <p style="margin-top:12px; color:var(--text-dim);">No hay cuentas elegibles para promoción en este momento.</p>
-  {% endif %}
-  {% if not is_root_superadmin %}
-  <p style="margin-top:8px; color:var(--text-dim);">Solo el SUPERADMIN padre puede promover cuentas a SUPERADMIN.</p>
-  {% endif %}
 </section>
 
-<section class="table-card">
-  <h3 style="margin-top:0;">Solicitudes de promoción a ADMIN ({{ pending_admin_promotions|length }})</h3>
-  {% if pending_admin_promotions %}
-  <div class="table-wrap">
-    <table class="inventory-table" style="min-width:980px;">
-      <thead>
-        <tr>
-          <th>Solicitante</th>
-          <th>Cuenta objetivo</th>
-          <th>Estado</th>
-          <th>Fecha</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for req in pending_admin_promotions %}
-        <tr>
-          <td>{{ req.requester.email if req.requester else '-' }}</td>
-          <td>{{ req.target_user.email if req.target_user else '-' }}</td>
-          <td>
-            <span class="status-badge {% if req.status == 'PENDING' %}status-warn{% elif req.status == 'APPROVED' %}status-ok{% else %}status-bad{% endif %}">
-              {{ req.status|status_label }}
-            </span>
-          </td>
-          <td>{{ req.created_at.strftime('%Y-%m-%d') if req.created_at else '-' }}</td>
-          <td>
-            {% if is_superadmin and req.status == 'PENDING' %}
-            <form method="post" action="{{ url_for('users.create_admin_account') }}" style="display:inline-block;">
-              <input type="hidden" name="action" value="review_promotion">
-              <input type="hidden" name="request_id" value="{{ req.id }}">
-              <input type="hidden" name="decision" value="APPROVE">
-              <button class="btn btn-gold" type="submit">Aprobar</button>
-            </form>
-            <form method="post" action="{{ url_for('users.create_admin_account') }}" style="display:inline-block; margin-left:6px;">
-              <input type="hidden" name="action" value="review_promotion">
-              <input type="hidden" name="request_id" value="{{ req.id }}">
-              <input type="hidden" name="decision" value="REJECT">
-              <button class="btn btn-ghost" type="submit">Rechazar</button>
-            </form>
-            {% else %}
-              -
-            {% endif %}
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% else %}
-  <p>No hay solicitudes de promoción registradas.</p>
-  {% endif %}
-</section>
+<script>
+(() => {
+  const USERS = [
+    {% for user in eligible_users %}
+    {
+      id: {{ user.id }},
+      email: {{ (user.email or '')|tojson }},
+      full_name: {{ (user.full_name or '')|tojson }},
+      role: {{ (user.role or '')|tojson }}
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ];
 
-<section class="table-card">
-  <h3 style="margin-top:0;">Solicitudes de promoción a ADMIN ({{ pending_admin_promotions|length }})</h3>
-  {% if pending_admin_promotions %}
-  <div class="table-wrap">
-    <table class="inventory-table" style="min-width:980px;">
-      <thead>
-        <tr>
-          <th>Solicitante</th>
-          <th>Cuenta objetivo</th>
-          <th>Estado</th>
-          <th>Fecha</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for req in pending_admin_promotions %}
-        <tr>
-          <td>{{ req.requester.email if req.requester else '-' }}</td>
-          <td>{{ req.target_user.email if req.target_user else '-' }}</td>
-          <td>
-            <span class="status-badge {% if req.status == 'PENDING' %}status-warn{% elif req.status == 'APPROVED' %}status-ok{% else %}status-bad{% endif %}">
-              {{ req.status|status_label }}
-            </span>
-          </td>
-          <td>{{ req.created_at.strftime('%Y-%m-%d') if req.created_at else '-' }}</td>
-          <td>
-            {% if is_superadmin and req.status == 'PENDING' %}
-            <form method="post" action="{{ url_for('users.create_admin_account') }}" style="display:inline-block;">
-              <input type="hidden" name="action" value="review_promotion">
-              <input type="hidden" name="request_id" value="{{ req.id }}">
-              <input type="hidden" name="decision" value="APPROVE">
-              <button class="btn btn-gold" type="submit">Aprobar</button>
-            </form>
-            <form method="post" action="{{ url_for('users.create_admin_account') }}" style="display:inline-block; margin-left:6px;">
-              <input type="hidden" name="action" value="review_promotion">
-              <input type="hidden" name="request_id" value="{{ req.id }}">
-              <input type="hidden" name="decision" value="REJECT">
-              <button class="btn btn-ghost" type="submit">Rechazar</button>
-            </form>
-            {% else %}
-              -
-            {% endif %}
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% else %}
-  <p>No hay solicitudes de promoción registradas.</p>
-  {% endif %}
-</section>
+  const input = document.getElementById("roleUserSearch");
+  const hidden = document.getElementById("roleUserId");
+  const list = document.getElementById("roleUserAutocomplete");
+  if (!input || !hidden || !list) return;
+
+  function render(matches) {
+    if (!matches.length) {
+      list.innerHTML = '<div style="padding:10px 12px; color:var(--text-dim);">Sin coincidencias</div>';
+      return;
+    }
+    list.innerHTML = matches.map((u) => {
+      const title = (u.full_name || '').trim() || u.email;
+      const subtitle = `${u.email} · ${u.role}`;
+      return `<button type="button" class="autocomplete-item" data-user-id="${u.id}" style="width:100%; text-align:left; border:0; background:transparent; padding:10px 12px;">`
+        + `<strong style="display:block;">${title}</strong>`
+        + `<span style="font-size:.83rem; color:var(--text-dim);">${subtitle}</span>`
+        + `</button>`;
+    }).join("");
+  }
+
+  function searchUsers() {
+    const q = (input.value || '').trim().toLowerCase();
+    hidden.value = '';
+    if (!q) {
+      list.innerHTML = '';
+      return;
+    }
+    const matches = USERS.filter((u) => {
+      const email = (u.email || '').toLowerCase();
+      const name = (u.full_name || '').toLowerCase();
+      return email.includes(q) || name.includes(q);
+    }).slice(0, 12);
+    render(matches);
+  }
+
+  list.addEventListener('click', (event) => {
+    const btn = event.target.closest('[data-user-id]');
+    if (!btn) return;
+    const userId = btn.getAttribute('data-user-id');
+    const user = USERS.find((item) => String(item.id) === String(userId));
+    if (!user) return;
+    hidden.value = user.id;
+    input.value = (user.full_name || '').trim() ? `${user.full_name} · ${user.email}` : user.email;
+    list.innerHTML = '';
+  });
+
+  input.addEventListener('input', searchUsers);
+  document.addEventListener('click', (event) => {
+    if (event.target.closest('#roleUserAutocomplete') || event.target === input) return;
+    list.innerHTML = '';
+  });
+})();
+</script>
 {% endif %}
 {% endblock %}
