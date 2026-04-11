@@ -8,7 +8,7 @@
     <p class="page-kicker">Gobernanza</p>
     <h1>Revisión de acciones de cuenta</h1>
     <p class="page-subtitle">
-      Bandeja de revisión para cuentas pendientes y solicitudes de perfil. El bloque de acciones sensibles fue ocultado de la UI principal.
+      Bandeja secundaria para revisión de acciones críticas. La operación principal vive en Administrar perfiles y roles.
     </p>
   </div>
 </header>
@@ -58,13 +58,4 @@
   {% endif %}
 </section>
 
-<section class="table-card">
-  <h3 style="margin-top:0;">Solicitudes de perfil pendientes ({{ pending_profile_requests|length }})</h3>
-  <p class="text-dim" style="margin-top:0;">
-    Estas solicitudes se gestionan en la bandeja de perfil para mantener separada la revisión de datos personales.
-  </p>
-  <div class="toolbar-actions">
-    <a href="{{ url_for('users.profile_change_requests') }}" class="btn btn-ghost">Ir a Solicitudes de perfil</a>
-  </div>
-</section>
 {% endblock %}

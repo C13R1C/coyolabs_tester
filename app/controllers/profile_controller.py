@@ -10,15 +10,12 @@ from app.models.academic_level import AcademicLevel
 from app.models.career import Career
 from app.models.debt import Debt
 from app.models.inventory_request_ticket import InventoryRequestTicket
-from app.models.notification import Notification
-from app.models.profile_change_request import ProfileChangeRequest
 from app.models.reservation import Reservation
 from app.models.teacher_academic_load import TeacherAcademicLoad
-from app.models.user import User
 from app.services.audit_service import log_event
 from app.utils.landing import resolve_landing_endpoint
 from app.utils.validators import normalize_and_validate_group_code, normalize_and_validate_phone
-from app.utils.roles import ROLE_TEACHER, ROLE_STUDENT, is_admin_role, normalize_role
+from app.utils.roles import ROLE_TEACHER, ROLE_STUDENT, normalize_role
 
 profile_bp = Blueprint("profile", __name__, url_prefix="/profile")
 
@@ -244,50 +241,7 @@ def request_profile_update():
     if legacy_phone:
         flash("Redirigiendo al flujo principal de cambio de teléfono.", "info")
         return request_phone_change()
-
-    if is_admin_role(current_user.role):
-        flash("Tu cuenta administrativa no requiere solicitud de actualización de perfil.", "info")
-        return redirect(url_for("profile.my_profile"))
-
-    pending = (
-        ProfileChangeRequest.query
-        .filter(ProfileChangeRequest.user_id == current_user.id)
-        .filter(ProfileChangeRequest.request_type == "PROFILE_CHANGE")
-        .filter(ProfileChangeRequest.status == "PENDING")
-        .first()
-    )
-    if pending:
-        flash("Ya tienes una solicitud de actualización de perfil pendiente.", "warning")
-        return redirect(url_for("profile.my_profile"))
-
-    req = ProfileChangeRequest(
-        user_id=current_user.id,
-        request_type="PROFILE_CHANGE",
-        reason="Solicitud recibida desde el formulario de actualización de perfil",
-        status="PENDING",
-    )
-    db.session.add(req)
-
-    admins = User.query.filter(User.role.in_(["ADMIN", "SUPERADMIN"])).all()
-    for admin in admins:
-        notif = Notification(
-            user_id=admin.id,
-            title="Solicitud de actualización de perfil",
-            message=f"{current_user.email} generó una solicitud de perfil (canal unificado).",
-            link=url_for("users.profile_change_requests"),
-        )
-        db.session.add(notif)
-
-    db.session.commit()
-    log_event(
-        module="PROFILE",
-        action="PROFILE_UPDATE_REQUEST_USED",
-        user_id=current_user.id,
-        entity_label="/profile/request-update",
-        description="Uso de formulario de actualización de perfil",
-        metadata={"preferred_flows": ["/profile/phone-change/request", "/profile/complete"]},
-    )
-    flash("Solicitud registrada correctamente.", "success")
+    flash("La actualización de perfil ahora es autoservicio. No se generan solicitudes de perfil.", "info")
     return redirect(url_for("profile.my_profile"))
 
 

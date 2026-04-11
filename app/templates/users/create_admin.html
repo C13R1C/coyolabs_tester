@@ -7,13 +7,13 @@
   <div class="topbar-left">
     <p class="page-kicker">Gobernanza</p>
     <h1>Administrar perfiles y roles</h1>
-    <p class="page-subtitle">Bandeja central para resolver perfiles pendientes, solicitudes de promoción y cambios de rol.</p>
+    <p class="page-subtitle">{{ 'Resuelve perfiles pendientes y aplica cambios directos de rol.' if is_superadmin else 'Resuelve perfiles pendientes institucionales.' }}</p>
   </div>
 </header>
 
 <section class="table-card">
   <h3 style="margin-top:0;">Perfiles pendientes ({{ pending_accounts|length }})</h3>
-  <p class="text-dim" style="margin-top:0;">Resuelve primero las cuentas con rol pendiente para habilitar su gestión normal.</p>
+  <p class="text-dim" style="margin-top:0;">Asigna rol institucional a cuentas pendientes.</p>
   {% if pending_accounts %}
   <div class="table-wrap">
     <table class="inventory-table table-mobile-cards" style="min-width:960px;">
@@ -57,20 +57,13 @@
   {% endif %}
 </section>
 
+{% if is_superadmin %}
 <section class="table-card">
-  <h3 style="margin-top:0;">Solicitudes de perfil pendientes ({{ pending_profile_requests|length }})</h3>
-  <p class="text-dim" style="margin-top:0;">Se mantienen visibles aquí para no depender del botón anterior de solicitudes de perfil.</p>
-  <div class="toolbar-actions">
-    <a href="{{ url_for('users.profile_change_requests') }}" class="btn btn-ghost">Revisar solicitudes de perfil</a>
-  </div>
-</section>
-
-<section class="table-card">
-  <h3 style="margin-top:0;">Promoción y cambios administrativos</h3>
-  <p class="text-dim" style="margin-top:0;">ADMIN puede solicitar promoción a ADMIN; SUPERADMIN puede aprobar y gestionar revocación de superadministrador según jerarquía.</p>
+  <h3 style="margin-top:0;">Cambios de rol</h3>
+  <p class="text-dim" style="margin-top:0;">Cambio directo de rol para cuentas existentes (sin crear SUPERADMIN).</p>
 
   <form method="post" class="toolbar" style="grid-template-columns: 1fr 1fr auto; margin-top:12px;">
-    <input type="hidden" name="action" value="promote">
+    <input type="hidden" name="action" value="change_role">
     <div class="toolbar-group">
       <label>Cuenta existente</label>
       <div class="select-wrap">
@@ -85,21 +78,13 @@
     </div>
 
     <div class="toolbar-group">
-      <label>Acción de rol</label>
-      {% if is_superadmin %}
+      <label>Nuevo rol</label>
       <div class="select-wrap">
         <select name="role" required>
-          <option value="ADMIN">Cambiar rol a administrador</option>
-          {% if is_root_superadmin %}
-          <option value="SUPERADMIN">Asignar superadministrador</option>
-          {% endif %}
-        </select>
-        <i class="ph ph-caret-down select-arrow"></i>
-      </div>
-      {% else %}
-      <div class="select-wrap">
-        <select name="role" required>
-          <option value="ADMIN">Solicitar promoción a administrador</option>
+          <option value="STUDENT">Estudiante</option>
+          <option value="TEACHER">Profesor</option>
+          <option value="STAFF">Staff</option>
+          <option value="ADMIN">Administrador</option>
         </select>
         <i class="ph ph-caret-down select-arrow"></i>
       </div>
@@ -107,7 +92,7 @@
     </div>
 
     <div class="toolbar-actions" style="align-self:end;">
-      <button type="submit" class="btn btn-gold">Enviar</button>
+      <button type="submit" class="btn btn-gold">Cambiar rol</button>
       <a href="{{ url_for('users.admin_panel') }}" class="btn btn-ghost">Volver</a>
     </div>
   </form>
@@ -224,4 +209,5 @@
   <p>No hay solicitudes de promoción registradas.</p>
   {% endif %}
 </section>
+{% endif %}
 {% endblock %}
