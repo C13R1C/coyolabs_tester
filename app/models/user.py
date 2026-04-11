@@ -37,6 +37,12 @@ class User(UserMixin, db.Model):
     professor_subjects = db.Column(db.Text, nullable=True)
     career_rel = db.relationship("Career", backref="users", foreign_keys=[career_id])
     academic_level_rel = db.relationship("AcademicLevel", backref="users", foreign_keys=[academic_level_id])
+    notifications = db.relationship(
+    "Notification",
+    foreign_keys="Notification.user_id",
+    back_populates="user",
+    lazy="dynamic"
+)
 
     created_at = db.Column(db.DateTime, server_default=db.func.now(), nullable=False)
 

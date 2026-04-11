@@ -1,24 +1,26 @@
 from app.extensions import db
-
+from sqlalchemy.sql import func
 
 class Notification(db.Model):
     __tablename__ = "notifications"
 
     id = db.Column(db.Integer, primary_key=True)
-
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    title = db.Column(db.String(150), nullable=False)
+    related_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+
+    title = db.Column(db.String(255), nullable=False)
     message = db.Column(db.Text, nullable=False)
-    link = db.Column(db.String(255), nullable=True)
-    event_code = db.Column(db.String(50), nullable=True, index=True)
-    is_persistent = db.Column(db.Boolean, nullable=False, default=False)
-    related_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
-
+    link = db.Column(db.String(255))
     is_read = db.Column(db.Boolean, nullable=False, default=False)
+    created_at = db.Column(db.DateTime, nullable=False, server_default=func.now())
 
-    created_at = db.Column(db.DateTime, server_default=db.func.now(), nullable=False)
+    user = db.relationship(
+        "User",
+        foreign_keys=[user_id],
+        back_populates="notifications"
+    )
 
-    user = db.relationship("User", backref="notifications")
-
-    def __repr__(self) -> str:
-        return f"<Notification {self.id} user={self.user_id} read={self.is_read}>"
+    related_user = db.relationship(
+        "User",
+        foreign_keys=[related_user_id]
+    )
