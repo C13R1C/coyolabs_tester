@@ -5,26 +5,26 @@
 {% block extra_css %}
 <style>
 :root {
-  --bg: #0c0e14;
-  --bg-raised: #12151f;
-  --card: #171b28;
-  --card-hover: #1c2133;
-  --border: #262b3e;
-  --border-light: #2f3550;
-  --fg: #e4e5eb;
-  --fg-secondary: #b0b3c4;
-  --fg-muted: #6b6f84;
-  --accent: #00d4aa;
-  --accent-dim: rgba(0,212,170,0.12);
-  --accent-glow: rgba(0,212,170,0.25);
-  --danger: #ff4757;
-  --danger-dim: rgba(255,71,87,0.12);
-  --warning: #f0a500;
-  --warning-dim: rgba(240,165,0,0.12);
-  --success: #00d4aa;
-  --info: #00bcd4;
-  --info-dim: rgba(0,188,212,0.12);
-  --radius: 12px;
+  --bg: transparent;
+  --bg-raised: var(--panel);
+  --card: var(--panel-2);
+  --card-hover: rgba(255,255,255,0.92);
+  --border: var(--stroke);
+  --border-light: var(--stroke-strong);
+  --fg: var(--text);
+  --fg-secondary: var(--text-soft);
+  --fg-muted: var(--text-dim);
+  --accent: var(--green);
+  --accent-dim: var(--green-3);
+  --accent-glow: rgba(91,140,114,0.22);
+  --danger: var(--danger);
+  --danger-dim: rgba(200,91,91,0.12);
+  --warning: var(--warning);
+  --warning-dim: rgba(212,166,61,0.14);
+  --success: var(--success);
+  --info: var(--info);
+  --info-dim: rgba(77,136,217,0.12);
+  --radius: 14px;
   --radius-sm: 8px;
   --radius-xs: 6px;
   --shadow: 0 4px 24px rgba(0,0,0,0.3);
@@ -38,17 +38,6 @@
 
 html { font-size: 15px; }
 
-body {
-  font-family: var(--font-body);
-  background: var(--bg);
-  color: var(--fg);
-  min-height: 100vh;
-  overflow-x: hidden;
-  background-image:
-    radial-gradient(ellipse at 15% 0%, rgba(0,212,170,0.04) 0%, transparent 55%),
-    radial-gradient(ellipse at 85% 100%, rgba(0,188,212,0.03) 0%, transparent 55%);
-}
-
 /* ===== SCROLLBAR ===== */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -60,12 +49,9 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 1.1rem 1.5rem;
-  border-bottom: 1px solid var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
   background: var(--bg-raised);
-  backdrop-filter: blur(12px);
-  position: sticky;
-  top: 0;
-  z-index: 50;
   gap: 1rem;
   flex-wrap: wrap;
 }
@@ -76,13 +62,13 @@ body {
 }
 .hero-logo {
   width: 36px; height: 36px;
-  background: linear-gradient(135deg, var(--accent), #009e7e);
+  background: linear-gradient(135deg, var(--gold), var(--gold-2));
   border-radius: var(--radius-sm);
   display: grid; place-items: center;
   font-size: 1rem; color: var(--bg);
   font-weight: 700;
   font-family: var(--font-display);
-  box-shadow: 0 0 20px var(--accent-glow);
+  box-shadow: 0 8px 20px rgba(140,106,20,0.22);
 }
 .hero-title {
   font-family: var(--font-display);
@@ -138,12 +124,13 @@ body {
 /* ===== MAIN LAYOUT ===== */
 .main-layout {
   display: grid;
-  grid-template-columns: 1fr 380px;
-  gap: 1.25rem;
-  padding: 1.25rem;
-  max-width: 1400px;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+  gap: 1rem;
+  padding: 1rem 0;
+  width: 100%;
+  max-width: 1180px;
   margin: 0 auto;
-  min-height: calc(100vh - 68px);
+  min-height: 0;
 }
 
 /* ===== SCANNER COLUMN ===== */
@@ -156,8 +143,8 @@ body {
   position: relative;
   border-radius: var(--radius);
   overflow: hidden;
-  background: #0a0c11;
-  border: 1px solid var(--border);
+  background: #1e2322;
+  border: 1px solid var(--border-light);
   aspect-ratio: 4/3;
   box-shadow: var(--shadow);
 }
@@ -171,7 +158,7 @@ body {
   justify-content: center;
   gap: 0.75rem;
   z-index: 5;
-  background: #0a0c11;
+  background: #1e2322;
   transition: opacity 0.4s ease;
 }
 .scanner-placeholder.hidden { opacity: 0; pointer-events: none; }
@@ -662,10 +649,10 @@ body {
 }
 
 /* ===== RESPONSIVE ===== */
-@media (max-width: 860px) {
+@media (max-width: 980px) {
   .main-layout {
     grid-template-columns: 1fr;
-    padding: 0.75rem;
+    padding: 0.85rem 0;
     gap: 0.75rem;
   }
   .scanner-wrapper { aspect-ratio: 1/1; }
@@ -675,6 +662,13 @@ body {
   .hero-sub { display: none; }
   .tech-tools-inner { grid-template-columns: 1fr; }
 }
+@media (max-width: 640px) {
+  .hero { padding: 0.8rem; }
+  .toolbar { display: grid; grid-template-columns: 1fr 1fr; }
+  .btn-toolbar { justify-content: center; min-height: 42px; }
+  .overlay-actions { flex-direction: column; }
+}
+
 @media (max-width: 480px) {
   html { font-size: 14px; }
   .scanner-wrapper { aspect-ratio: 3/4; }
@@ -700,8 +694,7 @@ body {
     <div class="hero-logo">CL</div>
     <div>
       <div class="hero-title">Escaneo RA</div>
-      <div class="hero-sub">Escanea codigos QR para consultar materiales de laboratorio</div>
-    </div>
+          </div>
   </div>
   <div class="status-chip" id="statusChip" data-state="ready">
     <span class="status-dot"></span>
@@ -753,12 +746,15 @@ body {
       <button class="btn-toolbar" id="btnStop" onclick="stopScan()" style="display:none;">
         <i class="fa-solid fa-stop"></i> Detener
       </button>
+      {% if can_view_ra_tools %}
       <button class="btn-toolbar" id="btnTools" onclick="toggleTechTools()">
         <i class="fa-solid fa-wrench"></i> Herramientas tecnicas
       </button>
+      {% endif %}
     </div>
 
     <!-- TECH TOOLS -->
+    {% if can_view_ra_tools %}
     <div class="tech-tools" id="techTools">
       <div class="tech-tools-inner">
         <div class="input-group full">
@@ -783,6 +779,7 @@ body {
         </div>
       </div>
     </div>
+    {% endif %}
   </section>
 
   <!-- COLUMNA DERECHA -->
@@ -831,6 +828,12 @@ body {
 
 <!-- TOASTS -->
 <div class="toast-container" id="toastContainer"></div>
+
+{% if not can_view_ra_tools %}
+<input type="hidden" id="cfgBaseUrl" value="{{ ra_api_base_url }}">
+<input type="hidden" id="cfgApiKey" value="{{ ra_api_key }}">
+<input type="hidden" id="cfgEmail" value="{{ ra_user_email }}">
+{% endif %}
 
 <script>
 /* ============================================================
