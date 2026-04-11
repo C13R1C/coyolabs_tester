@@ -88,8 +88,8 @@
 <div id="debts-admin-list-container">
   {% if debt_rows %}
   <section class="table-card">
-    <div class="table-wrap">
-      <table class="inventory-table" id="debtTable" style="min-width: 1100px;">
+    <div class="table-wrap" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+      <table class="inventory-table table-mobile-cards" id="debtTable" style="min-width: 1100px;">
         <thead>
           <tr>
             <th>ID</th>
@@ -107,21 +107,21 @@
         <tbody>
         {% for row in debt_rows %}
           <tr data-status="{{ row.status }}" data-flow="{{ row.flow_label }}" data-search="{{ row.search_blob }}">
-            <td>{{ row.id_label }}</td>
+            <td data-label="ID">{{ row.id_label }}</td>
 
-            <td>
+            <td data-label="Usuario">
               <strong>{{ row.user.email }}</strong>
               <br>
               <small style="opacity:.8;">{{ row.user.matricula or 'Sin matrícula' }} · {{ row.user.full_name or '-' }}</small>
             </td>
 
-            <td>
+            <td data-label="Estado">
               <span class="status-badge {% if row.status == 'PENDING' %}status-bad{% else %}status-ok{% endif %}">
                 {{ row.status|status_label }}
               </span>
             </td>
 
-            <td>
+            <td data-label="Materiales">
               <div>{{ row.material_label }}</div>
               {% if row.row_type == "group" %}
                 <small style="opacity:.8;">{{ row.material_preview }}</small>
@@ -130,15 +130,15 @@
               {% endif %}
             </td>
 
-            <td>{{ row.total_original }}</td>
-            <td>{{ row.total_pending }}</td>
+            <td data-label="Cant. original">{{ row.total_original }}</td>
+            <td data-label="Cant. pendiente">{{ row.total_pending }}</td>
 
-            <td>{{ row.reason }}</td>
-            <td>
+            <td data-label="Razón">{{ row.reason }}</td>
+            <td data-label="Flujo">
               <span class="status-badge status-neutral">{{ row.flow_label }}</span>
             </td>
 
-            <td>
+            <td data-label="Acción">
               <div style="display:flex; flex-wrap:wrap; gap:6px;">
                 <a href="{{ url_for('debts.admin_detail', debt_id=row.detail_debt_id) }}" class="btn btn-ghost">Ver detalle</a>
                 {% if row.can_pay_from_list %}

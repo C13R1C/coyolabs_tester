@@ -544,8 +544,8 @@
       </div>
 
       {% if top_materials %}
-      <div class="table-wrap">
-        <table class="inventory-table" style="min-width:620px;">
+      <div class="table-wrap" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+        <table class="inventory-table table-mobile-cards" style="min-width:620px;">
           <thead>
             <tr>
               <th>Material</th>
@@ -555,8 +555,8 @@
           <tbody>
             {% for m in top_materials %}
             <tr>
-              <td>{{ m[0] }}</td>
-              <td>{{ m[1] }}</td>
+              <td data-label="Material">{{ m[0] }}</td>
+              <td data-label="Total solicitado">{{ m[1] }}</td>
             </tr>
             {% endfor %}
           </tbody>
@@ -619,8 +619,8 @@
       </div>
 
       {% if top_debtors %}
-      <div class="table-wrap">
-        <table class="inventory-table" style="min-width:620px;">
+      <div class="table-wrap" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+        <table class="inventory-table table-mobile-cards" style="min-width:620px;">
           <thead>
             <tr>
               <th>Usuario</th>
@@ -630,8 +630,8 @@
           <tbody>
             {% for d in top_debtors %}
             <tr>
-              <td>{{ d[0] }}</td>
-              <td>{{ d[1] }}</td>
+              <td data-label="Usuario">{{ d[0] }}</td>
+              <td data-label="Adeudos abiertos">{{ d[1] }}</td>
             </tr>
             {% endfor %}
           </tbody>
@@ -655,8 +655,8 @@
       </div>
 
       {% if top_rooms %}
-      <div class="table-wrap">
-        <table class="inventory-table" style="min-width:620px;">
+      <div class="table-wrap" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+        <table class="inventory-table table-mobile-cards" style="min-width:620px;">
           <thead>
             <tr>
               <th>Salón/Lab</th>
@@ -666,8 +666,8 @@
           <tbody>
             {% for room in top_rooms %}
             <tr>
-              <td>{{ room[0] }}</td>
-              <td>{{ room[1] }}</td>
+              <td data-label="Salón/Lab">{{ room[0] }}</td>
+              <td data-label="Reservas">{{ room[1] }}</td>
             </tr>
             {% endfor %}
           </tbody>
@@ -693,8 +693,8 @@
   </div>
 
   {% if recent_debts %}
-  <div class="table-wrap">
-    <table class="inventory-table" style="min-width:980px;">
+  <div class="table-wrap" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+    <table class="inventory-table table-mobile-cards" style="min-width:980px;">
       <thead>
         <tr>
           <th>ID</th>
@@ -711,13 +711,13 @@
             {% set debt_badge = "status-bad" %}
           {% endif %}
         <tr>
-          <td>#{{ d.id }}</td>
-          <td>{{ d.user.email if d.user else '-' }}</td>
-          <td>{{ d.material.name if d.material else '-' }}</td>
-          <td>
+          <td data-label="ID">#{{ d.id }}</td>
+          <td data-label="Usuario">{{ d.user.email if d.user else '-' }}</td>
+          <td data-label="Material">{{ d.material.name if d.material else '-' }}</td>
+          <td data-label="Estado">
             <span class="status-badge {{ debt_badge }}">{{ d.status|status_label }}</span>
           </td>
-          <td>{{ d.created_at.strftime('%Y-%m-%d') if d.created_at else '-' }}</td>
+          <td data-label="Fecha">{{ d.created_at.strftime('%Y-%m-%d') if d.created_at else '-' }}</td>
         </tr>
         {% endfor %}
       </tbody>
