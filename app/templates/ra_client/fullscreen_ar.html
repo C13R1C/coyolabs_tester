@@ -480,18 +480,46 @@
       outline: none;
       font-size: 0.92rem;
     }
+    </script>
 
-    .field input:focus{
-      border-color: rgba(99,243,255,0.35);
-      box-shadow: 0 0 0 4px rgba(99,243,255,0.08);
-    }
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
-    .config-actions{
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-top: 4px;
-    }
+    <style>
+        :root {
+            --bg: #050505;
+            --surface: rgba(255,255,255,0.03);
+            --surface-border: rgba(255,255,255,0.07);
+            --text: rgba(255,255,255,0.88);
+            --text-dim: rgba(255,255,255,0.42);
+            --text-muted: rgba(255,255,255,0.16);
+            --accent: #D4881A;
+            --accent-soft: rgba(212,136,26,0.12);
+            --success: #2AD47A;
+            --error: #E84040;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%; height: 100dvh;
+            overflow: hidden;
+            background: var(--bg);
+            font-family: 'Space Grotesk', sans-serif;
+            color: var(--text);
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        canvas {
+            display: block;
+            position: fixed !important;
+            inset: 0 !important;
+            width: 100vw !important;
+            height: 100dvh !important;
+            z-index: 0;
+        }
 
     .config-actions button{
       min-height: 48px;
@@ -501,113 +529,243 @@
       cursor: pointer;
     }
 
-    .btn-gold{
-      background: linear-gradient(180deg, #63f3ff, #2fd0dd);
-      color: #071116;
-    }
+        #start-screen {
+            position: fixed; inset: 0; z-index: 20;
+            display: flex; align-items: center; justify-content: center;
+            padding: 24px;
+            background: var(--bg);
+            transition: opacity 0.5s ease, visibility 0.5s;
+        }
+        #start-screen.hidden {
+            opacity: 0; visibility: hidden; pointer-events: none;
+        }
 
-    .btn-ghost{
-      background: rgba(255,255,255,0.04);
-      color: var(--text);
-      border: 1px solid var(--stroke);
-    }
+        .start-bg {
+            position: absolute; inset: 0;
+            background: radial-gradient(ellipse 60% 50% at 50% 45%, rgba(212,136,26,0.04) 0%, transparent 70%);
+            pointer-events: none;
+        }
 
-    .scan-flash{
-      position: absolute;
-      inset: 0;
-      z-index: 4;
-      pointer-events: none;
-      opacity: 0;
-      background: radial-gradient(circle at center, rgba(99,243,255,0.22), transparent 36%);
-    }
+        .start-card {
+            position: relative;
+            background: var(--surface);
+            border: 1px solid var(--surface-border);
+            border-radius: 28px;
+            padding: 44px 32px 36px;
+            max-width: 400px; width: 100%;
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+        }
 
-    .scan-flash.active{
-      animation: flashScan .45s ease;
-    }
+        .start-icon {
+            width: 64px; height: 64px;
+            border-radius: 18px;
+            background: var(--accent-soft);
+            border: 1px solid rgba(212,136,26,0.18);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px; color: var(--accent);
+            margin-bottom: 24px;
+        }
 
-    .ripple-layer{
-      position: absolute;
-      inset: 0;
-      z-index: 4;
-      pointer-events: none;
-      overflow: hidden;
-    }
+        .start-title {
+            font-size: 26px; font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 8px;
+        }
 
-    .tap-ripple{
-      position: absolute;
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      border: 2px solid rgba(99,243,255,0.65);
-      transform: translate(-50%, -50%);
-      animation: rippleOut .7s ease forwards;
-    }
+        .start-sub {
+            font-size: 14px; color: var(--text-dim);
+            line-height: 1.6; margin-bottom: 28px;
+        }
 
-    #debugOut{
-      display: none;
-    }
+        .start-features {
+            list-style: none; margin-bottom: 32px;
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        .start-features li {
+            display: flex; align-items: center; gap: 10px;
+            font-size: 13px; color: var(--text-dim);
+        }
+        .start-features li i {
+            color: var(--accent); font-size: 11px; width: 16px; text-align: center;
+        }
 
-    @keyframes scanMove{
-      0%{ top: 12%; opacity: 0.7; }
-      50%{ opacity: 1; }
-      100%{ top: 86%; opacity: 0.7; }
-    }
+        .btn-primary {
+            width: 100%; padding: 16px; border: none; border-radius: 14px;
+            background: var(--accent); color: #000;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 15px; font-weight: 600;
+            cursor: pointer; transition: all 0.2s;
+            letter-spacing: 0.3px; margin-bottom: 10px;
+            pointer-events: auto;
+        }
+        .btn-primary:active { transform: scale(0.97); opacity: 0.85; }
+        .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
 
-    @keyframes pulseDot{
-      0%,100%{ transform: scale(1); opacity: 1; }
-      50%{ transform: scale(1.22); opacity: .7; }
-    }
+        .btn-ghost {
+            width: 100%; padding: 14px; border: 1px solid var(--surface-border);
+            border-radius: 14px; background: transparent;
+            color: var(--text-dim);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 13px; font-weight: 500;
+            cursor: pointer; transition: all 0.2s;
+            pointer-events: auto;
+        }
+        .btn-ghost:active { background: var(--surface); }
 
-    @keyframes reticleBreath{
-      0%,100%{ transform: translate(-50%, -50%) scale(1); }
-      50%{ transform: translate(-50%, -50%) scale(1.015); }
-    }
+        .start-note {
+            text-align: center; font-size: 11px;
+            color: var(--text-muted); margin-top: 20px;
+            line-height: 1.5;
+        }
 
-    @keyframes helperBlink{
-      0%,100%{ opacity: .82; }
-      50%{ opacity: 1; }
-    }
+        #hud {
+            position: fixed; inset: 0;
+            pointer-events: none;
+            opacity: 0; transition: opacity 0.4s;
+        }
+        #hud.visible { opacity: 1; }
 
-    @keyframes floatSoft{
-      0%,100%{ transform: translateY(0); }
-      50%{ transform: translateY(-2px); }
-    }
+        .hud-top {
+            position: absolute;
+            top: max(env(safe-area-inset-top, 12px), 12px);
+            left: 16px; right: 16px;
+            display: flex; justify-content: space-between; align-items: flex-start;
+        }
 
-    @keyframes cardPop{
-      0%{ opacity: 0; transform: translate(-50%, -44%) scale(.96); }
-      100%{ opacity: 1; transform: translate(-50%, -50%) scale(1); }
-    }
+        .tracking-badge {
+            display: flex; align-items: center; gap: 7px;
+            padding: 7px 14px; border-radius: 20px;
+            background: rgba(0,0,0,0.55);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px; letter-spacing: 1.5px;
+            text-transform: uppercase; color: var(--text-dim);
+        }
+        .tracking-dot {
+            width: 7px; height: 7px; border-radius: 50%;
+            background: rgba(255,255,255,0.25);
+            transition: all 0.4s;
+        }
+        .tracking-dot.active {
+            background: var(--success);
+            box-shadow: 0 0 10px rgba(42,212,122,0.5);
+        }
+        .tracking-dot.lost {
+            background: var(--error);
+            box-shadow: 0 0 10px rgba(232,64,64,0.4);
+        }
 
-    @keyframes fadeUp{
-      0%{ opacity: 0; transform: translateY(8px); }
-      100%{ opacity: 1; transform: translateY(0); }
-    }
+        .obj-badge {
+            padding: 7px 14px; border-radius: 20px;
+            background: rgba(0,0,0,0.55);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px; letter-spacing: 1px;
+            color: var(--text-dim);
+        }
+        .obj-badge span { color: var(--accent); font-weight: 500; }
 
-    @keyframes flashScan{
-      0%{ opacity: 0; }
-      35%{ opacity: 1; }
-      100%{ opacity: 0; }
-    }
+        .hud-bottom {
+            position: absolute;
+            bottom: max(env(safe-area-inset-bottom, 16px), 16px);
+            left: 16px; right: 16px;
+            display: flex; flex-direction: column;
+            align-items: center; gap: 14px;
+        }
 
-    @keyframes rippleOut{
-      0%{ opacity: .9; transform: translate(-50%, -50%) scale(.3); }
-      100%{ opacity: 0; transform: translate(-50%, -50%) scale(5.2); }
-    }
+        .hud-instruction {
+            padding: 8px 18px; border-radius: 20px;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            font-size: 12px; color: var(--text-dim);
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
 
-    @media (max-width: 760px){
-      .quick-info{
-        grid-template-columns: 1fr 1fr;
-      }
+        .hud-controls {
+            display: flex; gap: 10px;
+        }
+        .hud-btn {
+            width: 48px; height: 48px; border-radius: 14px;
+            background: rgba(0,0,0,0.55);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.06);
+            color: var(--text-dim); font-size: 16px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.2s;
+            pointer-events: auto;
+        }
+        .hud-btn:active { transform: scale(0.92); background: rgba(255,255,255,0.08); }
+        .hud-btn.accent { color: var(--accent); border-color: rgba(212,136,26,0.2); }
 
-      .status-pill{
-        max-width: 100%;
-      }
+        .hud-type-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 9px; letter-spacing: 1px;
+            text-transform: uppercase; color: var(--text-muted);
+            margin-bottom: -4px;
+        }
 
-      #arCard{
-        min-width: 200px;
-        max-width: 280px;
-      }
-    }
+        #error-screen {
+            position: fixed; inset: 0; z-index: 30;
+            display: none; align-items: center; justify-content: center;
+            padding: 32px;
+            background: var(--bg);
+        }
+        #error-screen.visible { display: flex; }
+
+        .error-card { text-align: center; max-width: 360px; }
+        .error-icon {
+            width: 56px; height: 56px; border-radius: 16px;
+            background: rgba(232,64,64,0.08);
+            border: 1px solid rgba(232,64,64,0.15);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px; color: var(--error);
+            margin: 0 auto 20px;
+        }
+        .error-msg {
+            font-size: 14px; color: var(--text-dim);
+            line-height: 1.6; margin-bottom: 8px;
+        }
+        .error-detail {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px; color: var(--text-muted);
+            margin-bottom: 24px;
+        }
+
+        #toast-container {
+            position: fixed;
+            bottom: calc(max(env(safe-area-inset-bottom, 16px), 16px) + 90px);
+            left: 50%; transform: translateX(-50%);
+            z-index: 50; display: flex;
+            flex-direction: column; gap: 6px;
+            width: min(85vw, 320px);
+            pointer-events: none;
+        }
+        .toast {
+            padding: 10px 16px; border-radius: 12px;
+            background: rgba(10,10,12,0.8);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--surface-border);
+            font-size: 12px; color: var(--text-dim);
+            text-align: center;
+            animation: toastIn 0.3s ease, toastOut 0.3s ease 2.2s forwards;
+        }
+        .toast.success { border-color: rgba(42,212,122,0.2); color: var(--success); }
+        .toast.error { border-color: rgba(232,64,64,0.2); color: var(--error); }
+
+        @keyframes toastIn { from { opacity: 0; transform: translateY(10px); } }
+        @keyframes toastOut { to { opacity: 0; transform: translateY(-10px); } }
+
+        @media (min-width: 768px) {
+            .start-card { padding: 48px 40px 40px; max-width: 420px; }
+            .hud-btn { width: 52px; height: 52px; font-size: 17px; }
+        }
 
     @media (max-width: 480px){
       .quick-info{
@@ -652,90 +810,54 @@
   </style>
 </head>
 <body>
-  <div class="ar-app" id="arApp">
-    <div id="reader"></div>
-    <div class="camera-fx"></div>
-    <div class="scan-flash" id="scanFlash"></div>
-    <div class="ripple-layer" id="rippleLayer"></div>
 
-    <div class="hud">
-      <div class="top-bar">
-        <div class="top-left">
-          <div class="back-pill">
-            <button id="backBtn" class="btn btn-ghost" type="button" data-href="{{ url_for('inventory.inventory_list') }}">⟵ Salir al inventario</button>
-          </div>
-
-          <div class="status-pill">
-            <span class="status-dot" id="statusDot"></span>
-            <span class="status-text" id="statusText">Inicializando cámara...</span>
-          </div>
+    <div id="overlay">
+        <div id="hud">
+            <div class="hud-top">
+                <div class="tracking-badge">
+                    <div class="tracking-dot" id="tracking-dot"></div>
+                    <span id="tracking-text">Tracking</span>
+                </div>
+                <div class="obj-badge"><span id="obj-count">0</span> objetos</div>
+            </div>
+            <div class="hud-bottom">
+                <div class="hud-type-label" id="type-label">Octaedro</div>
+                <div class="hud-instruction" id="instruction">Apunta a una superficie</div>
+                <div class="hud-controls">
+                    <button class="hud-btn accent" id="btn-cycle" title="Cambiar tipo" aria-label="Cambiar tipo de objeto">
+                        <i class="fa-solid fa-shapes"></i>
+                    </button>
+                    <button class="hud-btn" id="btn-clear" title="Limpiar" aria-label="Eliminar todos los objetos">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                    <button class="hud-btn" id="btn-stop" title="Salir" aria-label="Terminar sesion AR">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            </div>
         </div>
-
-        <div class="top-right">
-          <div class="action-pill">
-            <button id="toggleConfigBtn" class="btn btn-ghost" type="button">Config</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="scan-frame">
-        <span class="scan-ring"></span>
-        <span class="scan-corner tl"></span>
-        <span class="scan-corner tr"></span>
-        <span class="scan-corner bl"></span>
-        <span class="scan-corner br"></span>
-        <span class="scan-line"></span>
-        <span class="scan-center-dot"></span>
-      </div>
-
-      <div class="scan-helper" id="scanHelper">Alinea el QR dentro del recuadro</div>
-
-      <div class="bottom-panel">
-        <div class="quick-info">
-          <div class="info-box">
-            <span>Estado cámara</span>
-            <strong id="cameraState">Pendiente</strong>
-          </div>
-          <div class="info-box">
-            <span>Último QR</span>
-            <strong id="lastQrText">Sin lectura</strong>
-          </div>
-          <div class="info-box">
-            <span>Material</span>
-            <strong id="materialState">Sin carga</strong>
-          </div>
-          <div class="info-box">
-            <span>Última lectura</span>
-            <strong id="lastScanAt">—</strong>
-          </div>
-        </div>
-      </div>
+        <div id="toast-container"></div>
     </div>
 
-    <div id="arCard">
-      <h3 id="matName">Material</h3>
-
-      <div class="ar-row">
-        <strong>Laboratorio</strong>
-        <span id="matLab">—</span>
-      </div>
-
-      <div class="ar-row">
-        <strong>Ubicación</strong>
-        <span id="matLocation">—</span>
-      </div>
-
-      <div class="ar-row">
-        <strong>Piezas</strong>
-        <span id="matPieces">—</span>
-      </div>
-
-      <div class="ar-row">
-        <strong>Estado</strong>
-        <span id="matStatus">—</span>
-      </div>
-
-      <div id="arMessage">Esperando detección...</div>
+    <div id="start-screen">
+        <div class="start-bg"></div>
+        <div class="start-card">
+            <div class="start-icon"><i class="fa-solid fa-cube"></i></div>
+            <h1 class="start-title">Anchored AR</h1>
+            <p class="start-sub">Coloca objetos virtuales fijos en el mundo real. Se quedan anclados aunque muevas el dispositivo.</p>
+            <ul class="start-features">
+                <li><i class="fa-solid fa-check"></i> Deteccion de superficies planas</li>
+                <li><i class="fa-solid fa-check"></i> Anclaje espacial (world-locked)</li>
+                <li><i class="fa-solid fa-check"></i> Multiples objetos simultaneos</li>
+            </ul>
+            <button class="btn-primary" id="btn-start">
+                <i class="fa-solid fa-camera" style="margin-right:6px;"></i> Iniciar AR
+            </button>
+            <button class="btn-ghost" id="btn-preview">
+                <i class="fa-solid fa-eye" style="margin-right:6px;"></i> Vista previa 3D
+            </button>
+            <p class="start-note">Requiere Chrome Android 85+ o Safari 15.4+ con WebXR</p>
+        </div>
     </div>
 
     <aside class="config-panel" id="configPanel">
@@ -1091,11 +1213,85 @@
       setStatus(`Consultando material ${materialId}...`, "yellow");
       setCardMessage("Consultando material...", "warn");
 
-      const { response, data } = await fetchJson(`${baseUrl}/api/ra/materials/${materialId}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "X-API-Key": apiKey
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        /* =============================================
+           CONSTANTES
+        ============================================= */
+        const OBJECT_TYPES = [
+            { name: 'Octaedro',   color: 0xD4881A, emissive: 0x3A2200, createGeo: function() { return new THREE.OctahedronGeometry(0.1, 0); } },
+            { name: 'Nudo Torus', color: 0x18B8A8, emissive: 0x042824, createGeo: function() { return new THREE.TorusKnotGeometry(0.06, 0.022, 80, 16); } },
+            { name: 'Icosaedro',  color: 0xD83870, emissive: 0x380818, createGeo: function() { return new THREE.IcosahedronGeometry(0.1, 0); } }
+        ];
+
+        /* =============================================
+           CLASE PRINCIPAL
+        ============================================= */
+        function AnchoredAR() {
+
+            /* --- Estado --- */
+            this.isAR = false;
+            this.session = null;
+            this.supported = false;
+
+            /* --- Three.js --- */
+            this.renderer = null;
+            this.scene = null;
+            this.camera = null;
+            this.clock = new THREE.Clock();
+            this.controls = null;
+
+            /* --- WebXR --- */
+            this.refSpace = null;
+            this.viewerSpace = null;
+            this.hitTestSource = null;
+
+            /* --- Reticle --- */
+            this.reticleGroup = null;
+            this.reticleOuter = null;
+            this.reticleInner = null;
+            this.reticleVisible = false;
+            this.lastReticlePose = null;
+
+            /* --- Objetos --- */
+            this.placedObjects = [];
+            this.ripples = [];
+            this.objectType = 0;
+
+            /* --- Preview --- */
+            this.previewGroup = null;
+
+            /* --- Tracking --- */
+            this.trackingActive = false;
+
+            /* --- DOM --- */
+            this.dom = {
+                startScreen:     document.getElementById('start-screen'),
+                errorScreen:     document.getElementById('error-screen'),
+                errorMsg:        document.getElementById('error-msg'),
+                errorDetail:     document.getElementById('error-detail'),
+                hud:             document.getElementById('hud'),
+                trackingDot:     document.getElementById('tracking-dot'),
+                trackingText:    document.getElementById('tracking-text'),
+                objCount:        document.getElementById('obj-count'),
+                instruction:     document.getElementById('instruction'),
+                typeLabel:       document.getElementById('type-label'),
+                toastContainer:  document.getElementById('toast-container'),
+                btnStart:        document.getElementById('btn-start'),
+                btnPreview:      document.getElementById('btn-preview'),
+                btnCycle:        document.getElementById('btn-cycle'),
+                btnClear:        document.getElementById('btn-clear'),
+                btnStop:         document.getElementById('btn-stop')
+            };
+
+            /* --- Bindear metodos para no perder contexto --- */
+            this.onFrame = this._onFrame.bind(this);
+            this.handleSelect = this._handleSelect.bind(this);
+
+            /* --- Iniciar --- */
+            this.boot();
         }
       });
 
