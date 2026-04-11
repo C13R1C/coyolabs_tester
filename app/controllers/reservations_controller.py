@@ -100,6 +100,15 @@ def _professor_assignments(teacher_id: int) -> list[TeacherAcademicLoad]:
     )
 
 
+def _assignment_subject_name(assignment: TeacherAcademicLoad) -> str:
+    manual_name = (assignment.subject_name or "").strip()
+    if manual_name:
+        return manual_name
+    if assignment.subject and assignment.subject.name:
+        return assignment.subject.name.strip()
+    return ""
+
+
 def _build_requester_name() -> str:
     full_name = (getattr(current_user, "full_name", "") or "").strip()
     if full_name:
@@ -466,12 +475,13 @@ def request_reservation():
 
     is_professor = _is_professor_role(current_user.role)
     assignments = _professor_assignments(current_user.id) if is_professor else []
-    professor_subjects = sorted({a.subject.name for a in assignments if a.subject})
+    professor_subjects = sorted({_assignment_subject_name(a) for a in assignments if _assignment_subject_name(a)})
     professor_groups_by_subject = {}
     for assignment in assignments:
-        if not assignment.subject:
+        subject_name = _assignment_subject_name(assignment)
+        if not subject_name:
             continue
-        professor_groups_by_subject.setdefault(assignment.subject.name, set()).add(assignment.group_code)
+        professor_groups_by_subject.setdefault(subject_name, set()).add(assignment.group_code)
     professor_groups_by_subject = {
         subject_name: sorted(groups)
         for subject_name, groups in professor_groups_by_subject.items()
@@ -506,14 +516,17 @@ def request_reservation():
                 return redirect(url_for("reservations.request_reservation"))
 
             valid_assignment = next(
-                (a for a in assignments if a.subject and a.subject.name.lower() == subject.lower() and a.group_code == group_name),
+                (
+                    a for a in assignments
+                    if _assignment_subject_name(a).lower() == subject.lower() and a.group_code == group_name
+                ),
                 None,
             )
             if not valid_assignment:
                 flash("La materia/grupo seleccionados no pertenecen a tu carga académica.", "error")
                 return redirect(url_for("reservations.request_reservation"))
-            subject = valid_assignment.subject.name
-            selected_subject_id = valid_assignment.subject.id
+            subject = _assignment_subject_name(valid_assignment)
+            selected_subject_id = valid_assignment.subject_id
 
         if (
             not room
