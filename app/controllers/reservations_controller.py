@@ -126,6 +126,8 @@ def _build_requester_name() -> str:
 def _save_signature_image(signature_data_url: str) -> tuple[str | None, str | None]:
     prefix = "data:image/png;base64,"
     raw = (signature_data_url or "").strip()
+    if not raw:
+        return None, "Debes guardar tu firma digital antes de enviar."
     if not raw.startswith(prefix):
         return None, "Firma inválida. Vuelve a firmar en el recuadro."
 
@@ -139,6 +141,8 @@ def _save_signature_image(signature_data_url: str) -> tuple[str | None, str | No
         return None, "La firma está vacía o incompleta."
     if len(payload) > 1024 * 1024:
         return None, "La firma excede el tamaño máximo permitido."
+    if not payload.startswith(b"\x89PNG\r\n\x1a\n"):
+        return None, "El formato de firma no es válido."
 
     uploads_rel_dir = os.path.join("uploads", "signatures")
     uploads_abs_dir = os.path.join(current_app.root_path, "static", uploads_rel_dir)
