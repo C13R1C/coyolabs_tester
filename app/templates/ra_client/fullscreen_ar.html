@@ -1,1216 +1,1131 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>RA en pantalla completa</title>
-
-  <style>
-    :root{
-      --bg: #000;
-      --panel: rgba(10, 18, 24, 0.76);
-      --panel-strong: rgba(8, 15, 20, 0.92);
-      --stroke: rgba(255,255,255,0.12);
-      --text: #eef7fb;
-      --text-soft: #b5c7d1;
-      --cyan: #63f3ff;
-      --green: #71f5aa;
-      --yellow: #f1ca5b;
-      --red: #ff7c8e;
-      --shadow: 0 16px 40px rgba(0,0,0,0.35);
-    }
-
-    *{
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    html, body{
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background: #000;
-      font-family: "Segoe UI", Inter, Arial, sans-serif;
-      color: var(--text);
-    }
-
-    .ar-app{
-      position: fixed;
-      inset: 0;
-      background: #000;
-      overflow: hidden;
-      user-select: none;
-    }
-
-    #reader{
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 1;
-      background: #000;
-    }
-
-    #reader video{
-      width: 100% !important;
-      height: 100% !important;
-      object-fit: cover !important;
-      filter: saturate(1.06) contrast(1.03);
-    }
-
-    #reader__scan_region{
-      width: 100% !important;
-      height: 100% !important;
-      background: transparent !important;
-      border: none !important;
-    }
-
-    #reader img{
-      display: none !important;
-    }
-
-    .camera-fx{
-      position: absolute;
-      inset: 0;
-      z-index: 2;
-      pointer-events: none;
-      overflow: hidden;
-    }
-
-    .camera-fx::before{
-      content: "";
-      position: absolute;
-      inset: 0;
-      background:
-        radial-gradient(circle at center, transparent 20%, rgba(0,0,0,0.10) 68%, rgba(0,0,0,0.34) 100%),
-        linear-gradient(180deg, rgba(99,243,255,0.02), transparent 18%, transparent 82%, rgba(99,243,255,0.02));
-    }
-
-    .camera-fx::after{
-      content: "";
-      position: absolute;
-      inset: 0;
-      background:
-        linear-gradient(180deg, rgba(255,255,255,0.02) 0%, transparent 10%, transparent 90%, rgba(255,255,255,0.02) 100%);
-      mix-blend-mode: screen;
-    }
-
-    .hud{
-      position: absolute;
-      inset: 0;
-      z-index: 3;
-      pointer-events: none;
-    }
-
-    .top-bar{
-      position: absolute;
-      top: 14px;
-      left: 14px;
-      right: 14px;
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 10px;
-      pointer-events: none;
-    }
-
-    .top-left,
-    .top-right{
-      display: flex;
-      gap: 10px;
-      align-items: flex-start;
-      pointer-events: auto;
-    }
-
-    .status-pill,
-    .action-pill,
-    .back-pill{
-      backdrop-filter: blur(12px);
-      background: var(--panel);
-      border: 1px solid var(--stroke);
-      border-radius: 999px;
-      padding: 10px 14px;
-      box-shadow: var(--shadow);
-      pointer-events: auto;
-    }
-
-    .status-pill{
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      max-width: min(60vw, 460px);
-      animation: floatSoft 3.6s ease-in-out infinite;
-    }
-
-    .back-pill{
-      position: relative;
-      overflow: hidden;
-    }
-
-    .back-pill::before{
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(90deg, transparent, rgba(99,243,255,0.12), transparent);
-      transform: translateX(-100%);
-      transition: transform .45s ease;
-    }
-
-    .back-pill:hover::before{
-      transform: translateX(100%);
-    }
-
-    .status-dot{
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: var(--yellow);
-      box-shadow: 0 0 14px rgba(241,202,91,0.65);
-      flex-shrink: 0;
-      animation: pulseDot 1.8s ease-in-out infinite;
-    }
-
-    .status-text{
-      font-size: 0.92rem;
-      font-weight: 700;
-      color: var(--text);
-      line-height: 1.3;
-    }
-
-    .action-pill button,
-    .back-pill button{
-      border: none;
-      background: transparent;
-      color: var(--text);
-      font-weight: 800;
-      font-size: 0.92rem;
-      cursor: pointer;
-      letter-spacing: 0.03em;
-    }
-
-    .back-pill button{
-      color: var(--cyan);
-      text-shadow: 0 0 10px rgba(99,243,255,0.18);
-    }
-
-    .scan-frame{
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      width: min(72vw, 320px);
-      aspect-ratio: 1 / 1;
-      transform: translate(-50%, -50%);
-      z-index: 3;
-      pointer-events: none;
-      animation: reticleBreath 3s ease-in-out infinite;
-    }
-
-    .scan-ring{
-      position: absolute;
-      inset: 12%;
-      border-radius: 22px;
-      border: 1px solid rgba(99,243,255,0.18);
-      box-shadow: 0 0 18px rgba(99,243,255,0.10), inset 0 0 18px rgba(99,243,255,0.05);
-    }
-
-    .scan-corner{
-      position: absolute;
-      width: 48px;
-      height: 48px;
-      border-color: var(--cyan);
-      filter: drop-shadow(0 0 10px rgba(99,243,255,0.6));
-    }
-
-    .scan-corner.tl{
-      top: 0;
-      left: 0;
-      border-top: 4px solid;
-      border-left: 4px solid;
-      border-top-left-radius: 14px;
-    }
-
-    .scan-corner.tr{
-      top: 0;
-      right: 0;
-      border-top: 4px solid;
-      border-right: 4px solid;
-      border-top-right-radius: 14px;
-    }
-
-    .scan-corner.bl{
-      bottom: 0;
-      left: 0;
-      border-bottom: 4px solid;
-      border-left: 4px solid;
-      border-bottom-left-radius: 14px;
-    }
-
-    .scan-corner.br{
-      bottom: 0;
-      right: 0;
-      border-bottom: 4px solid;
-      border-right: 4px solid;
-      border-bottom-right-radius: 14px;
-    }
-
-    .scan-line{
-      position: absolute;
-      left: 8%;
-      right: 8%;
-      top: 12%;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, var(--cyan), transparent);
-      box-shadow:
-        0 0 10px rgba(99,243,255,0.85),
-        0 0 22px rgba(99,243,255,0.28);
-      animation: scanMove 2.6s linear infinite;
-    }
-
-    .scan-center-dot{
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--cyan);
-      transform: translate(-50%, -50%);
-      box-shadow: 0 0 14px rgba(99,243,255,0.65);
-    }
-
-    .scan-helper{
-      position: absolute;
-      left: 50%;
-      top: calc(50% + min(72vw, 320px) / 2 + 18px);
-      transform: translateX(-50%);
-      padding: 8px 14px;
-      border-radius: 999px;
-      background: rgba(8,15,20,0.68);
-      border: 1px solid rgba(255,255,255,0.1);
-      color: var(--text-soft);
-      font-size: 0.84rem;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      z-index: 3;
-      pointer-events: none;
-      backdrop-filter: blur(10px);
-      animation: helperBlink 2.8s ease-in-out infinite;
-    }
-
-    .bottom-panel{
-      position: absolute;
-      left: 14px;
-      right: 14px;
-      bottom: 14px;
-      display: grid;
-      gap: 12px;
-      z-index: 3;
-      pointer-events: none;
-    }
-
-    .quick-info{
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 10px;
-    }
-
-    .info-box{
-      backdrop-filter: blur(12px);
-      background: var(--panel);
-      border: 1px solid var(--stroke);
-      border-radius: 18px;
-      padding: 12px 14px;
-      box-shadow: var(--shadow);
-      min-height: 66px;
-      animation: floatSoft 4.8s ease-in-out infinite;
-    }
-
-    .info-box:nth-child(2){ animation-delay: .2s; }
-    .info-box:nth-child(3){ animation-delay: .35s; }
-    .info-box:nth-child(4){ animation-delay: .5s; }
-
-    .info-box span{
-      display: block;
-      color: var(--text-soft);
-      font-size: 0.78rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      font-weight: 700;
-      margin-bottom: 4px;
-    }
-
-    .info-box strong{
-      color: var(--text);
-      font-size: 0.95rem;
-      line-height: 1.35;
-      word-break: break-word;
-    }
-
-    #arCard{
-      position: absolute;
-      z-index: 4;
-      left: 50%;
-      top: 50%;
-      min-width: 220px;
-      max-width: 320px;
-      padding: 14px;
-      border-radius: 18px;
-      backdrop-filter: blur(14px);
-      background: var(--panel-strong);
-      border: 1px solid rgba(99,243,255,0.28);
-      box-shadow:
-        0 0 18px rgba(99,243,255,0.14),
-        0 18px 40px rgba(0,0,0,0.35);
-      display: none;
-      transform: translate(-50%, -50%);
-      pointer-events: none;
-    }
-
-    #arCard.show{
-      display: block;
-      animation: cardPop .38s ease;
-    }
-
-    #arCard h3{
-      margin: 0 0 10px;
-      font-size: 1.04rem;
-      color: var(--text);
-    }
-
-    .ar-row{
-      display: flex;
-      justify-content: space-between;
-      gap: 14px;
-      padding-bottom: 8px;
-      margin-bottom: 8px;
-      border-bottom: 1px solid rgba(255,255,255,0.06);
-    }
-
-    .ar-row:last-of-type{
-      margin-bottom: 0;
-    }
-
-    .ar-row strong{
-      color: var(--text-soft);
-      font-size: 0.8rem;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-    }
-
-    .ar-row span{
-      color: var(--text);
-      text-align: right;
-      max-width: 58%;
-      font-size: 0.92rem;
-      word-break: break-word;
-    }
-
-    #arMessage{
-      margin-top: 10px;
-      padding: 10px 12px;
-      border-radius: 12px;
-      background: rgba(99,243,255,0.10);
-      border: 1px solid rgba(99,243,255,0.18);
-      color: var(--cyan);
-      font-weight: 700;
-      font-size: 0.88rem;
-    }
-
-    .config-panel{
-      position: absolute;
-      top: 66px;
-      right: 14px;
-      width: min(92vw, 330px);
-      z-index: 5;
-      display: none;
-      backdrop-filter: blur(14px);
-      background: var(--panel-strong);
-      border: 1px solid var(--stroke);
-      border-radius: 20px;
-      box-shadow: var(--shadow);
-      padding: 16px;
-    }
-
-    .config-panel.active{
-      display: grid;
-      gap: 12px;
-      animation: fadeUp .24s ease;
-    }
-
-    .config-panel h2{
-      font-size: 1rem;
-      color: var(--text);
-      margin-bottom: 2px;
-    }
-
-    .config-panel p{
-      color: var(--text-soft);
-      font-size: 0.88rem;
-      line-height: 1.45;
-    }
-
-    .field{
-      display: grid;
-      gap: 6px;
-    }
-
-    .field label{
-      color: var(--text-soft);
-      font-size: 0.82rem;
-      font-weight: 700;
-    }
-
-    .field input{
-      width: 100%;
-      height: 46px;
-      border-radius: 12px;
-      border: 1px solid var(--stroke);
-      background: rgba(255,255,255,0.04);
-      color: var(--text);
-      padding: 0 12px;
-      outline: none;
-      font-size: 0.92rem;
-    }
-
-    .field input:focus{
-      border-color: rgba(99,243,255,0.35);
-      box-shadow: 0 0 0 4px rgba(99,243,255,0.08);
-    }
-
-    .config-actions{
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-top: 4px;
-    }
-
-    .config-actions button{
-      height: 44px;
-      border: none;
-      border-radius: 12px;
-      font-weight: 800;
-      cursor: pointer;
-    }
-
-    .btn-gold{
-      background: linear-gradient(180deg, #63f3ff, #2fd0dd);
-      color: #071116;
-    }
-
-    .btn-ghost{
-      background: rgba(255,255,255,0.04);
-      color: var(--text);
-      border: 1px solid var(--stroke);
-    }
-
-    .scan-flash{
-      position: absolute;
-      inset: 0;
-      z-index: 4;
-      pointer-events: none;
-      opacity: 0;
-      background: radial-gradient(circle at center, rgba(99,243,255,0.22), transparent 36%);
-    }
-
-    .scan-flash.active{
-      animation: flashScan .45s ease;
-    }
-
-    .ripple-layer{
-      position: absolute;
-      inset: 0;
-      z-index: 4;
-      pointer-events: none;
-      overflow: hidden;
-    }
-
-    .tap-ripple{
-      position: absolute;
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      border: 2px solid rgba(99,243,255,0.65);
-      transform: translate(-50%, -50%);
-      animation: rippleOut .7s ease forwards;
-    }
-
-    #debugOut{
-      display: none;
-    }
-
-    @keyframes scanMove{
-      0%{ top: 12%; opacity: 0.7; }
-      50%{ opacity: 1; }
-      100%{ top: 86%; opacity: 0.7; }
-    }
-
-    @keyframes pulseDot{
-      0%,100%{ transform: scale(1); opacity: 1; }
-      50%{ transform: scale(1.22); opacity: .7; }
-    }
-
-    @keyframes reticleBreath{
-      0%,100%{ transform: translate(-50%, -50%) scale(1); }
-      50%{ transform: translate(-50%, -50%) scale(1.015); }
-    }
-
-    @keyframes helperBlink{
-      0%,100%{ opacity: .82; }
-      50%{ opacity: 1; }
-    }
-
-    @keyframes floatSoft{
-      0%,100%{ transform: translateY(0); }
-      50%{ transform: translateY(-2px); }
-    }
-
-    @keyframes cardPop{
-      0%{ opacity: 0; transform: translate(-50%, -44%) scale(.96); }
-      100%{ opacity: 1; transform: translate(-50%, -50%) scale(1); }
-    }
-
-    @keyframes fadeUp{
-      0%{ opacity: 0; transform: translateY(8px); }
-      100%{ opacity: 1; transform: translateY(0); }
-    }
-
-    @keyframes flashScan{
-      0%{ opacity: 0; }
-      35%{ opacity: 1; }
-      100%{ opacity: 0; }
-    }
-
-    @keyframes rippleOut{
-      0%{ opacity: .9; transform: translate(-50%, -50%) scale(.3); }
-      100%{ opacity: 0; transform: translate(-50%, -50%) scale(5.2); }
-    }
-
-    @media (max-width: 760px){
-      .quick-info{
-        grid-template-columns: 1fr 1fr;
-      }
-
-      .status-pill{
-        max-width: 100%;
-      }
-
-      #arCard{
-        min-width: 200px;
-        max-width: 280px;
-      }
-    }
-
-    @media (max-width: 480px){
-      .quick-info{
-        grid-template-columns: 1fr;
-      }
-
-      .top-bar{
-        gap: 8px;
-      }
-
-      .top-left,
-      .top-right{
-        gap: 8px;
-      }
-
-      .status-pill,
-      .action-pill,
-      .back-pill{
-        padding: 9px 12px;
-      }
-
-      .status-text{
-        font-size: .86rem;
-      }
-
-      .scan-helper{
-        font-size: .78rem;
-      }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Anchored AR — Realidad Aumentada Espacial</title>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <style>
+        :root {
+            --bg: #050505;
+            --surface: rgba(255,255,255,0.03);
+            --surface-border: rgba(255,255,255,0.07);
+            --text: rgba(255,255,255,0.88);
+            --text-dim: rgba(255,255,255,0.42);
+            --text-muted: rgba(255,255,255,0.16);
+            --accent: #D4881A;
+            --accent-soft: rgba(212,136,26,0.12);
+            --success: #2AD47A;
+            --error: #E84040;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            width: 100%; height: 100dvh;
+            overflow: hidden;
+            background: var(--bg);
+            font-family: 'Space Grotesk', sans-serif;
+            color: var(--text);
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        canvas {
+            display: block;
+            position: fixed !important;
+            inset: 0 !important;
+            width: 100vw !important;
+            height: 100dvh !important;
+            z-index: 0;
+        }
+
+        #overlay {
+            position: fixed; inset: 0; z-index: 10;
+            pointer-events: none;
+        }
+
+        #start-screen {
+            position: fixed; inset: 0; z-index: 20;
+            display: flex; align-items: center; justify-content: center;
+            padding: 24px;
+            background: var(--bg);
+            transition: opacity 0.5s ease, visibility 0.5s;
+        }
+        #start-screen.hidden {
+            opacity: 0; visibility: hidden; pointer-events: none;
+        }
+
+        .start-bg {
+            position: absolute; inset: 0;
+            background: radial-gradient(ellipse 60% 50% at 50% 45%, rgba(212,136,26,0.04) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .start-card {
+            position: relative;
+            background: var(--surface);
+            border: 1px solid var(--surface-border);
+            border-radius: 28px;
+            padding: 44px 32px 36px;
+            max-width: 400px; width: 100%;
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+        }
+
+        .start-icon {
+            width: 64px; height: 64px;
+            border-radius: 18px;
+            background: var(--accent-soft);
+            border: 1px solid rgba(212,136,26,0.18);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px; color: var(--accent);
+            margin-bottom: 24px;
+        }
+
+        .start-title {
+            font-size: 26px; font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 8px;
+        }
+
+        .start-sub {
+            font-size: 14px; color: var(--text-dim);
+            line-height: 1.6; margin-bottom: 28px;
+        }
+
+        .start-features {
+            list-style: none; margin-bottom: 32px;
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        .start-features li {
+            display: flex; align-items: center; gap: 10px;
+            font-size: 13px; color: var(--text-dim);
+        }
+        .start-features li i {
+            color: var(--accent); font-size: 11px; width: 16px; text-align: center;
+        }
+
+        .btn-primary {
+            width: 100%; padding: 16px; border: none; border-radius: 14px;
+            background: var(--accent); color: #000;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 15px; font-weight: 600;
+            cursor: pointer; transition: all 0.2s;
+            letter-spacing: 0.3px; margin-bottom: 10px;
+            pointer-events: auto;
+        }
+        .btn-primary:active { transform: scale(0.97); opacity: 0.85; }
+        .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+
+        .btn-ghost {
+            width: 100%; padding: 14px; border: 1px solid var(--surface-border);
+            border-radius: 14px; background: transparent;
+            color: var(--text-dim);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 13px; font-weight: 500;
+            cursor: pointer; transition: all 0.2s;
+            pointer-events: auto;
+        }
+        .btn-ghost:active { background: var(--surface); }
+
+        .start-note {
+            text-align: center; font-size: 11px;
+            color: var(--text-muted); margin-top: 20px;
+            line-height: 1.5;
+        }
+
+        #hud {
+            position: fixed; inset: 0;
+            pointer-events: none;
+            opacity: 0; transition: opacity 0.4s;
+        }
+        #hud.visible { opacity: 1; }
+
+        .hud-top {
+            position: absolute;
+            top: max(env(safe-area-inset-top, 12px), 12px);
+            left: 16px; right: 16px;
+            display: flex; justify-content: space-between; align-items: flex-start;
+        }
+
+        .tracking-badge {
+            display: flex; align-items: center; gap: 7px;
+            padding: 7px 14px; border-radius: 20px;
+            background: rgba(0,0,0,0.55);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px; letter-spacing: 1.5px;
+            text-transform: uppercase; color: var(--text-dim);
+        }
+        .tracking-dot {
+            width: 7px; height: 7px; border-radius: 50%;
+            background: rgba(255,255,255,0.25);
+            transition: all 0.4s;
+        }
+        .tracking-dot.active {
+            background: var(--success);
+            box-shadow: 0 0 10px rgba(42,212,122,0.5);
+        }
+        .tracking-dot.lost {
+            background: var(--error);
+            box-shadow: 0 0 10px rgba(232,64,64,0.4);
+        }
+
+        .obj-badge {
+            padding: 7px 14px; border-radius: 20px;
+            background: rgba(0,0,0,0.55);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px; letter-spacing: 1px;
+            color: var(--text-dim);
+        }
+        .obj-badge span { color: var(--accent); font-weight: 500; }
+
+        .hud-bottom {
+            position: absolute;
+            bottom: max(env(safe-area-inset-bottom, 16px), 16px);
+            left: 16px; right: 16px;
+            display: flex; flex-direction: column;
+            align-items: center; gap: 14px;
+        }
+
+        .hud-instruction {
+            padding: 8px 18px; border-radius: 20px;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            font-size: 12px; color: var(--text-dim);
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+
+        .hud-controls {
+            display: flex; gap: 10px;
+        }
+        .hud-btn {
+            width: 48px; height: 48px; border-radius: 14px;
+            background: rgba(0,0,0,0.55);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.06);
+            color: var(--text-dim); font-size: 16px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.2s;
+            pointer-events: auto;
+        }
+        .hud-btn:active { transform: scale(0.92); background: rgba(255,255,255,0.08); }
+        .hud-btn.accent { color: var(--accent); border-color: rgba(212,136,26,0.2); }
+
+        .hud-type-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 9px; letter-spacing: 1px;
+            text-transform: uppercase; color: var(--text-muted);
+            margin-bottom: -4px;
+        }
+
+        #error-screen {
+            position: fixed; inset: 0; z-index: 30;
+            display: none; align-items: center; justify-content: center;
+            padding: 32px;
+            background: var(--bg);
+        }
+        #error-screen.visible { display: flex; }
+
+        .error-card { text-align: center; max-width: 360px; }
+        .error-icon {
+            width: 56px; height: 56px; border-radius: 16px;
+            background: rgba(232,64,64,0.08);
+            border: 1px solid rgba(232,64,64,0.15);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px; color: var(--error);
+            margin: 0 auto 20px;
+        }
+        .error-msg {
+            font-size: 14px; color: var(--text-dim);
+            line-height: 1.6; margin-bottom: 8px;
+        }
+        .error-detail {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px; color: var(--text-muted);
+            margin-bottom: 24px;
+        }
+
+        #toast-container {
+            position: fixed;
+            bottom: calc(max(env(safe-area-inset-bottom, 16px), 16px) + 90px);
+            left: 50%; transform: translateX(-50%);
+            z-index: 50; display: flex;
+            flex-direction: column; gap: 6px;
+            width: min(85vw, 320px);
+            pointer-events: none;
+        }
+        .toast {
+            padding: 10px 16px; border-radius: 12px;
+            background: rgba(10,10,12,0.8);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--surface-border);
+            font-size: 12px; color: var(--text-dim);
+            text-align: center;
+            animation: toastIn 0.3s ease, toastOut 0.3s ease 2.2s forwards;
+        }
+        .toast.success { border-color: rgba(42,212,122,0.2); color: var(--success); }
+        .toast.error { border-color: rgba(232,64,64,0.2); color: var(--error); }
+
+        @keyframes toastIn { from { opacity: 0; transform: translateY(10px); } }
+        @keyframes toastOut { to { opacity: 0; transform: translateY(-10px); } }
+
+        @media (min-width: 768px) {
+            .start-card { padding: 48px 40px 40px; max-width: 420px; }
+            .hud-btn { width: 52px; height: 52px; font-size: 17px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
 </head>
 <body>
-  <div class="ar-app" id="arApp">
-    <div id="reader"></div>
-    <div class="camera-fx"></div>
-    <div class="scan-flash" id="scanFlash"></div>
-    <div class="ripple-layer" id="rippleLayer"></div>
 
-    <div class="hud">
-      <div class="top-bar">
-        <div class="top-left">
-          <div class="back-pill">
-            <button id="backBtn" class="btn btn-ghost" type="button" data-href="{{ url_for('inventory.inventory_list') }}">⟵ Salir al inventario</button>
-          </div>
-
-          <div class="status-pill">
-            <span class="status-dot" id="statusDot"></span>
-            <span class="status-text" id="statusText">Inicializando cámara...</span>
-          </div>
+    <div id="overlay">
+        <div id="hud">
+            <div class="hud-top">
+                <div class="tracking-badge">
+                    <div class="tracking-dot" id="tracking-dot"></div>
+                    <span id="tracking-text">Tracking</span>
+                </div>
+                <div class="obj-badge"><span id="obj-count">0</span> objetos</div>
+            </div>
+            <div class="hud-bottom">
+                <div class="hud-type-label" id="type-label">Octaedro</div>
+                <div class="hud-instruction" id="instruction">Apunta a una superficie</div>
+                <div class="hud-controls">
+                    <button class="hud-btn accent" id="btn-cycle" title="Cambiar tipo" aria-label="Cambiar tipo de objeto">
+                        <i class="fa-solid fa-shapes"></i>
+                    </button>
+                    <button class="hud-btn" id="btn-clear" title="Limpiar" aria-label="Eliminar todos los objetos">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                    <button class="hud-btn" id="btn-stop" title="Salir" aria-label="Terminar sesion AR">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            </div>
         </div>
-
-        <div class="top-right">
-          <div class="action-pill">
-            <button id="toggleConfigBtn" class="btn btn-ghost" type="button">Config</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="scan-frame">
-        <span class="scan-ring"></span>
-        <span class="scan-corner tl"></span>
-        <span class="scan-corner tr"></span>
-        <span class="scan-corner bl"></span>
-        <span class="scan-corner br"></span>
-        <span class="scan-line"></span>
-        <span class="scan-center-dot"></span>
-      </div>
-
-      <div class="scan-helper" id="scanHelper">Alinea el QR dentro del recuadro</div>
-
-      <div class="bottom-panel">
-        <div class="quick-info">
-          <div class="info-box">
-            <span>Estado cámara</span>
-            <strong id="cameraState">Pendiente</strong>
-          </div>
-          <div class="info-box">
-            <span>Último QR</span>
-            <strong id="lastQrText">Sin lectura</strong>
-          </div>
-          <div class="info-box">
-            <span>Material</span>
-            <strong id="materialState">Sin carga</strong>
-          </div>
-          <div class="info-box">
-            <span>Última lectura</span>
-            <strong id="lastScanAt">—</strong>
-          </div>
-        </div>
-      </div>
+        <div id="toast-container"></div>
     </div>
 
-    <div id="arCard">
-      <h3 id="matName">Material</h3>
-
-      <div class="ar-row">
-        <strong>Laboratorio</strong>
-        <span id="matLab">—</span>
-      </div>
-
-      <div class="ar-row">
-        <strong>Ubicación</strong>
-        <span id="matLocation">—</span>
-      </div>
-
-      <div class="ar-row">
-        <strong>Piezas</strong>
-        <span id="matPieces">—</span>
-      </div>
-
-      <div class="ar-row">
-        <strong>Estado</strong>
-        <span id="matStatus">—</span>
-      </div>
-
-      <div id="arMessage">Esperando detección...</div>
+    <div id="start-screen">
+        <div class="start-bg"></div>
+        <div class="start-card">
+            <div class="start-icon"><i class="fa-solid fa-cube"></i></div>
+            <h1 class="start-title">Anchored AR</h1>
+            <p class="start-sub">Coloca objetos virtuales fijos en el mundo real. Se quedan anclados aunque muevas el dispositivo.</p>
+            <ul class="start-features">
+                <li><i class="fa-solid fa-check"></i> Deteccion de superficies planas</li>
+                <li><i class="fa-solid fa-check"></i> Anclaje espacial (world-locked)</li>
+                <li><i class="fa-solid fa-check"></i> Multiples objetos simultaneos</li>
+            </ul>
+            <button class="btn-primary" id="btn-start">
+                <i class="fa-solid fa-camera" style="margin-right:6px;"></i> Iniciar AR
+            </button>
+            <button class="btn-ghost" id="btn-preview">
+                <i class="fa-solid fa-eye" style="margin-right:6px;"></i> Vista previa 3D
+            </button>
+            <p class="start-note">Requiere Chrome Android 85+ o Safari 15.4+ con WebXR</p>
+        </div>
     </div>
 
-    <aside class="config-panel" id="configPanel">
-      <h2>Configuración</h2>
-      <p>Ajusta la conexión. Esta vista está pensada para celular y pantalla completa.</p>
+    <div id="error-screen">
+        <div class="error-card">
+            <div class="error-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            <p class="error-msg" id="error-msg">Dispositivo no compatible</p>
+            <p class="error-detail" id="error-detail"></p>
+            <button class="btn-ghost" onclick="location.reload()">Reintentar</button>
+        </div>
+    </div>
 
-      <div class="field">
-        <label for="baseUrl">Base URL</label>
-        <input id="baseUrl" type="text" value="http://127.0.0.1:5000" />
-      </div>
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-      <div class="field">
-        <label for="apiKey">API Key</label>
-        <input id="apiKey" type="text" value="1seizIZsXnTXMMxvfvvUth0ZRnlb6KtRz-65g8V2TI4" />
-      </div>
+        /* =============================================
+           CONSTANTES
+        ============================================= */
+        const OBJECT_TYPES = [
+            { name: 'Octaedro',   color: 0xD4881A, emissive: 0x3A2200, createGeo: function() { return new THREE.OctahedronGeometry(0.1, 0); } },
+            { name: 'Nudo Torus', color: 0x18B8A8, emissive: 0x042824, createGeo: function() { return new THREE.TorusKnotGeometry(0.06, 0.022, 80, 16); } },
+            { name: 'Icosaedro',  color: 0xD83870, emissive: 0x380818, createGeo: function() { return new THREE.IcosahedronGeometry(0.1, 0); } }
+        ];
 
-      <div class="field">
-        <label for="userEmail">User email</label>
-        <input id="userEmail" type="email" value="24310130@utpn.edu.mx" />
-      </div>
+        /* =============================================
+           CLASE PRINCIPAL
+        ============================================= */
+        function AnchoredAR() {
 
-      <div class="config-actions">
-        <button class="btn btn-gold" id="startBtn" type="button">Iniciar</button>
-        <button class="btn btn-ghost" id="stopBtn" type="button">Detener</button>
-      </div>
-    </aside>
+            /* --- Estado --- */
+            this.isAR = false;
+            this.session = null;
+            this.supported = false;
 
-    <pre id="debugOut"></pre>
-  </div>
+            /* --- Three.js --- */
+            this.renderer = null;
+            this.scene = null;
+            this.camera = null;
+            this.clock = new THREE.Clock();
+            this.controls = null;
 
-  <script src="https://unpkg.com/html5-qrcode"></script>
-  <script src="https://unpkg.com/html5-qrcode"></script>
-<script>
-  const $ = (id) => document.getElementById(id);
+            /* --- WebXR --- */
+            this.refSpace = null;
+            this.viewerSpace = null;
+            this.hitTestSource = null;
 
-  const statusText = $("statusText");
-  const statusDot = $("statusDot");
-  const cameraState = $("cameraState");
-  const lastQrText = $("lastQrText");
-  const materialState = $("materialState");
-  const lastScanAt = $("lastScanAt");
-  const scanHelper = $("scanHelper");
+            /* --- Reticle --- */
+            this.reticleGroup = null;
+            this.reticleOuter = null;
+            this.reticleInner = null;
+            this.reticleVisible = false;
+            this.lastReticlePose = null;
 
-  const arApp = $("arApp");
-  const arCard = $("arCard");
-  const arMessage = $("arMessage");
-  const scanFlash = $("scanFlash");
-  const rippleLayer = $("rippleLayer");
+            /* --- Objetos --- */
+            this.placedObjects = [];
+            this.ripples = [];
+            this.objectType = 0;
 
-  const matName = $("matName");
-  const matLab = $("matLab");
-  const matLocation = $("matLocation");
-  const matPieces = $("matPieces");
-  const matStatus = $("matStatus");
+            /* --- Preview --- */
+            this.previewGroup = null;
 
-  const configPanel = $("configPanel");
-  const toggleConfigBtn = $("toggleConfigBtn");
-  const startBtn = $("startBtn");
-  const stopBtn = $("stopBtn");
-  const backBtn = $("backBtn");
+            /* --- Tracking --- */
+            this.trackingActive = false;
 
-  const baseUrlInput = $("baseUrl");
-  const apiKeyInput = $("apiKey");
-  const userEmailInput = $("userEmail");
+            /* --- DOM --- */
+            this.dom = {
+                startScreen:     document.getElementById('start-screen'),
+                errorScreen:     document.getElementById('error-screen'),
+                errorMsg:        document.getElementById('error-msg'),
+                errorDetail:     document.getElementById('error-detail'),
+                hud:             document.getElementById('hud'),
+                trackingDot:     document.getElementById('tracking-dot'),
+                trackingText:    document.getElementById('tracking-text'),
+                objCount:        document.getElementById('obj-count'),
+                instruction:     document.getElementById('instruction'),
+                typeLabel:       document.getElementById('type-label'),
+                toastContainer:  document.getElementById('toast-container'),
+                btnStart:        document.getElementById('btn-start'),
+                btnPreview:      document.getElementById('btn-preview'),
+                btnCycle:        document.getElementById('btn-cycle'),
+                btnClear:        document.getElementById('btn-clear'),
+                btnStop:         document.getElementById('btn-stop')
+            };
 
-  const debugOut = $("debugOut");
+            /* --- Bindear metodos para no perder contexto --- */
+            this.onFrame = this._onFrame.bind(this);
+            this.handleSelect = this._handleSelect.bind(this);
 
-  const STATUS_STYLES = {
-    green: {
-      background: "var(--green)",
-      boxShadow: "0 0 14px rgba(113,245,170,0.8)"
-    },
-    red: {
-      background: "var(--red)",
-      boxShadow: "0 0 14px rgba(255,124,142,0.8)"
-    },
-    yellow: {
-      background: "var(--yellow)",
-      boxShadow: "0 0 14px rgba(241,202,91,0.8)"
-    }
-  };
-
-  const MESSAGE_STYLES = {
-    ok: {
-      color: "var(--green)",
-      borderColor: "rgba(113,245,170,0.18)",
-      background: "rgba(113,245,170,0.10)"
-    },
-    bad: {
-      color: "var(--red)",
-      borderColor: "rgba(255,124,142,0.18)",
-      background: "rgba(255,124,142,0.10)"
-    },
-    warn: {
-      color: "var(--yellow)",
-      borderColor: "rgba(241,202,91,0.18)",
-      background: "rgba(241,202,91,0.10)"
-    },
-    info: {
-      color: "var(--cyan)",
-      borderColor: "rgba(99,243,255,0.18)",
-      background: "rgba(99,243,255,0.10)"
-    }
-  };
-
-  const helperMessages = [
-    "Alinea el QR dentro del recuadro",
-    "Mantén buena luz para lectura estable",
-    "Acerca o aleja el código si no enfoca",
-    "El overlay aparecerá al detectar el material"
-  ];
-
-  let html5Qr = null;
-  let lastMaterialId = "";
-  let lastFetchAt = 0;
-  let helperIndex = 0;
-  let helperInterval = null;
-
-  function safeJsonParse(text, fallback = null) {
-    try {
-      return JSON.parse(text);
-    } catch {
-      return fallback;
-    }
-  }
-
-  async function safeResponseJson(response) {
-    try {
-      return await response.json();
-    } catch {
-      return {};
-    }
-  }
-
-  function log(message, data = null) {
-    const time = new Date().toLocaleTimeString();
-    let text = `[${time}] ${message}`;
-
-    if (data !== null) {
-      try {
-        text += `\n${JSON.stringify(data, null, 2)}`;
-      } catch {
-        text += `\n${String(data)}`;
-      }
-    }
-
-    debugOut.textContent = `${text}\n\n${debugOut.textContent}`;
-    console.log(message, data ?? "");
-  }
-
-  function setStatus(text, color = "yellow") {
-    statusText.textContent = text;
-    const style = STATUS_STYLES[color] || STATUS_STYLES.yellow;
-    statusDot.style.background = style.background;
-    statusDot.style.boxShadow = style.boxShadow;
-  }
-
-  function setCardMessage(text, type = "info") {
-    arMessage.textContent = text;
-    const style = MESSAGE_STYLES[type] || MESSAGE_STYLES.info;
-    arMessage.style.color = style.color;
-    arMessage.style.borderColor = style.borderColor;
-    arMessage.style.background = style.background;
-  }
-
-  function markScanTime() {
-    lastScanAt.textContent = new Date().toLocaleTimeString();
-  }
-
-  function getConfig() {
-    return {
-      baseUrl: baseUrlInput.value.trim().replace(/\/$/, ""),
-      apiKey: apiKeyInput.value.trim(),
-      userEmail: userEmailInput.value.trim().toLowerCase()
-    };
-  }
-
-  function validateConfig() {
-    const { baseUrl, apiKey, userEmail } = getConfig();
-
-    if (!baseUrl) {
-      setStatus("Falta Base URL.", "red");
-      return false;
-    }
-
-    if (!/^https?:\/\//i.test(baseUrl)) {
-      setStatus("Base URL inválida.", "red");
-      return false;
-    }
-
-    if (!apiKey) {
-      setStatus("Falta API Key.", "red");
-      return false;
-    }
-
-    if (!userEmail || !userEmail.includes("@")) {
-      setStatus("User email no válido.", "red");
-      return false;
-    }
-
-    return true;
-  }
-
-  function extractMaterialId(raw) {
-    const text = String(raw || "").trim();
-    log("Intentando extraer materialId de", text);
-
-    if (!text) return null;
-    if (/^\d+$/.test(text)) return Number(text);
-
-    const parsed = safeJsonParse(text);
-    if (parsed?.material_id) return Number(parsed.material_id);
-    if (parsed?.id) return Number(parsed.id);
-
-    const genericMatch = text.match(/material(?:_id)?\D*(\d+)/i);
-    if (genericMatch) return Number(genericMatch[1]);
-
-    const urlMatch = text.match(/[?&]id=(\d+)/i);
-    if (urlMatch) return Number(urlMatch[1]);
-
-    const tailNumber = text.match(/(\d+)(?!.*\d)/);
-    if (tailNumber) return Number(tailNumber[1]);
-
-    return null;
-  }
-
-  function normalizeMaterial(data) {
-    return {
-      name: data.name || data.material_name || "Sin nombre",
-      lab: data.lab || data.lab_name || data.laboratorio || "Sin laboratorio",
-      location: data.location || data.ubicacion || "Sin ubicación",
-      pieces: data.pieces_qty ?? data.pieces_text ?? data.cantidad ?? "N/D",
-      status: data.status || data.estado || "Sin estado"
-    };
-  }
-
-  function renderMaterialCard(data) {
-    const material = normalizeMaterial(data);
-
-    matName.textContent = material.name;
-    matLab.textContent = material.lab;
-    matLocation.textContent = material.location;
-    matPieces.textContent = material.pieces;
-    matStatus.textContent = material.status;
-
-    arCard.classList.remove("show");
-    arCard.style.display = "block";
-    void arCard.offsetWidth;
-    arCard.classList.add("show");
-  }
-
-  function hideMaterialCard() {
-    arCard.classList.remove("show");
-    arCard.style.display = "none";
-  }
-
-  function triggerScanSuccessEffects() {
-    scanFlash.classList.remove("active");
-    void scanFlash.offsetWidth;
-    scanFlash.classList.add("active");
-
-    setTimeout(() => {
-      scanFlash.classList.remove("active");
-    }, 500);
-  }
-
-  function createTapRipple(x, y) {
-    const ripple = document.createElement("span");
-    ripple.className = "tap-ripple";
-    ripple.style.left = `${x}px`;
-    ripple.style.top = `${y}px`;
-    rippleLayer.appendChild(ripple);
-
-    setTimeout(() => ripple.remove(), 750);
-  }
-
-  async function fetchJson(url, options = {}) {
-    const response = await fetch(url, options);
-    const data = await safeResponseJson(response);
-    return { response, data };
-  }
-
-  async function postEvent(materialId, qrText) {
-    const { baseUrl, apiKey, userEmail } = getConfig();
-
-    const payload = {
-      material_id: Number(materialId),
-      event_type: "scan",
-      user_email: userEmail,
-      metadata: {
-        qr_text: qrText,
-        source: "fullscreen_ar"
-      }
-    };
-
-    try {
-      const { response, data } = await fetchJson(`${baseUrl}/api/ra/events`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-API-Key": apiKey
-        },
-        body: JSON.stringify(payload)
-      });
-
-      log("POST /api/ra/events", { status: response.status, data });
-      return response.ok;
-    } catch (error) {
-      log("Error en postEvent", error.message);
-      return false;
-    }
-  }
-
-  async function fetchMaterial(materialId, qrText) {
-    if (!validateConfig()) return;
-
-    const { baseUrl, apiKey } = getConfig();
-
-    try {
-      materialState.textContent = "Consultando...";
-      setStatus(`Consultando material ${materialId}...`, "yellow");
-      setCardMessage("Consultando material...", "warn");
-
-      const { response, data } = await fetchJson(`${baseUrl}/api/ra/materials/${materialId}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "X-API-Key": apiKey
+            /* --- Iniciar --- */
+            this.boot();
         }
-      });
 
-      log("GET /api/ra/materials", { status: response.status, data });
+        /* =============================================
+           INICIO
+        ============================================= */
+        AnchoredAR.prototype.boot = async function() {
+            this.initRenderer();
+            this.initScene();
+            this.initReticle();
+            this.setupEvents();
 
-      if (!response.ok) {
-        materialState.textContent = "No encontrado";
-        setStatus("Material no encontrado.", "red");
-        setCardMessage("No se pudo obtener el material.", "bad");
-        return;
-      }
+            this.supported = await this.checkSupport();
+            if (this.supported) {
+                this.dom.btnStart.disabled = false;
+            }
 
-      renderMaterialCard(data);
-      materialState.textContent = "Cargado";
-      setStatus("Material detectado correctamente.", "green");
-      setCardMessage("Material detectado y cargado.", "ok");
-      triggerScanSuccessEffects();
+            this.initPreview();
+            this.renderer.setAnimationLoop(this.onFrame);
+        };
 
-      const eventOk = await postEvent(materialId, qrText);
-      if (!eventOk) {
-        setCardMessage("Material cargado, pero el evento no se registró.", "bad");
-      }
-    } catch (error) {
-      materialState.textContent = "Error";
-      setStatus("Error de red consultando material.", "red");
-      setCardMessage("Error de red consultando material.", "bad");
-      log("Error en fetchMaterial", error.message);
-    }
-  }
+        AnchoredAR.prototype.checkSupport = async function() {
+            if (!navigator.xr) {
+                this.showError(
+                    'WebXR no disponible',
+                    'Tu navegador no soporta WebXR. Usa Chrome Android o Safari iOS.'
+                );
+                return false;
+            }
+            var ok = false;
+            try {
+                ok = await navigator.xr.isSessionSupported('immersive-ar');
+            } catch (e) {
+                ok = false;
+            }
+            if (!ok) {
+                this.showError(
+                    'AR no compatible',
+                    'Tu dispositivo no soporta sesiones AR inmersivas.'
+                );
+                return false;
+            }
+            return true;
+        };
 
-  async function handleQr(decodedText) {
-    log("QR LEÍDO", decodedText);
-    lastQrText.textContent = decodedText || "Leído";
-    markScanTime();
-    setStatus("QR detectado correctamente.", "green");
-    setCardMessage(`QR leído: ${decodedText}`, "ok");
-    scanHelper.textContent = "Lectura detectada · procesando material";
+        /* =============================================
+           RENDERER
+        ============================================= */
+        AnchoredAR.prototype.initRenderer = function() {
+            this.renderer = new THREE.WebGLRenderer({
+                antialias: true,
+                alpha: true,
+                powerPreference: 'high-performance'
+            });
+            this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            this.renderer.setSize(window.innerWidth, window.innerHeight);
+            this.renderer.xr.enabled = true;
+            this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            this.renderer.toneMappingExposure = 1.0;
+            this.renderer.shadowMap.enabled = true;
+            this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.body.appendChild(this.renderer.domElement);
 
-    const materialId = extractMaterialId(decodedText);
+            var self = this;
+            window.addEventListener('resize', function() {
+                self.camera.aspect = window.innerWidth / window.innerHeight;
+                self.camera.updateProjectionMatrix();
+                self.renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        };
 
-    if (!materialId || Number.isNaN(materialId)) {
-      setStatus("QR leído, pero no contiene material_id usable.", "red");
-      setCardMessage("QR no válido para material.", "bad");
-      return;
-    }
+        /* =============================================
+           ESCENA
+        ============================================= */
+        AnchoredAR.prototype.initScene = function() {
+            this.scene = new THREE.Scene();
+            this.camera = new THREE.PerspectiveCamera(
+                65,
+                window.innerWidth / window.innerHeight,
+                0.01, 100
+            );
 
-    const now = Date.now();
-    const shouldFetch = materialId !== lastMaterialId || now - lastFetchAt > 2500;
+            this.ambientLight = new THREE.AmbientLight(0xffffff, 0.55);
+            this.scene.add(this.ambientLight);
 
-    if (shouldFetch) {
-      lastMaterialId = materialId;
-      lastFetchAt = now;
-      await fetchMaterial(materialId, decodedText);
-    }
-  }
+            this.dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+            this.dirLight.position.set(3, 6, 4);
+            this.dirLight.castShadow = true;
+            this.dirLight.shadow.mapSize.setScalar(1024);
+            this.dirLight.shadow.camera.near = 0.1;
+            this.dirLight.shadow.camera.far = 20;
+            this.dirLight.shadow.camera.left = -3;
+            this.dirLight.shadow.camera.right = 3;
+            this.dirLight.shadow.camera.top = 3;
+            this.dirLight.shadow.camera.bottom = -3;
+            this.scene.add(this.dirLight);
 
-  function getQrBoxSize(viewfinderWidth, viewfinderHeight) {
-    const size = Math.min(viewfinderWidth, viewfinderHeight) * 0.68;
-    return {
-      width: Math.floor(size),
-      height: Math.floor(size)
-    };
-  }
+            this.pointLight = new THREE.PointLight(0xD4881A, 0.3, 8);
+            this.pointLight.position.set(-1, 2, -1);
+            this.scene.add(this.pointLight);
+        };
 
-  async function startCamera() {
-    if (!validateConfig()) return;
+        /* =============================================
+           RETICLE
+        ============================================= */
+        AnchoredAR.prototype.initReticle = function() {
+            this.reticleGroup = new THREE.Group();
+            this.reticleGroup.matrixAutoUpdate = false;
+            this.reticleGroup.visible = false;
+            this.scene.add(this.reticleGroup);
 
-    await stopCamera();
+            var outerGeo = new THREE.RingGeometry(0.085, 0.095, 64);
+            var outerMat = new THREE.MeshBasicMaterial({
+                color: 0xD4881A,
+                transparent: true,
+                opacity: 0.45,
+                side: THREE.DoubleSide,
+                depthTest: false
+            });
+            this.reticleOuter = new THREE.Mesh(outerGeo, outerMat);
+            this.reticleGroup.add(this.reticleOuter);
 
-    try {
-      setStatus("Iniciando cámara...", "yellow");
-      cameraState.textContent = "Iniciando";
-      scanHelper.textContent = "Preparando lector QR...";
+            var innerGeo = new THREE.RingGeometry(0.035, 0.04, 48);
+            var innerMat = new THREE.MeshBasicMaterial({
+                color: 0xD4881A,
+                transparent: true,
+                opacity: 0.25,
+                side: THREE.DoubleSide,
+                depthTest: false
+            });
+            this.reticleInner = new THREE.Mesh(innerGeo, innerMat);
+            this.reticleGroup.add(this.reticleInner);
 
-      html5Qr = new Html5Qrcode("reader");
+            var dotGeo = new THREE.CircleGeometry(0.006, 24);
+            var dotMat = new THREE.MeshBasicMaterial({
+                color: 0xD4881A,
+                transparent: true,
+                opacity: 0.7,
+                side: THREE.DoubleSide,
+                depthTest: false
+            });
+            var dot = new THREE.Mesh(dotGeo, dotMat);
+            dot.position.z = 0.001;
+            this.reticleGroup.add(dot);
+        };
 
-      await html5Qr.start(
-        { facingMode: "environment" },
-        {
-          fps: 10,
-          qrbox: getQrBoxSize,
-          disableFlip: false,
-          formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE]
-        },
-        async (decodedText, decodedResult) => {
-          log("Callback de escaneo disparado", { decodedText, decodedResult });
-          await handleQr(decodedText);
-        },
-        () => {}
-      );
+        /* =============================================
+           CREAR OBJETO 3D
+        ============================================= */
+        AnchoredAR.prototype.createObject = function(typeIndex, position) {
+            var type = OBJECT_TYPES[typeIndex % OBJECT_TYPES.length];
+            var geometry = type.createGeo();
 
-      cameraState.textContent = "Activa";
-      setStatus("Cámara activa. Apunta el QR dentro del cuadro.", "green");
-      scanHelper.textContent = "Alinea el QR dentro del recuadro";
-    } catch (error) {
-      cameraState.textContent = "Error";
-      setStatus(`No se pudo iniciar la cámara: ${error.message || error}`, "red");
-      scanHelper.textContent = "No se pudo iniciar el lector";
-      log("Error startCamera", error.message || error);
-      console.error(error);
-    }
-  }
+            var material = new THREE.MeshStandardMaterial({
+                color: type.color,
+                emissive: type.emissive,
+                emissiveIntensity: 0.6,
+                roughness: 0.25,
+                metalness: 0.75,
+                transparent: true,
+                opacity: 0.88
+            });
 
-  async function stopCamera() {
-    if (html5Qr) {
-      try {
-        await html5Qr.stop();
-        await html5Qr.clear();
-      } catch (error) {
-        log("Error stopCamera", error.message);
-      } finally {
-        html5Qr = null;
-      }
-    }
+            var mesh = new THREE.Mesh(geometry, material);
+            mesh.position.copy(position);
+            mesh.castShadow = true;
 
-    cameraState.textContent = "Detenida";
-    scanHelper.textContent = "Lector detenido";
-    hideMaterialCard();
-  }
+            /* Wireframe superpuesto */
+            var wireMat = new THREE.MeshBasicMaterial({
+                color: type.color,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.12
+            });
+            var wire = new THREE.Mesh(geometry.clone(), wireMat);
+            wire.scale.setScalar(1.04);
+            mesh.add(wire);
 
-  function rotateHelperText() {
-    clearInterval(helperInterval);
+            /* Escala inicial a 0 para animar aparicion */
+            mesh.scale.setScalar(0.001);
 
-    helperInterval = setInterval(() => {
-      if (cameraState.textContent !== "Activa") return;
-      helperIndex = (helperIndex + 1) % helperMessages.length;
-      scanHelper.textContent = helperMessages[helperIndex];
-    }, 2800);
-  }
+            return { mesh: mesh, type: type };
+        };
 
-  function bindEvents() {
-    toggleConfigBtn.addEventListener("click", () => {
-      configPanel.classList.toggle("active");
-    });
+        /* =============================================
+           EFECTO RIPPLE
+        ============================================= */
+        AnchoredAR.prototype.createRipple = function(position) {
+            var geo = new THREE.RingGeometry(0.01, 0.02, 32);
+            var mat = new THREE.MeshBasicMaterial({
+                color: 0xD4881A,
+                transparent: true,
+                opacity: 0.7,
+                side: THREE.DoubleSide,
+                depthTest: false
+            });
+            var ring = new THREE.Mesh(geo, mat);
+            ring.position.copy(position);
+            ring.position.y += 0.002;
+            ring.rotation.x = -Math.PI / 2;
+            ring.matrixAutoUpdate = false;
+            ring.updateMatrix();
+            this.scene.add(ring);
+            this.ripples.push({ mesh: ring, time: 0, baseScale: 1 });
+        };
 
-    startBtn.addEventListener("click", startCamera);
-    stopBtn.addEventListener("click", stopCamera);
+        /* =============================================
+           VISTA PREVIA
+        ============================================= */
+        AnchoredAR.prototype.initPreview = function() {
+            this.previewGroup = new THREE.Group();
+            this.scene.add(this.previewGroup);
 
-    backBtn.addEventListener("click", async () => {
-      try {
-        await stopCamera();
-      } catch {}
+            /* Plano de suelo con sombras */
+            var groundGeo = new THREE.PlaneGeometry(6, 6);
+            var groundMat = new THREE.ShadowMaterial({ opacity: 0.25 });
+            var ground = new THREE.Mesh(groundGeo, groundMat);
+            ground.rotation.x = -Math.PI / 2;
+            ground.receiveShadow = true;
+            this.previewGroup.add(ground);
 
-      const href = backBtn.dataset.href || "/inventory/";
-      window.location.href = href;
-    });
+            /* Grid */
+            var gridHelper = new THREE.GridHelper(4, 20, 0x1a1a1a, 0x111111);
+            gridHelper.position.y = 0.001;
+            this.previewGroup.add(gridHelper);
 
-    arApp.addEventListener("pointerdown", (event) => {
-      createTapRipple(event.clientX, event.clientY);
-    });
-  }
+            /* 3 objetos de muestra */
+            var positions = [
+                new THREE.Vector3(-0.8, 0.5, 0),
+                new THREE.Vector3(0, 0.5, 0),
+                new THREE.Vector3(0.8, 0.5, 0)
+            ];
+            for (var i = 0; i < OBJECT_TYPES.length; i++) {
+                var obj = this.createObject(i, positions[i]);
+                obj.mesh.scale.setScalar(1);
+                this.previewGroup.add(obj.mesh);
+            }
 
-  function initView() {
-    cameraState.textContent = "Pendiente";
-    materialState.textContent = "Sin carga";
-    lastScanAt.textContent = "—";
-    setStatus("Listo para iniciar.", "yellow");
-    scanHelper.textContent = "Alinea el QR dentro del recuadro";
-    rotateHelperText();
-    log("Vista cargada");
-  }
+            /* Controles orbitales */
+            this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+            this.controls.enableDamping = true;
+            this.controls.dampingFactor = 0.06;
+            this.controls.target.set(0, 0.4, 0);
+            this.controls.maxPolarAngle = Math.PI / 2.1;
+            this.controls.minDistance = 1;
+            this.controls.maxDistance = 6;
+            this.camera.position.set(0, 1.3, 2.8);
+            this.controls.update();
+        };
 
-  document.addEventListener("DOMContentLoaded", () => {
-    bindEvents();
-    initView();
-  });
-</script>
+        AnchoredAR.prototype.removePreview = function() {
+            if (!this.previewGroup) { return; }
+            this.scene.remove(this.previewGroup);
+            this.previewGroup.traverse(function(child) {
+                if (child.geometry) { child.geometry.dispose(); }
+                if (child.material) {
+                    if (Array.isArray(child.material)) {
+                        child.material.forEach(function(m) { m.dispose(); });
+                    } else {
+                        child.material.dispose();
+                    }
+                }
+            });
+            this.previewGroup = null;
+            if (this.controls) {
+                this.controls.dispose();
+                this.controls = null;
+            }
+        };
+
+        /* =============================================
+           SESION AR
+        ============================================= */
+        AnchoredAR.prototype.startAR = async function() {
+            try {
+                /* Crear sesion */
+                this.session = await navigator.xr.requestSession('immersive-ar', {
+                    requiredFeatures: ['hit-test'],
+                    optionalFeatures: ['anchors', 'dom-overlay', 'light-estimation'],
+                    domOverlay: { root: document.getElementById('overlay') }
+                });
+
+                /* Limpiar preview */
+                this.removePreview();
+                this.isAR = true;
+
+                /* Eventos de sesion */
+                var self = this;
+                this.session.addEventListener('end', function() { self.onSessionEnd(); });
+                this.session.addEventListener('visibilitychange', function(e) {
+                    self.trackingActive = e.session.visibilityState === 'visible' && self.isAR;
+                    self.updateTrackingUI();
+                });
+
+                /* Escuchar select ANTES de setSession */
+                this.session.addEventListener('select', this.handleSelect);
+
+                /* Conectar renderer */
+                await this.renderer.xr.setSession(this.session);
+
+                /* Espacios de referencia */
+                this.viewerSpace = await this.session.requestReferenceSpace('viewer');
+                try {
+                    this.refSpace = await this.session.requestReferenceSpace('local-floor');
+                    this.refSpace.addEventListener('reset', function() {
+                        self.toast('Referencia reiniciada', 'error');
+                    });
+                } catch (refErr) {
+                    console.warn('local-floor no disponible, usando viewer:', refErr);
+                    this.refSpace = this.viewerSpace;
+                }
+
+                /* Fuente de hit-test */
+                try {
+                    this.hitTestSource = await this.session.requestHitTestSource({
+                        space: this.viewerSpace
+                    });
+                } catch (htErr) {
+                    console.warn('Hit-test no disponible:', htErr);
+                    this.hitTestSource = null;
+                    this.toast('Hit-test no disponible — modo fallback', 'error');
+                }
+
+                /* UI */
+                this.dom.startScreen.classList.add('hidden');
+                this.dom.hud.classList.add('visible');
+                this.trackingActive = true;
+                this.updateTrackingUI();
+                this.updateTypeLabel();
+                this.toast('Apunta a una superficie plana', '');
+
+            } catch (err) {
+                console.error('Error al iniciar AR:', err);
+                this.showError('Error al iniciar AR', err.message);
+                this.isAR = false;
+                this.initPreview();
+            }
+        };
+
+        AnchoredAR.prototype.onSessionEnd = function() {
+            this.isAR = false;
+            this.trackingActive = false;
+            this.session = null;
+            this.hitTestSource = null;
+            this.lastReticlePose = null;
+            this.reticleGroup.visible = false;
+            this.reticleVisible = false;
+
+            this.clearPlacedObjects(true);
+
+            this.dom.hud.classList.remove('visible');
+            this.dom.startScreen.classList.remove('hidden');
+
+            this.initPreview();
+        };
+
+        /* =============================================
+           EVENTOS
+        ============================================= */
+        AnchoredAR.prototype.setupEvents = function() {
+            var self = this;
+            this.dom.btnStart.addEventListener('click', function() { self.startAR(); });
+            this.dom.btnPreview.addEventListener('click', function() {
+                self.dom.startScreen.classList.add('hidden');
+                self.toast('Arrastra para rotar la vista', '');
+            });
+            this.dom.btnCycle.addEventListener('click', function() { self.cycleType(); });
+            this.dom.btnClear.addEventListener('click', function() { self.clearPlacedObjects(false); });
+            this.dom.btnStop.addEventListener('click', function() { self.endSession(); });
+        };
+
+        AnchoredAR.prototype.cycleType = function() {
+            this.objectType = (this.objectType + 1) % OBJECT_TYPES.length;
+            this.updateTypeLabel();
+            this.toast(OBJECT_TYPES[this.objectType].name, '');
+        };
+
+        AnchoredAR.prototype.updateTypeLabel = function() {
+            this.dom.typeLabel.textContent = OBJECT_TYPES[this.objectType].name;
+        };
+
+        AnchoredAR.prototype.endSession = async function() {
+            if (this.session) {
+                try { await this.session.end(); } catch (e) { /* ya terminada */ }
+            }
+        };
+
+        /* =============================================
+           SELECT / COLOCAR
+        ============================================= */
+        AnchoredAR.prototype._handleSelect = function(event) {
+            if (!this.isAR) { return; }
+
+            /* Fallback: sin hit-test, colocar frente a camara */
+            if (!this.hitTestSource && !this.reticleVisible) {
+                var dir = new THREE.Vector3(0, -0.2, -1);
+                dir.applyQuaternion(this.camera.quaternion);
+                var pos = this.camera.position.clone().add(dir.multiplyScalar(1.5));
+                this.placeObject(pos);
+                return;
+            }
+
+            if (!this.reticleVisible || !this.lastReticlePose) {
+                this.toast('Apunta a una superficie primero', '');
+                return;
+            }
+
+            /* Extraer posicion del pose */
+            var m = new THREE.Matrix4().fromArray(this.lastReticlePose.transform.matrix);
+            var pos2 = new THREE.Vector3().setFromMatrixPosition(m);
+            this.placeObject(pos2);
+        };
+
+        AnchoredAR.prototype.placeObject = function(position) {
+            var result = this.createObject(this.objectType, position);
+            var mesh = result.mesh;
+            var type = result.type;
+
+            this.scene.add(mesh);
+
+            /* Guardar referencia al ultimo pose para ancla */
+            var savedPose = this.lastReticlePose;
+
+            this.placedObjects.push({
+                mesh: mesh,
+                anchorPose: savedPose,
+                baseY: position.y,
+                time: 0,
+                offset: Math.random() * Math.PI * 2
+            });
+
+            /* Ripple */
+            this.createRipple(position);
+
+            /* Feedback */
+            if (navigator.vibrate) { navigator.vibrate(30); }
+            this.updateObjCount();
+            this.toast(type.name + ' colocado', 'success');
+
+            /* Avanzar tipo */
+            this.objectType = (this.objectType + 1) % OBJECT_TYPES.length;
+            this.updateTypeLabel();
+        };
+
+        /* =============================================
+           LIMPIAR OBJETOS
+        ============================================= */
+        AnchoredAR.prototype.clearPlacedObjects = function(silent) {
+            var self = this;
+            this.placedObjects.forEach(function(obj) {
+                self.scene.remove(obj.mesh);
+                obj.mesh.traverse(function(child) {
+                    if (child.geometry) { child.geometry.dispose(); }
+                    if (child.material) {
+                        if (Array.isArray(child.material)) {
+                            child.material.forEach(function(m) { m.dispose(); });
+                        } else {
+                            child.material.dispose();
+                        }
+                    }
+                });
+            });
+            this.placedObjects = [];
+            this.updateObjCount();
+            if (!silent) { this.toast('Objetos eliminados', ''); }
+        };
+
+        /* =============================================
+           LOOP PRINCIPAL
+        ============================================= */
+        AnchoredAR.prototype._onFrame = function(time, xrFrame) {
+            var delta = this.clock.getDelta();
+
+            if (this.isAR && xrFrame) {
+                this.onARFrame(time, xrFrame, delta);
+            } else if (this.controls) {
+                this.onPreviewFrame(time, delta);
+            }
+
+            this.renderer.render(this.scene, this.camera);
+        };
+
+        /* =============================================
+           FRAME AR
+        ============================================= */
+        AnchoredAR.prototype.onARFrame = function(time, frame, delta) {
+            /* Hit-test */
+            this.processHitTest(frame);
+
+            /* Animar reticle */
+            if (this.reticleVisible) {
+                this.reticleOuter.rotation.z += 0.006;
+                this.reticleInner.rotation.z -= 0.01;
+                var s = 1 + Math.sin(time * 0.004) * 0.1;
+                this.reticleOuter.scale.setScalar(s);
+            }
+
+            /* Actualizar objetos anclados */
+            this.updatePlacedObjects(time, delta, frame);
+
+            /* Ripples */
+            this.updateRipples(delta);
+
+            /* Estimacion de luz */
+            try {
+                if (this.refSpace) {
+                    var estimate = frame.getLightEstimate(this.refSpace);
+                    if (estimate && estimate.primaryLightIntensity) {
+                        var intensity = THREE.MathUtils.clamp(
+                            estimate.primaryLightIntensity.x, 0.2, 2.5
+                        );
+                        this.ambientLight.intensity = intensity * 0.55;
+                        this.dirLight.intensity = intensity * 0.9;
+                    }
+                }
+            } catch (lightErr) {
+                /* Estimacion de luz no soportada, ignorar */
+            }
+        };
+
+        /* =============================================
+           HIT TEST
+        ============================================= */
+        AnchoredAR.prototype.processHitTest = function(frame) {
+            if (!this.hitTestSource) { return; }
+
+            var results = frame.getHitTestResults(this.hitTestSource);
+
+            if (results.length > 0) {
+                var hit = results[0];
+                var pose = null;
+                try {
+                    pose = hit.getPose(this.refSpace);
+                } catch (poseErr) {
+                    pose = null;
+                }
+
+                if (pose) {
+                    this.reticleGroup.visible = true;
+                    this.reticleGroup.matrix.fromArray(pose.transform.matrix);
+                    this.lastReticlePose = pose;
+                    this.reticleVisible = true;
+                    this.dom.instruction.textContent = 'Toca para colocar';
+                    return;
+                }
+            }
+
+            this.reticleGroup.visible = false;
+            this.reticleVisible = false;
+            this.lastReticlePose = null;
+            this.dom.instruction.textContent = 'Apunta a una superficie';
+        };
+
+        /* =============================================
+           ACTUALIZAR OBJETOS ANCLADOS
+        ============================================= */
+        AnchoredAR.prototype.updatePlacedObjects = function(time, delta, frame) {
+            var self = this;
+            this.placedObjects.forEach(function(obj) {
+                obj.time += delta;
+
+                /* Intentar actualizar desde ancla nativa del frame */
+                if (obj.anchorPose) {
+                    try {
+                        var nativeAnchor = obj.anchorPose.createAnchor
+                            ? obj.anchorPose
+                            : null;
+                        if (nativeAnchor && nativeAnchor.anchorSpace) {
+                            var anchorPose = frame.getPose(nativeAnchor.anchorSpace, self.refSpace);
+                            if (anchorPose) {
+                                var m = new THREE.Matrix4().fromArray(anchorPose.transform.matrix);
+                                var pos = new THREE.Vector3().setFromMatrixPosition(m);
+                                pos.y += Math.sin(time * 0.0015 + obj.offset) * 0.035;
+                                m.setPosition(pos);
+                                obj.mesh.matrix.copy(m);
+                                obj.mesh.matrixAutoUpdate = false;
+                                obj.mesh.rotation.y += 0.008;
+                                return;
+                            }
+                        }
+                    } catch (anchorErr) {
+                        /* Ancla no disponible, usar fallback */
+                    }
+                }
+
+                /* Fallback: mantener posicion original + flotacion */
+                self.fallBackUpdate(obj, time);
+
+                /* Animacion de aparicion */
+                if (obj.mesh.scale.x < 0.99) {
+                    var sc = THREE.MathUtils.lerp(obj.mesh.scale.x, 1, 0.12);
+                    obj.mesh.scale.setScalar(sc);
+                } else {
+                    obj.mesh.scale.setScalar(1);
+                }
+            });
+        };
+
+        AnchoredAR.prototype.fallBackUpdate = function(obj, time) {
+            obj.mesh.matrixAutoUpdate = true;
+            obj.mesh.position.y = obj.baseY + Math.sin(time * 0.0015 + obj.offset) * 0.035;
+            obj.mesh.rotation.y += 0.008;
+            obj.mesh.rotation.x = Math.sin(time * 0.001 + obj.offset * 2) * 0.05;
+        };
+
+        /* =============================================
+           RIPPLES
+        ============================================= */
+        AnchoredAR.prototype.updateRipples = function(delta) {
+            for (var i = this.ripples.length - 1; i >= 0; i--) {
+                var r = this.ripples[i];
+                r.time += delta;
+                var progress = r.time / 0.7;
+
+                if (progress >= 1) {
+                    this.scene.remove(r.mesh);
+                    r.mesh.geometry.dispose();
+                    r.mesh.material.dispose();
+                    this.ripples.splice(i, 1);
+                } else {
+                    var scale = r.baseScale + progress * 10;
+                    r.mesh.scale.set(scale, scale, scale);
+                    r.mesh.material.opacity = 0.7 * (1 - progress);
+                }
+            }
+        };
+
+        /* =============================================
+           FRAME VISTA PREVIA
+        ============================================= */
+        AnchoredAR.prototype.onPreviewFrame = function(time, delta) {
+            if (!this.previewGroup) { return; }
+            var children = this.previewGroup.children;
+            for (var i = 0; i < children.length; i++) {
+                var child = children[i];
+                if (child.isMesh && child.castShadow) {
+                    child.rotation.y += 0.005;
+                    child.position.y = 0.5 + Math.sin(time * 0.001 + child.position.x) * 0.08;
+                }
+            }
+            if (this.controls) { this.controls.update(); }
+        };
+
+        /* =============================================
+           UI HELPERS
+        ============================================= */
+        AnchoredAR.prototype.updateTrackingUI = function() {
+            var dot = this.dom.trackingDot;
+            var text = this.dom.trackingText;
+            dot.classList.remove('active', 'lost');
+            if (this.trackingActive) {
+                dot.classList.add('active');
+                text.textContent = 'Tracking';
+            } else {
+                dot.classList.add('lost');
+                text.textContent = 'Lost';
+            }
+        };
+
+        AnchoredAR.prototype.updateObjCount = function() {
+            this.dom.objCount.textContent = this.placedObjects.length;
+        };
+
+        AnchoredAR.prototype.toast = function(msg, type) {
+            var el = document.createElement('div');
+            el.className = 'toast';
+            if (type) { el.className += ' ' + type; }
+            el.textContent = msg;
+            this.dom.toastContainer.appendChild(el);
+            setTimeout(function() { el.remove(); }, 2600);
+        };
+
+        AnchoredAR.prototype.showError = function(msg, detail) {
+            this.dom.errorMsg.textContent = msg;
+            this.dom.errorDetail.textContent = detail || '';
+            this.dom.errorScreen.classList.add('visible');
+            this.dom.startScreen.classList.add('hidden');
+        };
+
+        /* =============================================
+           INICIALIZACION
+        ============================================= */
+        var app = new AnchoredAR();
+
+    </script>
 </body>
 </html>
