@@ -13,6 +13,7 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
 
     role = db.Column(db.String(20), nullable=False, default="STUDENT")
+    is_root_superadmin = db.Column(db.Boolean, nullable=False, default=False)
 
     is_verified = db.Column(db.Boolean, nullable=False, default=False)
     is_active = db.Column(db.Boolean, nullable=False, default=True)

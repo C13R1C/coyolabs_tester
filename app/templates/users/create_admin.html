@@ -1,46 +1,100 @@
 {% extends "layouts/student_base.html" %}
-{% set crumbs = [("Inicio", url_for('root_home')), ("Administración usuarios", url_for('users.admin_panel')), ("Crear administrador", url_for('users.create_admin_account'))] %}
-{% block title %}Crear administrador{% endblock %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Administración usuarios", url_for('users.admin_panel')), ("Administrar perfiles y roles", url_for('users.create_admin_account'))] %}
+{% block title %}Administrar perfiles y roles{% endblock %}
 
 {% block content %}
 <header class="topbar">
   <div class="topbar-left">
-    <p class="page-kicker">Administrador</p>
-    <h1>Crear cuenta de administrador</h1>
-    <p class="page-subtitle">Crea credenciales iniciales para un nuevo administrador.</p>
+    <p class="page-kicker">Gobernanza</p>
+    <h1>Administrar perfiles y roles</h1>
+    <p class="page-subtitle">{{ 'Resuelve perfiles pendientes y aplica cambios directos de rol.' if is_superadmin else 'Resuelve perfiles pendientes institucionales.' }}</p>
   </div>
 </header>
 
 <section class="table-card">
-  <form method="post" class="toolbar" style="grid-template-columns: 1fr; max-width: 560px;" data-form-mode="create">
+  <h3 style="margin-top:0;">Perfiles pendientes ({{ pending_accounts|length }})</h3>
+  <p class="text-dim" style="margin-top:0;">Asigna rol institucional a cuentas pendientes.</p>
+  {% if pending_accounts %}
+  <div class="table-wrap">
+    <table class="inventory-table table-mobile-cards" style="min-width:960px;">
+      <thead>
+        <tr>
+          <th>Email</th>
+          <th>Nombre</th>
+          <th>Matrícula</th>
+          <th>Creada</th>
+          <th>Asignar rol</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for user in pending_accounts %}
+        <tr>
+          <td data-label="Email">{{ user.email }}</td>
+          <td data-label="Nombre">{{ user.full_name or '-' }}</td>
+          <td data-label="Matrícula">{{ user.matricula or '-' }}</td>
+          <td data-label="Creada">{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else '-' }}</td>
+          <td data-label="Asignar rol">
+            <form method="post" action="{{ url_for('users.assign_role', user_id=user.id) }}" style="display:flex; gap:8px; flex-wrap:wrap;">
+              <div class="select-wrap" style="min-width:200px;">
+                <select name="role" required>
+                  <option value="">Selecciona rol</option>
+                  {% for role_name in pending_accounts_assignable_roles %}
+                  <option value="{{ role_name }}">{{ role_name|role_label }}</option>
+                  {% endfor %}
+                </select>
+                <i class="ph ph-caret-down select-arrow"></i>
+              </div>
+              <button class="btn btn-gold" type="submit">Asignar</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p>No hay perfiles pendientes por resolver.</p>
+  {% endif %}
+</section>
+
+{% if is_superadmin %}
+<section class="table-card">
+  <h3 style="margin-top:0;">Cambios de rol</h3>
+  <p class="text-dim" style="margin-top:0;">Cambio directo de rol para cuentas existentes (sin crear SUPERADMIN).</p>
+
+  <form method="post" class="toolbar" style="grid-template-columns: 1fr 1fr auto; margin-top:12px;">
+    <input type="hidden" name="action" value="change_role">
     <div class="toolbar-group">
-      <label>Email institucional</label>
-      <div class="search-box">
-        <i class="ph ph-envelope search-icon"></i>
-        <input type="email" name="email" placeholder="usuario@utpn.edu.mx" required>
+      <label>Cuenta existente</label>
+      <div class="select-wrap">
+        <select name="user_id" required>
+          <option value="">Selecciona una cuenta</option>
+          {% for user in eligible_users %}
+          <option value="{{ user.id }}">{{ user.email }}{% if user.full_name %} · {{ user.full_name }}{% endif %} · {{ user.role|role_label }}</option>
+          {% endfor %}
+        </select>
+        <i class="ph ph-caret-down select-arrow"></i>
       </div>
     </div>
 
     <div class="toolbar-group">
-      <label>Nombre (opcional)</label>
-      <div class="search-box">
-        <i class="ph ph-user search-icon"></i>
-        <input type="text" name="full_name">
+      <label>Nuevo rol</label>
+      <div class="select-wrap">
+        <select name="role" required>
+          <option value="STUDENT">Estudiante</option>
+          <option value="TEACHER">Profesor</option>
+          <option value="STAFF">Staff</option>
+          <option value="ADMIN">Administrador</option>
+        </select>
+        <i class="ph ph-caret-down select-arrow"></i>
       </div>
     </div>
 
-    <div class="toolbar-group">
-      <label>Contraseña inicial</label>
-      <div class="search-box">
-        <i class="ph ph-lock search-icon"></i>
-        <input type="password" name="password" required>
-      </div>
-    </div>
-
-    <div class="toolbar-actions">
-      <button type="submit" class="btn btn-gold">Crear administrador</button>
-      <a href="{{ url_for('users.admin_panel') }}" class="btn btn-ghost">Cancelar</a>
+    <div class="toolbar-actions" style="align-self:end;">
+      <button type="submit" class="btn btn-gold">Cambiar rol</button>
+      <a href="{{ url_for('users.admin_panel') }}" class="btn btn-ghost">Volver</a>
     </div>
   </form>
 </section>
+{% endif %}
 {% endblock %}

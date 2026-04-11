@@ -80,6 +80,8 @@ def notification_to_dict(notification: Notification, unread_count: int | None = 
         "title": notification.title,
         "message": notification.message,
         "link": notification.link,
+        "event_code": notification.event_code,
+        "is_persistent": notification.is_persistent,
         "priority": priority,
         "is_read": notification.is_read,
         "created_at": notification.created_at.isoformat() if notification.created_at else None,

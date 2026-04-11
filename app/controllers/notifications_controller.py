@@ -2,6 +2,7 @@ import queue
 
 from flask import Blueprint, Response, jsonify, render_template, redirect, request, url_for, flash
 from flask_login import current_user
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.utils.authz import min_role_required
 from app.extensions import db
@@ -87,6 +88,17 @@ def mark_read(notif_id: int):
         flash("Notificación no encontrada.", "error")
         return redirect(url_for("notifications.list_notifications"))
 
+    try:
+        is_persistent = bool(notif.is_persistent)
+    except Exception:
+        is_persistent = False
+
+    if is_persistent:
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"ok": False, "error": "La notificación permanece activa hasta resolver el perfil pendiente."}), 400
+        flash("La notificación permanece activa hasta resolver el perfil pendiente.", "warning")
+        return redirect(url_for("notifications.list_notifications"))
+
     notif.is_read = True
     log_event(
         module="NOTIFICATIONS",
@@ -111,11 +123,23 @@ def mark_read(notif_id: int):
 @notifications_bp.route("/mark-all-read", methods=["POST"])
 @min_role_required("STUDENT")
 def mark_all_read():
-    updated_rows = (
-        Notification.query
-        .filter(Notification.user_id == current_user.id, Notification.is_read.is_(False))
-        .update({Notification.is_read: True}, synchronize_session=False)
-    )
+    try:
+        updated_rows = (
+            Notification.query
+            .filter(
+                Notification.user_id == current_user.id,
+                Notification.is_read.is_(False),
+                Notification.is_persistent.is_(False),
+            )
+            .update({Notification.is_read: True}, synchronize_session=False)
+        )
+    except SQLAlchemyError:
+        db.session.rollback()
+        updated_rows = (
+            Notification.query
+            .filter(Notification.user_id == current_user.id, Notification.is_read.is_(False))
+            .update({Notification.is_read: True}, synchronize_session=False)
+        )
     db.session.commit()
     unread_count = get_unread_count(current_user.id)
 
@@ -129,14 +153,26 @@ def mark_all_read():
 @notifications_bp.route("/clear-read", methods=["POST"])
 @min_role_required("STUDENT")
 def clear_read():
-    deleted_rows = (
-        Notification.query
-        .filter(
-            Notification.user_id == current_user.id,
-            Notification.is_read == True
+    try:
+        deleted_rows = (
+            Notification.query
+            .filter(
+                Notification.user_id == current_user.id,
+                Notification.is_read == True,
+                Notification.is_persistent.is_(False),
+            )
+            .delete(synchronize_session=False)
         )
-        .delete(synchronize_session=False)
-    )
+    except SQLAlchemyError:
+        db.session.rollback()
+        deleted_rows = (
+            Notification.query
+            .filter(
+                Notification.user_id == current_user.id,
+                Notification.is_read == True,
+            )
+            .delete(synchronize_session=False)
+        )
 
     db.session.commit()
 

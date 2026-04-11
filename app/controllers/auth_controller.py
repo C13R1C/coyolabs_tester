@@ -4,8 +4,10 @@ from flask import Blueprint, current_app, flash, jsonify, redirect, render_templ
 from flask_login import current_user, login_required, login_user, logout_user
 
 from app.extensions import db
+from app.models.notification import Notification
 from app.models.user import User
 from app.services.email_service import send_password_reset_email, send_verification_email
+from app.services.notification_realtime_service import publish_notification_created
 from app.services.token_service import (
     confirm_password_reset_token,
     confirm_verify_token,
@@ -173,6 +175,25 @@ def register():
         user.set_password(password)
         db.session.add(user)
         db.session.commit()
+
+        notifications_created: list[Notification] = []
+        if inferred_role == ROLE_PENDING:
+            admins = User.query.filter(User.role.in_(["ADMIN", "SUPERADMIN"])).all()
+            for admin in admins:
+                notif = Notification(
+                    user_id=admin.id,
+                    title="Perfil pendiente por resolver",
+                    message=f"Nueva cuenta pendiente: {user.email}. Asigna rol desde Administrar perfiles y roles.",
+                    link=url_for("users.create_admin_account"),
+                    event_code="PENDING_PROFILE",
+                    is_persistent=True,
+                    related_user_id=user.id,
+                )
+                db.session.add(notif)
+                notifications_created.append(notif)
+            db.session.commit()
+            for notif in notifications_created:
+                publish_notification_created(notif)
 
         token = generate_verify_token(email, user.verify_token_version or 0)
         base_url = current_app.config.get("APP_BASE_URL", "http://127.0.0.1:5000")
