@@ -162,6 +162,44 @@
   min-width: 180px;
 }
 
+.signature-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim, #728078);
+  font-size: .92rem;
+  pointer-events: none;
+}
+
+.signature-guide-line {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: 44px;
+  border-bottom: 1px solid rgba(99, 114, 122, .45);
+  pointer-events: none;
+}
+
+.signature-preview-panel {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(44, 54, 61, .16);
+  background: rgba(255, 255, 255, .92);
+}
+
+.signature-preview {
+  display: none;
+  width: 100%;
+  max-height: 190px;
+  object-fit: contain;
+  border-radius: 8px;
+  border: 1px solid rgba(44, 54, 61, .2);
+  background: #fff;
+}
+
 .signature-hint {
   margin-top: 8px;
   font-size: .82rem;
@@ -421,8 +459,10 @@ let clockPointerActive = false;
 let lastSnappedStep = 0;
 let signatureDrawing = false;
 let signatureHasStroke = false;
+let signatureSaved = false;
+let signatureCtx = null;
 
-function signaturePosition(evt) {
+function getCoordinates(event) {
   const rect = signaturePad.getBoundingClientRect();
   const touchSource = evt.touches && evt.touches.length ? evt.touches[0] : null;
   const source = touchSource || evt;
@@ -480,6 +520,8 @@ function initSignaturePad() {
     ctx.moveTo(pos.x, pos.y);
     markAsSigned();
   }
+  toggleSignaturePlaceholder();
+}
 
   function moveDraw(evt) {
     if (!signatureDrawing) return;
@@ -490,20 +532,27 @@ function initSignaturePad() {
     markAsSigned();
   }
 
-  function endDraw() {
-    signatureDrawing = false;
-  }
+function initSignaturePad() {
+  if (!signaturePad) return;
+  signatureCtx = signaturePad.getContext("2d");
+  resizeCanvas();
 
-  signaturePad.addEventListener("mousedown", startDraw);
-  signaturePad.addEventListener("mousemove", moveDraw);
-  window.addEventListener("mouseup", endDraw);
-  signaturePad.addEventListener("touchstart", startDraw, { passive: false });
-  signaturePad.addEventListener("touchmove", moveDraw, { passive: false });
-  window.addEventListener("touchend", endDraw, { passive: true });
+  signaturePad.addEventListener("mousedown", startDrawing);
+  signaturePad.addEventListener("mousemove", draw);
+  window.addEventListener("mouseup", stopDrawing);
+  signaturePad.addEventListener("mouseleave", stopDrawing);
+
+  signaturePad.addEventListener("touchstart", startDrawing, { passive: false });
+  signaturePad.addEventListener("touchmove", draw, { passive: false });
+  signaturePad.addEventListener("touchend", stopDrawing, { passive: true });
+  signaturePad.addEventListener("touchcancel", stopDrawing, { passive: true });
+
+  window.addEventListener("resize", resizeCanvas);
 
   clearSignatureBtn?.addEventListener("click", () => {
-    ctx.clearRect(0, 0, signaturePad.width, signaturePad.height);
+    signatureCtx.clearRect(0, 0, signaturePad.width, signaturePad.height);
     signatureHasStroke = false;
+    signatureSaved = false;
     signatureDataInput.value = "";
     if (signaturePlaceholder) signaturePlaceholder.style.display = "block";
   });
@@ -597,8 +646,7 @@ function bindCalendarAsyncFilters() {
 
 function validateAndSerializeSignature() {
   if (!signaturePad || !signatureDataInput) return true;
-  if (!signatureHasStroke) return false;
-  signatureDataInput.value = signaturePad.toDataURL("image/png");
+  if (!signatureHasStroke || !signatureSaved || !signatureDataInput.value) return false;
   return true;
 }
 
@@ -861,7 +909,7 @@ reservationForm?.addEventListener("submit", (event) => {
   if (!validateAndSerializeSignature()) {
     event.preventDefault();
     if (submitReservationBtn) submitReservationBtn.disabled = false;
-    alert("Debes capturar tu firma digital para enviar la reservación.");
+    alert("Debes dibujar y presionar \"Guardar firma\" antes de enviar la reservación.");
     return;
   }
 });
