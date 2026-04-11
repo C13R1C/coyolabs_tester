@@ -108,35 +108,9 @@
 
           <p class="note">Nota: Si tu cuenta no está verificada, no podrás iniciar sesión.</p>
 
-          <div
-            class="verify-email-box"
-            id="verifyEmailBox"
-            data-pending-email="{{ pending_verify_email or '' }}"
-            data-csrf-token="{{ csrf_token }}"
-          >
-            <p class="note">
-              ¿Correo incorrecto?
-              <button type="button" class="link inline-link" id="toggleChangeEmail">Cambiar correo</button>
-            </p>
-
-            <div class="change-email-panel" id="changeEmailPanel" hidden>
-              <label for="change_email_input">Nuevo correo institucional</label>
-              <div class="field">
-                <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/>
-                </svg>
-                <input
-                  id="change_email_input"
-                  type="email"
-                  placeholder="tu.correo@utpn.edu.mx"
-                  pattern="^(\\d{8}|[a-z]+(?:\\.[a-z]+)*)@utpn\\.edu\\.mx$"
-                />
-              </div>
-              <button type="button" class="btn btn-ghost" id="saveAndResendBtn">Guardar y reenviar código</button>
-            </div>
-
-            <p class="hint" id="changeEmailStatus" aria-live="polite"></p>
-          </div>
+          <p class="note">
+            Si tu registro expiró por no verificar el correo a tiempo, debes registrarte nuevamente.
+          </p>
         </form>
 
         <form
@@ -172,7 +146,7 @@
       <input id="email_reg" type="email" name="email"
         placeholder="usuario@utpn.edu.mx"
         required
-        pattern="^(\\d{8}|[a-z]+(?:\\.[a-z]+)*)@utpn\\.edu\\.mx$"
+        pattern="^([0-9]{8}|[A-Za-z0-9._%+-]+)@utpn\\.edu\\.mx$"
         title="Debe ser matrícula (8 dígitos) o correo nominal institucional @utpn.edu.mx" 
       />
     </div>

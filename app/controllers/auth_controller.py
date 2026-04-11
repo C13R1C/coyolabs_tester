@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 
 from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_required, login_user, logout_user
+from sqlalchemy import or_
 
 from app.extensions import db
 from app.models.notification import Notification
@@ -13,6 +14,7 @@ from app.services.token_service import (
     confirm_verify_token,
     generate_password_reset_token,
     generate_verify_token,
+    peek_verify_token,
 )
 from app.utils.landing import resolve_landing_endpoint
 from app.utils.roles import ROLE_PENDING, ROLE_STUDENT, ROLE_TEACHER, infer_role_from_email, normalize_role
@@ -21,6 +23,7 @@ from app.utils.validators import is_valid_utpn_email
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 EMAIL_CHANGE_LIMIT_PER_HOUR = 3
+EMAIL_VERIFY_TTL = timedelta(hours=1)
 
 
 def _requires_profile_completion(role: str | None) -> bool:
@@ -64,6 +67,65 @@ def _bad_register_request(message: str):
     return _render_auth("register"), 400
 
 
+def _clear_pending_verify_session() -> None:
+    session.pop("pending_verify_user_id", None)
+    session.pop("pending_verify_email", None)
+
+
+def _purge_users_with_dependencies(user_ids: list[int]) -> None:
+    if not user_ids:
+        return
+
+    for table in db.metadata.sorted_tables:
+        if table.name == "users":
+            continue
+        fk_columns = [
+            column
+            for column in table.c
+            if any(fk.column.table.name == "users" and fk.column.name == "id" for fk in column.foreign_keys)
+        ]
+        if not fk_columns:
+            continue
+        db.session.execute(table.delete().where(or_(*[column.in_(user_ids) for column in fk_columns])))
+
+    db.session.query(User).filter(User.id.in_(user_ids)).delete(synchronize_session=False)
+
+
+def purge_expired_unverified_users(email: str | None = None) -> set[str]:
+    now = datetime.utcnow()
+    cutoff = now - EMAIL_VERIFY_TTL
+
+    try:
+        query = User.query.filter(
+            User.is_verified.is_(False),
+            User.verified_at.is_(None),
+            User.created_at <= cutoff,
+        )
+        if email:
+            normalized_email = email.strip().lower()
+            query = query.filter(User.email == normalized_email)
+
+        users = query.all()
+    except Exception:
+        return set()
+
+    if not users:
+        return set()
+
+    user_ids = [u.id for u in users]
+    purged_emails = {u.email for u in users if u.email}
+    pending_id = session.get("pending_verify_user_id")
+    pending_email = (session.get("pending_verify_email") or "").strip().lower()
+
+    _purge_users_with_dependencies(user_ids)
+    db.session.commit()
+
+    if (isinstance(pending_id, int) and pending_id in user_ids) or (pending_email and pending_email in purged_emails):
+        _clear_pending_verify_session()
+
+    return purged_emails
+
+
 def _is_accept_terms_valid(raw_value) -> bool:
     if isinstance(raw_value, bool):
         return raw_value
@@ -77,6 +139,7 @@ def auth_page():
     if current_user.is_authenticated:
         return redirect(url_for(resolve_landing_endpoint(current_user.role)))
 
+    purge_expired_unverified_users()
     mode = request.args.get("mode", "login")
     return _render_auth(mode)
 
@@ -89,6 +152,7 @@ def login():
     if request.method == "POST":
         email = (request.form.get("email") or "").strip().lower()
         password = request.form.get("password") or ""
+        purge_expired_unverified_users(email=email)
 
         user = User.query.filter_by(email=email).first()
 
@@ -150,6 +214,8 @@ def register():
 
         if not is_valid_utpn_email(email):
             return _bad_register_request("Solo se permiten correos institucionales (@utpn.edu.mx)")
+
+        purge_expired_unverified_users(email=email)
 
         inferred_role = infer_role_from_email(email)
         if inferred_role is None:
@@ -220,17 +286,30 @@ def register():
 
 @auth_bp.route("/verify/<token>", methods=["GET"])
 def verify(token):
+    purge_expired_unverified_users()
     token_data = confirm_verify_token(token, max_age_seconds=3600)
     if not token_data:
+        token_preview = peek_verify_token(token)
+        token_email = str((token_preview or {}).get("email") or "").strip().lower()
+        if token_email:
+            purged_emails = purge_expired_unverified_users(email=token_email)
+            if token_email in purged_emails:
+                flash("Tu registro expiró por no verificar el correo a tiempo. Debes registrarte nuevamente.", "warning")
+                return redirect(url_for("auth.auth_page", mode="register"))
         flash("Token inválido o expirado.", "error")
         return redirect(url_for("auth.auth_page", mode="login"))
 
     email = str(token_data.get("email") or "").strip().lower()
     token_version = int(token_data.get("token_version") or 0)
 
+    purged_emails = purge_expired_unverified_users(email=email)
+    if email in purged_emails:
+        flash("Tu registro expiró por no verificar el correo a tiempo. Debes registrarte nuevamente.", "warning")
+        return redirect(url_for("auth.auth_page", mode="register"))
+
     user = User.query.filter_by(email=email).first()
     if not user:
-        flash("Usuario no encontrado.", "error")
+        flash("Tu registro expiró por no verificar el correo a tiempo. Debes registrarte nuevamente.", "warning")
         return redirect(url_for("auth.auth_page", mode="register"))
     if token_version != (user.verify_token_version or 0):
         flash("Token inválido o expirado.", "error")
@@ -249,8 +328,7 @@ def verify(token):
     user.email_change_window_started_at = None
     db.session.commit()
 
-    session.pop("pending_verify_user_id", None)
-    session.pop("pending_verify_email", None)
+    _clear_pending_verify_session()
     flash("Correo verificado correctamente.", "success")
     login_user(user)
     if _requires_profile_completion(user.role) and not user.profile_completed:

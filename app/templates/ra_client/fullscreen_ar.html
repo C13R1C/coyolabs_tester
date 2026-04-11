@@ -18,6 +18,7 @@
       --yellow: #f1ca5b;
       --red: #ff7c8e;
       --shadow: 0 16px 40px rgba(0,0,0,0.35);
+      --app-height: 100dvh;
     }
 
     *{
@@ -42,6 +43,9 @@
       background: #000;
       overflow: hidden;
       user-select: none;
+      height: var(--app-height);
+      overscroll-behavior: none;
+      touch-action: manipulation;
     }
 
     #reader{
@@ -188,6 +192,9 @@
       font-size: 0.92rem;
       cursor: pointer;
       letter-spacing: 0.03em;
+      min-height: 44px;
+      min-width: 44px;
+      padding: 6px 8px;
     }
 
     .back-pill button{
@@ -487,7 +494,7 @@
     }
 
     .config-actions button{
-      height: 44px;
+      min-height: 48px;
       border: none;
       border-radius: 12px;
       font-weight: 800;
@@ -619,7 +626,7 @@
       .status-pill,
       .action-pill,
       .back-pill{
-        padding: 9px 12px;
+        padding: 10px 12px;
       }
 
       .status-text{
@@ -628,6 +635,18 @@
 
       .scan-helper{
         font-size: .78rem;
+      }
+
+      .top-bar{
+        top: max(10px, env(safe-area-inset-top));
+        left: max(10px, env(safe-area-inset-left));
+        right: max(10px, env(safe-area-inset-right));
+      }
+
+      .bottom-panel{
+        left: max(10px, env(safe-area-inset-left));
+        right: max(10px, env(safe-area-inset-right));
+        bottom: max(10px, env(safe-area-inset-bottom));
       }
     }
   </style>
@@ -748,7 +767,6 @@
   </div>
 
   <script src="https://unpkg.com/html5-qrcode"></script>
-  <script src="https://unpkg.com/html5-qrcode"></script>
 <script>
   const $ = (id) => document.getElementById(id);
 
@@ -834,6 +852,7 @@
   let lastFetchAt = 0;
   let helperIndex = 0;
   let helperInterval = null;
+  let viewportResizeTimer = null;
 
   function safeJsonParse(text, fallback = null) {
     try {
@@ -880,6 +899,38 @@
     arMessage.style.color = style.color;
     arMessage.style.borderColor = style.borderColor;
     arMessage.style.background = style.background;
+  }
+
+  function setUiBlocked(message, detail = "") {
+    cameraState.textContent = "No disponible";
+    materialState.textContent = "Sin carga";
+    setStatus(message, "red");
+    setCardMessage(detail || message, "bad");
+    scanHelper.textContent = detail || message;
+  }
+
+  function isSecureContextForCamera() {
+    if (window.isSecureContext) return true;
+    return location.hostname === "localhost" || location.hostname === "127.0.0.1";
+  }
+
+  function applyVideoSafetyAttributes() {
+    const video = document.querySelector("#reader video");
+    if (!video) return;
+    video.setAttribute("playsinline", "true");
+    video.setAttribute("webkit-playsinline", "true");
+    video.muted = true;
+    video.autoplay = true;
+  }
+
+  function syncViewportHeight() {
+    const current = `${window.innerHeight}px`;
+    document.documentElement.style.setProperty("--app-height", current);
+  }
+
+  function debounceViewportSync() {
+    window.clearTimeout(viewportResizeTimer);
+    viewportResizeTimer = window.setTimeout(syncViewportHeight, 120);
   }
 
   function markScanTime() {
@@ -1111,6 +1162,18 @@
 
   async function startCamera() {
     if (!validateConfig()) return;
+    if (!window.Html5Qrcode) {
+      setUiBlocked("Lector QR no disponible.", "No se pudo cargar el motor de escaneo.");
+      return;
+    }
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setUiBlocked("Navegador incompatible.", "Tu navegador no soporta acceso a cámara (getUserMedia).");
+      return;
+    }
+    if (!isSecureContextForCamera()) {
+      setUiBlocked("Se requiere conexión segura.", "Abre esta vista en HTTPS para usar la cámara.");
+      return;
+    }
 
     await stopCamera();
 
@@ -1135,14 +1198,30 @@
         },
         () => {}
       );
+      applyVideoSafetyAttributes();
 
       cameraState.textContent = "Activa";
       setStatus("Cámara activa. Apunta el QR dentro del cuadro.", "green");
       scanHelper.textContent = "Alinea el QR dentro del recuadro";
     } catch (error) {
       cameraState.textContent = "Error";
-      setStatus(`No se pudo iniciar la cámara: ${error.message || error}`, "red");
-      scanHelper.textContent = "No se pudo iniciar el lector";
+      const rawMessage = String(error?.message || error || "");
+      const lowerMessage = rawMessage.toLowerCase();
+      let friendlyMessage = "No se pudo iniciar la cámara.";
+
+      if (lowerMessage.includes("permission") || lowerMessage.includes("notallowed")) {
+        friendlyMessage = "Permiso de cámara denegado. Habilítalo en Android Chrome.";
+      } else if (lowerMessage.includes("secure") || lowerMessage.includes("https")) {
+        friendlyMessage = "Se requiere HTTPS para usar la cámara.";
+      } else if (lowerMessage.includes("notfound") || lowerMessage.includes("devicesnotfound")) {
+        friendlyMessage = "No se encontró cámara disponible en este dispositivo.";
+      } else if (lowerMessage.includes("notreadable")) {
+        friendlyMessage = "La cámara está en uso por otra app.";
+      }
+
+      setStatus(friendlyMessage, "red");
+      scanHelper.textContent = friendlyMessage;
+      setCardMessage(friendlyMessage, "bad");
       log("Error startCamera", error.message || error);
       console.error(error);
     }
@@ -1195,14 +1274,26 @@
     arApp.addEventListener("pointerdown", (event) => {
       createTapRipple(event.clientX, event.clientY);
     });
+
+    window.addEventListener("resize", debounceViewportSync, { passive: true });
+    window.addEventListener("orientationchange", debounceViewportSync, { passive: true });
   }
 
   function initView() {
+    syncViewportHeight();
     cameraState.textContent = "Pendiente";
     materialState.textContent = "Sin carga";
     lastScanAt.textContent = "—";
     setStatus("Listo para iniciar.", "yellow");
     scanHelper.textContent = "Alinea el QR dentro del recuadro";
+    if (!isSecureContextForCamera()) {
+      setUiBlocked(
+        "Cámara bloqueada por contexto inseguro.",
+        "Para Android Chrome usa HTTPS (o localhost en desarrollo)."
+      );
+    } else if (!navigator.mediaDevices?.getUserMedia) {
+      setUiBlocked("Navegador incompatible.", "Este navegador no soporta getUserMedia.");
+    }
     rotateHelperText();
     log("Vista cargada");
   }
