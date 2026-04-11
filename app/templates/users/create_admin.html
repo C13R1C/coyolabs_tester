@@ -111,6 +111,12 @@
       <a href="{{ url_for('users.admin_panel') }}" class="btn btn-ghost">Volver</a>
     </div>
   </form>
+  {% if eligible_users|length == 0 %}
+  <p style="margin-top:12px; color:var(--text-dim);">No hay cuentas elegibles para promoción en este momento.</p>
+  {% endif %}
+  {% if not is_root_superadmin %}
+  <p style="margin-top:8px; color:var(--text-dim);">Solo el SUPERADMIN padre puede promover cuentas a SUPERADMIN.</p>
+  {% endif %}
 </section>
 
 <section class="table-card">

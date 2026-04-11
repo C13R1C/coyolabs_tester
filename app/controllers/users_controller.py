@@ -177,7 +177,7 @@ def _apply_critical_action(req: CriticalActionRequest) -> str:
 
 
 @users_bp.route("/pending", methods=["GET"])
-@min_role_required("ADMIN")
+@min_role_required("SUPERADMIN")
 def pending_users():
     users = (
         User.query.filter(User.role == ROLE_PENDING)
@@ -193,7 +193,7 @@ def pending_users():
 
 
 @users_bp.route("/<int:user_id>/role", methods=["POST"])
-@min_role_required("ADMIN")
+@min_role_required("SUPERADMIN")
 def assign_role(user_id: int):
     if not _is_admin_or_superadmin():
         flash("Solo ADMIN/SUPERADMIN puede cambiar roles pendientes.", "error")
