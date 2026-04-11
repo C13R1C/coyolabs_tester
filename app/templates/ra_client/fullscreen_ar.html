@@ -1,16 +1,484 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Anchored AR — Realidad Aumentada Espacial</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>RA en pantalla completa</title>
 
-    <script type="importmap">
-    {
-        "imports": {
-            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
-        }
+  <style>
+    :root{
+      --bg: #000;
+      --panel: rgba(10, 18, 24, 0.76);
+      --panel-strong: rgba(8, 15, 20, 0.92);
+      --stroke: rgba(255,255,255,0.12);
+      --text: #eef7fb;
+      --text-soft: #b5c7d1;
+      --cyan: #63f3ff;
+      --green: #71f5aa;
+      --yellow: #f1ca5b;
+      --red: #ff7c8e;
+      --shadow: 0 16px 40px rgba(0,0,0,0.35);
+      --app-height: 100dvh;
+    }
+
+    *{
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body{
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: "Segoe UI", Inter, Arial, sans-serif;
+      color: var(--text);
+    }
+
+    .ar-app{
+      position: fixed;
+      inset: 0;
+      background: #000;
+      overflow: hidden;
+      user-select: none;
+      height: var(--app-height);
+      overscroll-behavior: none;
+      touch-action: manipulation;
+    }
+
+    #reader{
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      background: #000;
+    }
+
+    #reader video{
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: cover !important;
+      filter: saturate(1.06) contrast(1.03);
+    }
+
+    #reader__scan_region{
+      width: 100% !important;
+      height: 100% !important;
+      background: transparent !important;
+      border: none !important;
+    }
+
+    #reader img{
+      display: none !important;
+    }
+
+    .camera-fx{
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .camera-fx::before{
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at center, transparent 20%, rgba(0,0,0,0.10) 68%, rgba(0,0,0,0.34) 100%),
+        linear-gradient(180deg, rgba(99,243,255,0.02), transparent 18%, transparent 82%, rgba(99,243,255,0.02));
+    }
+
+    .camera-fx::after{
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.02) 0%, transparent 10%, transparent 90%, rgba(255,255,255,0.02) 100%);
+      mix-blend-mode: screen;
+    }
+
+    .hud{
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    .top-bar{
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      right: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .top-left,
+    .top-right{
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      pointer-events: auto;
+    }
+
+    .status-pill,
+    .action-pill,
+    .back-pill{
+      backdrop-filter: blur(12px);
+      background: var(--panel);
+      border: 1px solid var(--stroke);
+      border-radius: 999px;
+      padding: 10px 14px;
+      box-shadow: var(--shadow);
+      pointer-events: auto;
+    }
+
+    .status-pill{
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      max-width: min(60vw, 460px);
+      animation: floatSoft 3.6s ease-in-out infinite;
+    }
+
+    .back-pill{
+      position: relative;
+      overflow: hidden;
+    }
+
+    .back-pill::before{
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(99,243,255,0.12), transparent);
+      transform: translateX(-100%);
+      transition: transform .45s ease;
+    }
+
+    .back-pill:hover::before{
+      transform: translateX(100%);
+    }
+
+    .status-dot{
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--yellow);
+      box-shadow: 0 0 14px rgba(241,202,91,0.65);
+      flex-shrink: 0;
+      animation: pulseDot 1.8s ease-in-out infinite;
+    }
+
+    .status-text{
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.3;
+    }
+
+    .action-pill button,
+    .back-pill button{
+      border: none;
+      background: transparent;
+      color: var(--text);
+      font-weight: 800;
+      font-size: 0.92rem;
+      cursor: pointer;
+      letter-spacing: 0.03em;
+      min-height: 44px;
+      min-width: 44px;
+      padding: 6px 8px;
+    }
+
+    .back-pill button{
+      color: var(--cyan);
+      text-shadow: 0 0 10px rgba(99,243,255,0.18);
+    }
+
+    .scan-frame{
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: min(72vw, 320px);
+      aspect-ratio: 1 / 1;
+      transform: translate(-50%, -50%);
+      z-index: 3;
+      pointer-events: none;
+      animation: reticleBreath 3s ease-in-out infinite;
+    }
+
+    .scan-ring{
+      position: absolute;
+      inset: 12%;
+      border-radius: 22px;
+      border: 1px solid rgba(99,243,255,0.18);
+      box-shadow: 0 0 18px rgba(99,243,255,0.10), inset 0 0 18px rgba(99,243,255,0.05);
+    }
+
+    .scan-corner{
+      position: absolute;
+      width: 48px;
+      height: 48px;
+      border-color: var(--cyan);
+      filter: drop-shadow(0 0 10px rgba(99,243,255,0.6));
+    }
+
+    .scan-corner.tl{
+      top: 0;
+      left: 0;
+      border-top: 4px solid;
+      border-left: 4px solid;
+      border-top-left-radius: 14px;
+    }
+
+    .scan-corner.tr{
+      top: 0;
+      right: 0;
+      border-top: 4px solid;
+      border-right: 4px solid;
+      border-top-right-radius: 14px;
+    }
+
+    .scan-corner.bl{
+      bottom: 0;
+      left: 0;
+      border-bottom: 4px solid;
+      border-left: 4px solid;
+      border-bottom-left-radius: 14px;
+    }
+
+    .scan-corner.br{
+      bottom: 0;
+      right: 0;
+      border-bottom: 4px solid;
+      border-right: 4px solid;
+      border-bottom-right-radius: 14px;
+    }
+
+    .scan-line{
+      position: absolute;
+      left: 8%;
+      right: 8%;
+      top: 12%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+      box-shadow:
+        0 0 10px rgba(99,243,255,0.85),
+        0 0 22px rgba(99,243,255,0.28);
+      animation: scanMove 2.6s linear infinite;
+    }
+
+    .scan-center-dot{
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--cyan);
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 14px rgba(99,243,255,0.65);
+    }
+
+    .scan-helper{
+      position: absolute;
+      left: 50%;
+      top: calc(50% + min(72vw, 320px) / 2 + 18px);
+      transform: translateX(-50%);
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(8,15,20,0.68);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: var(--text-soft);
+      font-size: 0.84rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      z-index: 3;
+      pointer-events: none;
+      backdrop-filter: blur(10px);
+      animation: helperBlink 2.8s ease-in-out infinite;
+    }
+
+    .bottom-panel{
+      position: absolute;
+      left: 14px;
+      right: 14px;
+      bottom: 14px;
+      display: grid;
+      gap: 12px;
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    .quick-info{
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .info-box{
+      backdrop-filter: blur(12px);
+      background: var(--panel);
+      border: 1px solid var(--stroke);
+      border-radius: 18px;
+      padding: 12px 14px;
+      box-shadow: var(--shadow);
+      min-height: 66px;
+      animation: floatSoft 4.8s ease-in-out infinite;
+    }
+
+    .info-box:nth-child(2){ animation-delay: .2s; }
+    .info-box:nth-child(3){ animation-delay: .35s; }
+    .info-box:nth-child(4){ animation-delay: .5s; }
+
+    .info-box span{
+      display: block;
+      color: var(--text-soft);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .info-box strong{
+      color: var(--text);
+      font-size: 0.95rem;
+      line-height: 1.35;
+      word-break: break-word;
+    }
+
+    #arCard{
+      position: absolute;
+      z-index: 4;
+      left: 50%;
+      top: 50%;
+      min-width: 220px;
+      max-width: 320px;
+      padding: 14px;
+      border-radius: 18px;
+      backdrop-filter: blur(14px);
+      background: var(--panel-strong);
+      border: 1px solid rgba(99,243,255,0.28);
+      box-shadow:
+        0 0 18px rgba(99,243,255,0.14),
+        0 18px 40px rgba(0,0,0,0.35);
+      display: none;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+
+    #arCard.show{
+      display: block;
+      animation: cardPop .38s ease;
+    }
+
+    #arCard h3{
+      margin: 0 0 10px;
+      font-size: 1.04rem;
+      color: var(--text);
+    }
+
+    .ar-row{
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      padding-bottom: 8px;
+      margin-bottom: 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .ar-row:last-of-type{
+      margin-bottom: 0;
+    }
+
+    .ar-row strong{
+      color: var(--text-soft);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .ar-row span{
+      color: var(--text);
+      text-align: right;
+      max-width: 58%;
+      font-size: 0.92rem;
+      word-break: break-word;
+    }
+
+    #arMessage{
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(99,243,255,0.10);
+      border: 1px solid rgba(99,243,255,0.18);
+      color: var(--cyan);
+      font-weight: 700;
+      font-size: 0.88rem;
+    }
+
+    .config-panel{
+      position: absolute;
+      top: 66px;
+      right: 14px;
+      width: min(92vw, 330px);
+      z-index: 5;
+      display: none;
+      backdrop-filter: blur(14px);
+      background: var(--panel-strong);
+      border: 1px solid var(--stroke);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      padding: 16px;
+    }
+
+    .config-panel.active{
+      display: grid;
+      gap: 12px;
+      animation: fadeUp .24s ease;
+    }
+
+    .config-panel h2{
+      font-size: 1rem;
+      color: var(--text);
+      margin-bottom: 2px;
+    }
+
+    .config-panel p{
+      color: var(--text-soft);
+      font-size: 0.88rem;
+      line-height: 1.45;
+    }
+
+    .field{
+      display: grid;
+      gap: 6px;
+    }
+
+    .field label{
+      color: var(--text-soft);
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    .field input{
+      width: 100%;
+      height: 46px;
+      border-radius: 12px;
+      border: 1px solid var(--stroke);
+      background: rgba(255,255,255,0.04);
+      color: var(--text);
+      padding: 0 12px;
+      outline: none;
+      font-size: 0.92rem;
     }
     </script>
 
@@ -53,10 +521,13 @@
             z-index: 0;
         }
 
-        #overlay {
-            position: fixed; inset: 0; z-index: 10;
-            pointer-events: none;
-        }
+    .config-actions button{
+      min-height: 48px;
+      border: none;
+      border-radius: 12px;
+      font-weight: 800;
+      cursor: pointer;
+    }
 
         #start-screen {
             position: fixed; inset: 0; z-index: 20;
@@ -296,13 +767,47 @@
             .hud-btn { width: 52px; height: 52px; font-size: 17px; }
         }
 
-        @media (prefers-reduced-motion: reduce) {
-            *, *::before, *::after {
-                animation-duration: 0.01ms !important;
-                transition-duration: 0.01ms !important;
-            }
-        }
-    </style>
+    @media (max-width: 480px){
+      .quick-info{
+        grid-template-columns: 1fr;
+      }
+
+      .top-bar{
+        gap: 8px;
+      }
+
+      .top-left,
+      .top-right{
+        gap: 8px;
+      }
+
+      .status-pill,
+      .action-pill,
+      .back-pill{
+        padding: 10px 12px;
+      }
+
+      .status-text{
+        font-size: .86rem;
+      }
+
+      .scan-helper{
+        font-size: .78rem;
+      }
+
+      .top-bar{
+        top: max(10px, env(safe-area-inset-top));
+        left: max(10px, env(safe-area-inset-left));
+        right: max(10px, env(safe-area-inset-right));
+      }
+
+      .bottom-panel{
+        left: max(10px, env(safe-area-inset-left));
+        right: max(10px, env(safe-area-inset-right));
+        bottom: max(10px, env(safe-area-inset-bottom));
+      }
+    }
+  </style>
 </head>
 <body>
 
@@ -355,14 +860,358 @@
         </div>
     </div>
 
-    <div id="error-screen">
-        <div class="error-card">
-            <div class="error-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
-            <p class="error-msg" id="error-msg">Dispositivo no compatible</p>
-            <p class="error-detail" id="error-detail"></p>
-            <button class="btn-ghost" onclick="location.reload()">Reintentar</button>
-        </div>
-    </div>
+    <aside class="config-panel" id="configPanel">
+      <h2>Configuración</h2>
+      <p>Ajusta la conexión. Esta vista está pensada para celular y pantalla completa.</p>
+
+      <div class="field">
+        <label for="baseUrl">Base URL</label>
+        <input id="baseUrl" type="text" value="http://127.0.0.1:5000" />
+      </div>
+
+      <div class="field">
+        <label for="apiKey">API Key</label>
+        <input id="apiKey" type="text" value="1seizIZsXnTXMMxvfvvUth0ZRnlb6KtRz-65g8V2TI4" />
+      </div>
+
+      <div class="field">
+        <label for="userEmail">User email</label>
+        <input id="userEmail" type="email" value="24310130@utpn.edu.mx" />
+      </div>
+
+      <div class="config-actions">
+        <button class="btn btn-gold" id="startBtn" type="button">Iniciar</button>
+        <button class="btn btn-ghost" id="stopBtn" type="button">Detener</button>
+      </div>
+    </aside>
+
+    <pre id="debugOut"></pre>
+  </div>
+
+  <script src="https://unpkg.com/html5-qrcode"></script>
+<script>
+  const $ = (id) => document.getElementById(id);
+
+  const statusText = $("statusText");
+  const statusDot = $("statusDot");
+  const cameraState = $("cameraState");
+  const lastQrText = $("lastQrText");
+  const materialState = $("materialState");
+  const lastScanAt = $("lastScanAt");
+  const scanHelper = $("scanHelper");
+
+  const arApp = $("arApp");
+  const arCard = $("arCard");
+  const arMessage = $("arMessage");
+  const scanFlash = $("scanFlash");
+  const rippleLayer = $("rippleLayer");
+
+  const matName = $("matName");
+  const matLab = $("matLab");
+  const matLocation = $("matLocation");
+  const matPieces = $("matPieces");
+  const matStatus = $("matStatus");
+
+  const configPanel = $("configPanel");
+  const toggleConfigBtn = $("toggleConfigBtn");
+  const startBtn = $("startBtn");
+  const stopBtn = $("stopBtn");
+  const backBtn = $("backBtn");
+
+  const baseUrlInput = $("baseUrl");
+  const apiKeyInput = $("apiKey");
+  const userEmailInput = $("userEmail");
+
+  const debugOut = $("debugOut");
+
+  const STATUS_STYLES = {
+    green: {
+      background: "var(--green)",
+      boxShadow: "0 0 14px rgba(113,245,170,0.8)"
+    },
+    red: {
+      background: "var(--red)",
+      boxShadow: "0 0 14px rgba(255,124,142,0.8)"
+    },
+    yellow: {
+      background: "var(--yellow)",
+      boxShadow: "0 0 14px rgba(241,202,91,0.8)"
+    }
+  };
+
+  const MESSAGE_STYLES = {
+    ok: {
+      color: "var(--green)",
+      borderColor: "rgba(113,245,170,0.18)",
+      background: "rgba(113,245,170,0.10)"
+    },
+    bad: {
+      color: "var(--red)",
+      borderColor: "rgba(255,124,142,0.18)",
+      background: "rgba(255,124,142,0.10)"
+    },
+    warn: {
+      color: "var(--yellow)",
+      borderColor: "rgba(241,202,91,0.18)",
+      background: "rgba(241,202,91,0.10)"
+    },
+    info: {
+      color: "var(--cyan)",
+      borderColor: "rgba(99,243,255,0.18)",
+      background: "rgba(99,243,255,0.10)"
+    }
+  };
+
+  const helperMessages = [
+    "Alinea el QR dentro del recuadro",
+    "Mantén buena luz para lectura estable",
+    "Acerca o aleja el código si no enfoca",
+    "El overlay aparecerá al detectar el material"
+  ];
+
+  let html5Qr = null;
+  let lastMaterialId = "";
+  let lastFetchAt = 0;
+  let helperIndex = 0;
+  let helperInterval = null;
+  let viewportResizeTimer = null;
+
+  function safeJsonParse(text, fallback = null) {
+    try {
+      return JSON.parse(text);
+    } catch {
+      return fallback;
+    }
+  }
+
+  async function safeResponseJson(response) {
+    try {
+      return await response.json();
+    } catch {
+      return {};
+    }
+  }
+
+  function log(message, data = null) {
+    const time = new Date().toLocaleTimeString();
+    let text = `[${time}] ${message}`;
+
+    if (data !== null) {
+      try {
+        text += `\n${JSON.stringify(data, null, 2)}`;
+      } catch {
+        text += `\n${String(data)}`;
+      }
+    }
+
+    debugOut.textContent = `${text}\n\n${debugOut.textContent}`;
+    console.log(message, data ?? "");
+  }
+
+  function setStatus(text, color = "yellow") {
+    statusText.textContent = text;
+    const style = STATUS_STYLES[color] || STATUS_STYLES.yellow;
+    statusDot.style.background = style.background;
+    statusDot.style.boxShadow = style.boxShadow;
+  }
+
+  function setCardMessage(text, type = "info") {
+    arMessage.textContent = text;
+    const style = MESSAGE_STYLES[type] || MESSAGE_STYLES.info;
+    arMessage.style.color = style.color;
+    arMessage.style.borderColor = style.borderColor;
+    arMessage.style.background = style.background;
+  }
+
+  function setUiBlocked(message, detail = "") {
+    cameraState.textContent = "No disponible";
+    materialState.textContent = "Sin carga";
+    setStatus(message, "red");
+    setCardMessage(detail || message, "bad");
+    scanHelper.textContent = detail || message;
+  }
+
+  function isSecureContextForCamera() {
+    if (window.isSecureContext) return true;
+    return location.hostname === "localhost" || location.hostname === "127.0.0.1";
+  }
+
+  function applyVideoSafetyAttributes() {
+    const video = document.querySelector("#reader video");
+    if (!video) return;
+    video.setAttribute("playsinline", "true");
+    video.setAttribute("webkit-playsinline", "true");
+    video.muted = true;
+    video.autoplay = true;
+  }
+
+  function syncViewportHeight() {
+    const current = `${window.innerHeight}px`;
+    document.documentElement.style.setProperty("--app-height", current);
+  }
+
+  function debounceViewportSync() {
+    window.clearTimeout(viewportResizeTimer);
+    viewportResizeTimer = window.setTimeout(syncViewportHeight, 120);
+  }
+
+  function markScanTime() {
+    lastScanAt.textContent = new Date().toLocaleTimeString();
+  }
+
+  function getConfig() {
+    return {
+      baseUrl: baseUrlInput.value.trim().replace(/\/$/, ""),
+      apiKey: apiKeyInput.value.trim(),
+      userEmail: userEmailInput.value.trim().toLowerCase()
+    };
+  }
+
+  function validateConfig() {
+    const { baseUrl, apiKey, userEmail } = getConfig();
+
+    if (!baseUrl) {
+      setStatus("Falta Base URL.", "red");
+      return false;
+    }
+
+    if (!/^https?:\/\//i.test(baseUrl)) {
+      setStatus("Base URL inválida.", "red");
+      return false;
+    }
+
+    if (!apiKey) {
+      setStatus("Falta API Key.", "red");
+      return false;
+    }
+
+    if (!userEmail || !userEmail.includes("@")) {
+      setStatus("User email no válido.", "red");
+      return false;
+    }
+
+    return true;
+  }
+
+  function extractMaterialId(raw) {
+    const text = String(raw || "").trim();
+    log("Intentando extraer materialId de", text);
+
+    if (!text) return null;
+    if (/^\d+$/.test(text)) return Number(text);
+
+    const parsed = safeJsonParse(text);
+    if (parsed?.material_id) return Number(parsed.material_id);
+    if (parsed?.id) return Number(parsed.id);
+
+    const genericMatch = text.match(/material(?:_id)?\D*(\d+)/i);
+    if (genericMatch) return Number(genericMatch[1]);
+
+    const urlMatch = text.match(/[?&]id=(\d+)/i);
+    if (urlMatch) return Number(urlMatch[1]);
+
+    const tailNumber = text.match(/(\d+)(?!.*\d)/);
+    if (tailNumber) return Number(tailNumber[1]);
+
+    return null;
+  }
+
+  function normalizeMaterial(data) {
+    return {
+      name: data.name || data.material_name || "Sin nombre",
+      lab: data.lab || data.lab_name || data.laboratorio || "Sin laboratorio",
+      location: data.location || data.ubicacion || "Sin ubicación",
+      pieces: data.pieces_qty ?? data.pieces_text ?? data.cantidad ?? "N/D",
+      status: data.status || data.estado || "Sin estado"
+    };
+  }
+
+  function renderMaterialCard(data) {
+    const material = normalizeMaterial(data);
+
+    matName.textContent = material.name;
+    matLab.textContent = material.lab;
+    matLocation.textContent = material.location;
+    matPieces.textContent = material.pieces;
+    matStatus.textContent = material.status;
+
+    arCard.classList.remove("show");
+    arCard.style.display = "block";
+    void arCard.offsetWidth;
+    arCard.classList.add("show");
+  }
+
+  function hideMaterialCard() {
+    arCard.classList.remove("show");
+    arCard.style.display = "none";
+  }
+
+  function triggerScanSuccessEffects() {
+    scanFlash.classList.remove("active");
+    void scanFlash.offsetWidth;
+    scanFlash.classList.add("active");
+
+    setTimeout(() => {
+      scanFlash.classList.remove("active");
+    }, 500);
+  }
+
+  function createTapRipple(x, y) {
+    const ripple = document.createElement("span");
+    ripple.className = "tap-ripple";
+    ripple.style.left = `${x}px`;
+    ripple.style.top = `${y}px`;
+    rippleLayer.appendChild(ripple);
+
+    setTimeout(() => ripple.remove(), 750);
+  }
+
+  async function fetchJson(url, options = {}) {
+    const response = await fetch(url, options);
+    const data = await safeResponseJson(response);
+    return { response, data };
+  }
+
+  async function postEvent(materialId, qrText) {
+    const { baseUrl, apiKey, userEmail } = getConfig();
+
+    const payload = {
+      material_id: Number(materialId),
+      event_type: "scan",
+      user_email: userEmail,
+      metadata: {
+        qr_text: qrText,
+        source: "fullscreen_ar"
+      }
+    };
+
+    try {
+      const { response, data } = await fetchJson(`${baseUrl}/api/ra/events`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-API-Key": apiKey
+        },
+        body: JSON.stringify(payload)
+      });
+
+      log("POST /api/ra/events", { status: response.status, data });
+      return response.ok;
+    } catch (error) {
+      log("Error en postEvent", error.message);
+      return false;
+    }
+  }
+
+  async function fetchMaterial(materialId, qrText) {
+    if (!validateConfig()) return;
+
+    const { baseUrl, apiKey } = getConfig();
+
+    try {
+      materialState.textContent = "Consultando...";
+      setStatus(`Consultando material ${materialId}...`, "yellow");
+      setCardMessage("Consultando material...", "warn");
 
     <script type="module">
         import * as THREE from 'three';
@@ -444,688 +1293,211 @@
             /* --- Iniciar --- */
             this.boot();
         }
-
-        /* =============================================
-           INICIO
-        ============================================= */
-        AnchoredAR.prototype.boot = async function() {
-            this.initRenderer();
-            this.initScene();
-            this.initReticle();
-            this.setupEvents();
-
-            this.supported = await this.checkSupport();
-            if (this.supported) {
-                this.dom.btnStart.disabled = false;
-            }
-
-            this.initPreview();
-            this.renderer.setAnimationLoop(this.onFrame);
-        };
-
-        AnchoredAR.prototype.checkSupport = async function() {
-            if (!navigator.xr) {
-                this.showError(
-                    'WebXR no disponible',
-                    'Tu navegador no soporta WebXR. Usa Chrome Android o Safari iOS.'
-                );
-                return false;
-            }
-            var ok = false;
-            try {
-                ok = await navigator.xr.isSessionSupported('immersive-ar');
-            } catch (e) {
-                ok = false;
-            }
-            if (!ok) {
-                this.showError(
-                    'AR no compatible',
-                    'Tu dispositivo no soporta sesiones AR inmersivas.'
-                );
-                return false;
-            }
-            return true;
-        };
-
-        /* =============================================
-           RENDERER
-        ============================================= */
-        AnchoredAR.prototype.initRenderer = function() {
-            this.renderer = new THREE.WebGLRenderer({
-                antialias: true,
-                alpha: true,
-                powerPreference: 'high-performance'
-            });
-            this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-            this.renderer.setSize(window.innerWidth, window.innerHeight);
-            this.renderer.xr.enabled = true;
-            this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-            this.renderer.toneMappingExposure = 1.0;
-            this.renderer.shadowMap.enabled = true;
-            this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-            document.body.appendChild(this.renderer.domElement);
-
-            var self = this;
-            window.addEventListener('resize', function() {
-                self.camera.aspect = window.innerWidth / window.innerHeight;
-                self.camera.updateProjectionMatrix();
-                self.renderer.setSize(window.innerWidth, window.innerHeight);
-            });
-        };
-
-        /* =============================================
-           ESCENA
-        ============================================= */
-        AnchoredAR.prototype.initScene = function() {
-            this.scene = new THREE.Scene();
-            this.camera = new THREE.PerspectiveCamera(
-                65,
-                window.innerWidth / window.innerHeight,
-                0.01, 100
-            );
-
-            this.ambientLight = new THREE.AmbientLight(0xffffff, 0.55);
-            this.scene.add(this.ambientLight);
-
-            this.dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
-            this.dirLight.position.set(3, 6, 4);
-            this.dirLight.castShadow = true;
-            this.dirLight.shadow.mapSize.setScalar(1024);
-            this.dirLight.shadow.camera.near = 0.1;
-            this.dirLight.shadow.camera.far = 20;
-            this.dirLight.shadow.camera.left = -3;
-            this.dirLight.shadow.camera.right = 3;
-            this.dirLight.shadow.camera.top = 3;
-            this.dirLight.shadow.camera.bottom = -3;
-            this.scene.add(this.dirLight);
-
-            this.pointLight = new THREE.PointLight(0xD4881A, 0.3, 8);
-            this.pointLight.position.set(-1, 2, -1);
-            this.scene.add(this.pointLight);
-        };
-
-        /* =============================================
-           RETICLE
-        ============================================= */
-        AnchoredAR.prototype.initReticle = function() {
-            this.reticleGroup = new THREE.Group();
-            this.reticleGroup.matrixAutoUpdate = false;
-            this.reticleGroup.visible = false;
-            this.scene.add(this.reticleGroup);
-
-            var outerGeo = new THREE.RingGeometry(0.085, 0.095, 64);
-            var outerMat = new THREE.MeshBasicMaterial({
-                color: 0xD4881A,
-                transparent: true,
-                opacity: 0.45,
-                side: THREE.DoubleSide,
-                depthTest: false
-            });
-            this.reticleOuter = new THREE.Mesh(outerGeo, outerMat);
-            this.reticleGroup.add(this.reticleOuter);
-
-            var innerGeo = new THREE.RingGeometry(0.035, 0.04, 48);
-            var innerMat = new THREE.MeshBasicMaterial({
-                color: 0xD4881A,
-                transparent: true,
-                opacity: 0.25,
-                side: THREE.DoubleSide,
-                depthTest: false
-            });
-            this.reticleInner = new THREE.Mesh(innerGeo, innerMat);
-            this.reticleGroup.add(this.reticleInner);
-
-            var dotGeo = new THREE.CircleGeometry(0.006, 24);
-            var dotMat = new THREE.MeshBasicMaterial({
-                color: 0xD4881A,
-                transparent: true,
-                opacity: 0.7,
-                side: THREE.DoubleSide,
-                depthTest: false
-            });
-            var dot = new THREE.Mesh(dotGeo, dotMat);
-            dot.position.z = 0.001;
-            this.reticleGroup.add(dot);
-        };
-
-        /* =============================================
-           CREAR OBJETO 3D
-        ============================================= */
-        AnchoredAR.prototype.createObject = function(typeIndex, position) {
-            var type = OBJECT_TYPES[typeIndex % OBJECT_TYPES.length];
-            var geometry = type.createGeo();
-
-            var material = new THREE.MeshStandardMaterial({
-                color: type.color,
-                emissive: type.emissive,
-                emissiveIntensity: 0.6,
-                roughness: 0.25,
-                metalness: 0.75,
-                transparent: true,
-                opacity: 0.88
-            });
-
-            var mesh = new THREE.Mesh(geometry, material);
-            mesh.position.copy(position);
-            mesh.castShadow = true;
-
-            /* Wireframe superpuesto */
-            var wireMat = new THREE.MeshBasicMaterial({
-                color: type.color,
-                wireframe: true,
-                transparent: true,
-                opacity: 0.12
-            });
-            var wire = new THREE.Mesh(geometry.clone(), wireMat);
-            wire.scale.setScalar(1.04);
-            mesh.add(wire);
-
-            /* Escala inicial a 0 para animar aparicion */
-            mesh.scale.setScalar(0.001);
-
-            return { mesh: mesh, type: type };
-        };
-
-        /* =============================================
-           EFECTO RIPPLE
-        ============================================= */
-        AnchoredAR.prototype.createRipple = function(position) {
-            var geo = new THREE.RingGeometry(0.01, 0.02, 32);
-            var mat = new THREE.MeshBasicMaterial({
-                color: 0xD4881A,
-                transparent: true,
-                opacity: 0.7,
-                side: THREE.DoubleSide,
-                depthTest: false
-            });
-            var ring = new THREE.Mesh(geo, mat);
-            ring.position.copy(position);
-            ring.position.y += 0.002;
-            ring.rotation.x = -Math.PI / 2;
-            ring.matrixAutoUpdate = false;
-            ring.updateMatrix();
-            this.scene.add(ring);
-            this.ripples.push({ mesh: ring, time: 0, baseScale: 1 });
-        };
-
-        /* =============================================
-           VISTA PREVIA
-        ============================================= */
-        AnchoredAR.prototype.initPreview = function() {
-            this.previewGroup = new THREE.Group();
-            this.scene.add(this.previewGroup);
-
-            /* Plano de suelo con sombras */
-            var groundGeo = new THREE.PlaneGeometry(6, 6);
-            var groundMat = new THREE.ShadowMaterial({ opacity: 0.25 });
-            var ground = new THREE.Mesh(groundGeo, groundMat);
-            ground.rotation.x = -Math.PI / 2;
-            ground.receiveShadow = true;
-            this.previewGroup.add(ground);
-
-            /* Grid */
-            var gridHelper = new THREE.GridHelper(4, 20, 0x1a1a1a, 0x111111);
-            gridHelper.position.y = 0.001;
-            this.previewGroup.add(gridHelper);
-
-            /* 3 objetos de muestra */
-            var positions = [
-                new THREE.Vector3(-0.8, 0.5, 0),
-                new THREE.Vector3(0, 0.5, 0),
-                new THREE.Vector3(0.8, 0.5, 0)
-            ];
-            for (var i = 0; i < OBJECT_TYPES.length; i++) {
-                var obj = this.createObject(i, positions[i]);
-                obj.mesh.scale.setScalar(1);
-                this.previewGroup.add(obj.mesh);
-            }
-
-            /* Controles orbitales */
-            this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-            this.controls.enableDamping = true;
-            this.controls.dampingFactor = 0.06;
-            this.controls.target.set(0, 0.4, 0);
-            this.controls.maxPolarAngle = Math.PI / 2.1;
-            this.controls.minDistance = 1;
-            this.controls.maxDistance = 6;
-            this.camera.position.set(0, 1.3, 2.8);
-            this.controls.update();
-        };
-
-        AnchoredAR.prototype.removePreview = function() {
-            if (!this.previewGroup) { return; }
-            this.scene.remove(this.previewGroup);
-            this.previewGroup.traverse(function(child) {
-                if (child.geometry) { child.geometry.dispose(); }
-                if (child.material) {
-                    if (Array.isArray(child.material)) {
-                        child.material.forEach(function(m) { m.dispose(); });
-                    } else {
-                        child.material.dispose();
-                    }
-                }
-            });
-            this.previewGroup = null;
-            if (this.controls) {
-                this.controls.dispose();
-                this.controls = null;
-            }
-        };
-
-        /* =============================================
-           SESION AR
-        ============================================= */
-        AnchoredAR.prototype.startAR = async function() {
-            try {
-                /* Crear sesion */
-                this.session = await navigator.xr.requestSession('immersive-ar', {
-                    requiredFeatures: ['hit-test'],
-                    optionalFeatures: ['anchors', 'dom-overlay', 'light-estimation'],
-                    domOverlay: { root: document.getElementById('overlay') }
-                });
-
-                /* Limpiar preview */
-                this.removePreview();
-                this.isAR = true;
-
-                /* Eventos de sesion */
-                var self = this;
-                this.session.addEventListener('end', function() { self.onSessionEnd(); });
-                this.session.addEventListener('visibilitychange', function(e) {
-                    self.trackingActive = e.session.visibilityState === 'visible' && self.isAR;
-                    self.updateTrackingUI();
-                });
-
-                /* Escuchar select ANTES de setSession */
-                this.session.addEventListener('select', this.handleSelect);
-
-                /* Conectar renderer */
-                await this.renderer.xr.setSession(this.session);
-
-                /* Espacios de referencia */
-                this.viewerSpace = await this.session.requestReferenceSpace('viewer');
-                try {
-                    this.refSpace = await this.session.requestReferenceSpace('local-floor');
-                    this.refSpace.addEventListener('reset', function() {
-                        self.toast('Referencia reiniciada', 'error');
-                    });
-                } catch (refErr) {
-                    console.warn('local-floor no disponible, usando viewer:', refErr);
-                    this.refSpace = this.viewerSpace;
-                }
-
-                /* Fuente de hit-test */
-                try {
-                    this.hitTestSource = await this.session.requestHitTestSource({
-                        space: this.viewerSpace
-                    });
-                } catch (htErr) {
-                    console.warn('Hit-test no disponible:', htErr);
-                    this.hitTestSource = null;
-                    this.toast('Hit-test no disponible — modo fallback', 'error');
-                }
-
-                /* UI */
-                this.dom.startScreen.classList.add('hidden');
-                this.dom.hud.classList.add('visible');
-                this.trackingActive = true;
-                this.updateTrackingUI();
-                this.updateTypeLabel();
-                this.toast('Apunta a una superficie plana', '');
-
-            } catch (err) {
-                console.error('Error al iniciar AR:', err);
-                this.showError('Error al iniciar AR', err.message);
-                this.isAR = false;
-                this.initPreview();
-            }
-        };
-
-        AnchoredAR.prototype.onSessionEnd = function() {
-            this.isAR = false;
-            this.trackingActive = false;
-            this.session = null;
-            this.hitTestSource = null;
-            this.lastReticlePose = null;
-            this.reticleGroup.visible = false;
-            this.reticleVisible = false;
-
-            this.clearPlacedObjects(true);
-
-            this.dom.hud.classList.remove('visible');
-            this.dom.startScreen.classList.remove('hidden');
-
-            this.initPreview();
-        };
-
-        /* =============================================
-           EVENTOS
-        ============================================= */
-        AnchoredAR.prototype.setupEvents = function() {
-            var self = this;
-            this.dom.btnStart.addEventListener('click', function() { self.startAR(); });
-            this.dom.btnPreview.addEventListener('click', function() {
-                self.dom.startScreen.classList.add('hidden');
-                self.toast('Arrastra para rotar la vista', '');
-            });
-            this.dom.btnCycle.addEventListener('click', function() { self.cycleType(); });
-            this.dom.btnClear.addEventListener('click', function() { self.clearPlacedObjects(false); });
-            this.dom.btnStop.addEventListener('click', function() { self.endSession(); });
-        };
-
-        AnchoredAR.prototype.cycleType = function() {
-            this.objectType = (this.objectType + 1) % OBJECT_TYPES.length;
-            this.updateTypeLabel();
-            this.toast(OBJECT_TYPES[this.objectType].name, '');
-        };
-
-        AnchoredAR.prototype.updateTypeLabel = function() {
-            this.dom.typeLabel.textContent = OBJECT_TYPES[this.objectType].name;
-        };
-
-        AnchoredAR.prototype.endSession = async function() {
-            if (this.session) {
-                try { await this.session.end(); } catch (e) { /* ya terminada */ }
-            }
-        };
-
-        /* =============================================
-           SELECT / COLOCAR
-        ============================================= */
-        AnchoredAR.prototype._handleSelect = function(event) {
-            if (!this.isAR) { return; }
-
-            /* Fallback: sin hit-test, colocar frente a camara */
-            if (!this.hitTestSource && !this.reticleVisible) {
-                var dir = new THREE.Vector3(0, -0.2, -1);
-                dir.applyQuaternion(this.camera.quaternion);
-                var pos = this.camera.position.clone().add(dir.multiplyScalar(1.5));
-                this.placeObject(pos);
-                return;
-            }
-
-            if (!this.reticleVisible || !this.lastReticlePose) {
-                this.toast('Apunta a una superficie primero', '');
-                return;
-            }
-
-            /* Extraer posicion del pose */
-            var m = new THREE.Matrix4().fromArray(this.lastReticlePose.transform.matrix);
-            var pos2 = new THREE.Vector3().setFromMatrixPosition(m);
-            this.placeObject(pos2);
-        };
-
-        AnchoredAR.prototype.placeObject = function(position) {
-            var result = this.createObject(this.objectType, position);
-            var mesh = result.mesh;
-            var type = result.type;
-
-            this.scene.add(mesh);
-
-            /* Guardar referencia al ultimo pose para ancla */
-            var savedPose = this.lastReticlePose;
-
-            this.placedObjects.push({
-                mesh: mesh,
-                anchorPose: savedPose,
-                baseY: position.y,
-                time: 0,
-                offset: Math.random() * Math.PI * 2
-            });
-
-            /* Ripple */
-            this.createRipple(position);
-
-            /* Feedback */
-            if (navigator.vibrate) { navigator.vibrate(30); }
-            this.updateObjCount();
-            this.toast(type.name + ' colocado', 'success');
-
-            /* Avanzar tipo */
-            this.objectType = (this.objectType + 1) % OBJECT_TYPES.length;
-            this.updateTypeLabel();
-        };
-
-        /* =============================================
-           LIMPIAR OBJETOS
-        ============================================= */
-        AnchoredAR.prototype.clearPlacedObjects = function(silent) {
-            var self = this;
-            this.placedObjects.forEach(function(obj) {
-                self.scene.remove(obj.mesh);
-                obj.mesh.traverse(function(child) {
-                    if (child.geometry) { child.geometry.dispose(); }
-                    if (child.material) {
-                        if (Array.isArray(child.material)) {
-                            child.material.forEach(function(m) { m.dispose(); });
-                        } else {
-                            child.material.dispose();
-                        }
-                    }
-                });
-            });
-            this.placedObjects = [];
-            this.updateObjCount();
-            if (!silent) { this.toast('Objetos eliminados', ''); }
-        };
-
-        /* =============================================
-           LOOP PRINCIPAL
-        ============================================= */
-        AnchoredAR.prototype._onFrame = function(time, xrFrame) {
-            var delta = this.clock.getDelta();
-
-            if (this.isAR && xrFrame) {
-                this.onARFrame(time, xrFrame, delta);
-            } else if (this.controls) {
-                this.onPreviewFrame(time, delta);
-            }
-
-            this.renderer.render(this.scene, this.camera);
-        };
-
-        /* =============================================
-           FRAME AR
-        ============================================= */
-        AnchoredAR.prototype.onARFrame = function(time, frame, delta) {
-            /* Hit-test */
-            this.processHitTest(frame);
-
-            /* Animar reticle */
-            if (this.reticleVisible) {
-                this.reticleOuter.rotation.z += 0.006;
-                this.reticleInner.rotation.z -= 0.01;
-                var s = 1 + Math.sin(time * 0.004) * 0.1;
-                this.reticleOuter.scale.setScalar(s);
-            }
-
-            /* Actualizar objetos anclados */
-            this.updatePlacedObjects(time, delta, frame);
-
-            /* Ripples */
-            this.updateRipples(delta);
-
-            /* Estimacion de luz */
-            try {
-                if (this.refSpace) {
-                    var estimate = frame.getLightEstimate(this.refSpace);
-                    if (estimate && estimate.primaryLightIntensity) {
-                        var intensity = THREE.MathUtils.clamp(
-                            estimate.primaryLightIntensity.x, 0.2, 2.5
-                        );
-                        this.ambientLight.intensity = intensity * 0.55;
-                        this.dirLight.intensity = intensity * 0.9;
-                    }
-                }
-            } catch (lightErr) {
-                /* Estimacion de luz no soportada, ignorar */
-            }
-        };
-
-        /* =============================================
-           HIT TEST
-        ============================================= */
-        AnchoredAR.prototype.processHitTest = function(frame) {
-            if (!this.hitTestSource) { return; }
-
-            var results = frame.getHitTestResults(this.hitTestSource);
-
-            if (results.length > 0) {
-                var hit = results[0];
-                var pose = null;
-                try {
-                    pose = hit.getPose(this.refSpace);
-                } catch (poseErr) {
-                    pose = null;
-                }
-
-                if (pose) {
-                    this.reticleGroup.visible = true;
-                    this.reticleGroup.matrix.fromArray(pose.transform.matrix);
-                    this.lastReticlePose = pose;
-                    this.reticleVisible = true;
-                    this.dom.instruction.textContent = 'Toca para colocar';
-                    return;
-                }
-            }
-
-            this.reticleGroup.visible = false;
-            this.reticleVisible = false;
-            this.lastReticlePose = null;
-            this.dom.instruction.textContent = 'Apunta a una superficie';
-        };
-
-        /* =============================================
-           ACTUALIZAR OBJETOS ANCLADOS
-        ============================================= */
-        AnchoredAR.prototype.updatePlacedObjects = function(time, delta, frame) {
-            var self = this;
-            this.placedObjects.forEach(function(obj) {
-                obj.time += delta;
-
-                /* Intentar actualizar desde ancla nativa del frame */
-                if (obj.anchorPose) {
-                    try {
-                        var nativeAnchor = obj.anchorPose.createAnchor
-                            ? obj.anchorPose
-                            : null;
-                        if (nativeAnchor && nativeAnchor.anchorSpace) {
-                            var anchorPose = frame.getPose(nativeAnchor.anchorSpace, self.refSpace);
-                            if (anchorPose) {
-                                var m = new THREE.Matrix4().fromArray(anchorPose.transform.matrix);
-                                var pos = new THREE.Vector3().setFromMatrixPosition(m);
-                                pos.y += Math.sin(time * 0.0015 + obj.offset) * 0.035;
-                                m.setPosition(pos);
-                                obj.mesh.matrix.copy(m);
-                                obj.mesh.matrixAutoUpdate = false;
-                                obj.mesh.rotation.y += 0.008;
-                                return;
-                            }
-                        }
-                    } catch (anchorErr) {
-                        /* Ancla no disponible, usar fallback */
-                    }
-                }
-
-                /* Fallback: mantener posicion original + flotacion */
-                self.fallBackUpdate(obj, time);
-
-                /* Animacion de aparicion */
-                if (obj.mesh.scale.x < 0.99) {
-                    var sc = THREE.MathUtils.lerp(obj.mesh.scale.x, 1, 0.12);
-                    obj.mesh.scale.setScalar(sc);
-                } else {
-                    obj.mesh.scale.setScalar(1);
-                }
-            });
-        };
-
-        AnchoredAR.prototype.fallBackUpdate = function(obj, time) {
-            obj.mesh.matrixAutoUpdate = true;
-            obj.mesh.position.y = obj.baseY + Math.sin(time * 0.0015 + obj.offset) * 0.035;
-            obj.mesh.rotation.y += 0.008;
-            obj.mesh.rotation.x = Math.sin(time * 0.001 + obj.offset * 2) * 0.05;
-        };
-
-        /* =============================================
-           RIPPLES
-        ============================================= */
-        AnchoredAR.prototype.updateRipples = function(delta) {
-            for (var i = this.ripples.length - 1; i >= 0; i--) {
-                var r = this.ripples[i];
-                r.time += delta;
-                var progress = r.time / 0.7;
-
-                if (progress >= 1) {
-                    this.scene.remove(r.mesh);
-                    r.mesh.geometry.dispose();
-                    r.mesh.material.dispose();
-                    this.ripples.splice(i, 1);
-                } else {
-                    var scale = r.baseScale + progress * 10;
-                    r.mesh.scale.set(scale, scale, scale);
-                    r.mesh.material.opacity = 0.7 * (1 - progress);
-                }
-            }
-        };
-
-        /* =============================================
-           FRAME VISTA PREVIA
-        ============================================= */
-        AnchoredAR.prototype.onPreviewFrame = function(time, delta) {
-            if (!this.previewGroup) { return; }
-            var children = this.previewGroup.children;
-            for (var i = 0; i < children.length; i++) {
-                var child = children[i];
-                if (child.isMesh && child.castShadow) {
-                    child.rotation.y += 0.005;
-                    child.position.y = 0.5 + Math.sin(time * 0.001 + child.position.x) * 0.08;
-                }
-            }
-            if (this.controls) { this.controls.update(); }
-        };
-
-        /* =============================================
-           UI HELPERS
-        ============================================= */
-        AnchoredAR.prototype.updateTrackingUI = function() {
-            var dot = this.dom.trackingDot;
-            var text = this.dom.trackingText;
-            dot.classList.remove('active', 'lost');
-            if (this.trackingActive) {
-                dot.classList.add('active');
-                text.textContent = 'Tracking';
-            } else {
-                dot.classList.add('lost');
-                text.textContent = 'Lost';
-            }
-        };
-
-        AnchoredAR.prototype.updateObjCount = function() {
-            this.dom.objCount.textContent = this.placedObjects.length;
-        };
-
-        AnchoredAR.prototype.toast = function(msg, type) {
-            var el = document.createElement('div');
-            el.className = 'toast';
-            if (type) { el.className += ' ' + type; }
-            el.textContent = msg;
-            this.dom.toastContainer.appendChild(el);
-            setTimeout(function() { el.remove(); }, 2600);
-        };
-
-        AnchoredAR.prototype.showError = function(msg, detail) {
-            this.dom.errorMsg.textContent = msg;
-            this.dom.errorDetail.textContent = detail || '';
-            this.dom.errorScreen.classList.add('visible');
-            this.dom.startScreen.classList.add('hidden');
-        };
-
-        /* =============================================
-           INICIALIZACION
-        ============================================= */
-        var app = new AnchoredAR();
-
-    </script>
+      });
+
+      log("GET /api/ra/materials", { status: response.status, data });
+
+      if (!response.ok) {
+        materialState.textContent = "No encontrado";
+        setStatus("Material no encontrado.", "red");
+        setCardMessage("No se pudo obtener el material.", "bad");
+        return;
+      }
+
+      renderMaterialCard(data);
+      materialState.textContent = "Cargado";
+      setStatus("Material detectado correctamente.", "green");
+      setCardMessage("Material detectado y cargado.", "ok");
+      triggerScanSuccessEffects();
+
+      const eventOk = await postEvent(materialId, qrText);
+      if (!eventOk) {
+        setCardMessage("Material cargado, pero el evento no se registró.", "bad");
+      }
+    } catch (error) {
+      materialState.textContent = "Error";
+      setStatus("Error de red consultando material.", "red");
+      setCardMessage("Error de red consultando material.", "bad");
+      log("Error en fetchMaterial", error.message);
+    }
+  }
+
+  async function handleQr(decodedText) {
+    log("QR LEÍDO", decodedText);
+    lastQrText.textContent = decodedText || "Leído";
+    markScanTime();
+    setStatus("QR detectado correctamente.", "green");
+    setCardMessage(`QR leído: ${decodedText}`, "ok");
+    scanHelper.textContent = "Lectura detectada · procesando material";
+
+    const materialId = extractMaterialId(decodedText);
+
+    if (!materialId || Number.isNaN(materialId)) {
+      setStatus("QR leído, pero no contiene material_id usable.", "red");
+      setCardMessage("QR no válido para material.", "bad");
+      return;
+    }
+
+    const now = Date.now();
+    const shouldFetch = materialId !== lastMaterialId || now - lastFetchAt > 2500;
+
+    if (shouldFetch) {
+      lastMaterialId = materialId;
+      lastFetchAt = now;
+      await fetchMaterial(materialId, decodedText);
+    }
+  }
+
+  function getQrBoxSize(viewfinderWidth, viewfinderHeight) {
+    const size = Math.min(viewfinderWidth, viewfinderHeight) * 0.68;
+    return {
+      width: Math.floor(size),
+      height: Math.floor(size)
+    };
+  }
+
+  async function startCamera() {
+    if (!validateConfig()) return;
+    if (!window.Html5Qrcode) {
+      setUiBlocked("Lector QR no disponible.", "No se pudo cargar el motor de escaneo.");
+      return;
+    }
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setUiBlocked("Navegador incompatible.", "Tu navegador no soporta acceso a cámara (getUserMedia).");
+      return;
+    }
+    if (!isSecureContextForCamera()) {
+      setUiBlocked("Se requiere conexión segura.", "Abre esta vista en HTTPS para usar la cámara.");
+      return;
+    }
+
+    await stopCamera();
+
+    try {
+      setStatus("Iniciando cámara...", "yellow");
+      cameraState.textContent = "Iniciando";
+      scanHelper.textContent = "Preparando lector QR...";
+
+      html5Qr = new Html5Qrcode("reader");
+
+      await html5Qr.start(
+        { facingMode: "environment" },
+        {
+          fps: 10,
+          qrbox: getQrBoxSize,
+          disableFlip: false,
+          formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE]
+        },
+        async (decodedText, decodedResult) => {
+          log("Callback de escaneo disparado", { decodedText, decodedResult });
+          await handleQr(decodedText);
+        },
+        () => {}
+      );
+      applyVideoSafetyAttributes();
+
+      cameraState.textContent = "Activa";
+      setStatus("Cámara activa. Apunta el QR dentro del cuadro.", "green");
+      scanHelper.textContent = "Alinea el QR dentro del recuadro";
+    } catch (error) {
+      cameraState.textContent = "Error";
+      const rawMessage = String(error?.message || error || "");
+      const lowerMessage = rawMessage.toLowerCase();
+      let friendlyMessage = "No se pudo iniciar la cámara.";
+
+      if (lowerMessage.includes("permission") || lowerMessage.includes("notallowed")) {
+        friendlyMessage = "Permiso de cámara denegado. Habilítalo en Android Chrome.";
+      } else if (lowerMessage.includes("secure") || lowerMessage.includes("https")) {
+        friendlyMessage = "Se requiere HTTPS para usar la cámara.";
+      } else if (lowerMessage.includes("notfound") || lowerMessage.includes("devicesnotfound")) {
+        friendlyMessage = "No se encontró cámara disponible en este dispositivo.";
+      } else if (lowerMessage.includes("notreadable")) {
+        friendlyMessage = "La cámara está en uso por otra app.";
+      }
+
+      setStatus(friendlyMessage, "red");
+      scanHelper.textContent = friendlyMessage;
+      setCardMessage(friendlyMessage, "bad");
+      log("Error startCamera", error.message || error);
+      console.error(error);
+    }
+  }
+
+  async function stopCamera() {
+    if (html5Qr) {
+      try {
+        await html5Qr.stop();
+        await html5Qr.clear();
+      } catch (error) {
+        log("Error stopCamera", error.message);
+      } finally {
+        html5Qr = null;
+      }
+    }
+
+    cameraState.textContent = "Detenida";
+    scanHelper.textContent = "Lector detenido";
+    hideMaterialCard();
+  }
+
+  function rotateHelperText() {
+    clearInterval(helperInterval);
+
+    helperInterval = setInterval(() => {
+      if (cameraState.textContent !== "Activa") return;
+      helperIndex = (helperIndex + 1) % helperMessages.length;
+      scanHelper.textContent = helperMessages[helperIndex];
+    }, 2800);
+  }
+
+  function bindEvents() {
+    toggleConfigBtn.addEventListener("click", () => {
+      configPanel.classList.toggle("active");
+    });
+
+    startBtn.addEventListener("click", startCamera);
+    stopBtn.addEventListener("click", stopCamera);
+
+    backBtn.addEventListener("click", async () => {
+      try {
+        await stopCamera();
+      } catch {}
+
+      const href = backBtn.dataset.href || "/inventory/";
+      window.location.href = href;
+    });
+
+    arApp.addEventListener("pointerdown", (event) => {
+      createTapRipple(event.clientX, event.clientY);
+    });
+
+    window.addEventListener("resize", debounceViewportSync, { passive: true });
+    window.addEventListener("orientationchange", debounceViewportSync, { passive: true });
+  }
+
+  function initView() {
+    syncViewportHeight();
+    cameraState.textContent = "Pendiente";
+    materialState.textContent = "Sin carga";
+    lastScanAt.textContent = "—";
+    setStatus("Listo para iniciar.", "yellow");
+    scanHelper.textContent = "Alinea el QR dentro del recuadro";
+    if (!isSecureContextForCamera()) {
+      setUiBlocked(
+        "Cámara bloqueada por contexto inseguro.",
+        "Para Android Chrome usa HTTPS (o localhost en desarrollo)."
+      );
+    } else if (!navigator.mediaDevices?.getUserMedia) {
+      setUiBlocked("Navegador incompatible.", "Este navegador no soporta getUserMedia.");
+    }
+    rotateHelperText();
+    log("Vista cargada");
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    bindEvents();
+    initView();
+  });
+</script>
 </body>
 </html>

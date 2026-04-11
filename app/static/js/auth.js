@@ -16,14 +16,8 @@
   const registerEmail = document.getElementById("email_reg");
   const emailRegHint = document.getElementById("emailRegHint");
   const registerForm = document.getElementById("registerForm");
-  const verifyEmailBox = document.getElementById("verifyEmailBox");
   const toggleForgotPassword = document.getElementById("toggleForgotPassword");
   const forgotPasswordPanel = document.getElementById("forgotPasswordPanel");
-  const toggleChangeEmail = document.getElementById("toggleChangeEmail");
-  const changeEmailPanel = document.getElementById("changeEmailPanel");
-  const changeEmailInput = document.getElementById("change_email_input");
-  const saveAndResendBtn = document.getElementById("saveAndResendBtn");
-  const changeEmailStatus = document.getElementById("changeEmailStatus");
   const authNotifications = document.querySelectorAll(".auth-notification-stack .notification");
 
   // Helpers
@@ -154,30 +148,6 @@
     }
   });
 
-  const setChangeEmailStatus = (message, kind = "") => {
-    if (!changeEmailStatus) return;
-    changeEmailStatus.textContent = message || "";
-    changeEmailStatus.className = kind ? `hint ${kind}` : "hint";
-  };
-
-  const hasPendingVerifyEmail = Boolean((verifyEmailBox?.dataset.pendingEmail || "").trim());
-  if (!hasPendingVerifyEmail && verifyEmailBox) {
-    verifyEmailBox.style.display = "none";
-  } else if (changeEmailInput && verifyEmailBox?.dataset.pendingEmail) {
-    changeEmailInput.value = verifyEmailBox.dataset.pendingEmail;
-  }
-
-  toggleChangeEmail?.addEventListener("click", () => {
-    if (!changeEmailPanel) return;
-    const isHidden = changeEmailPanel.hasAttribute("hidden");
-    if (isHidden) {
-      changeEmailPanel.removeAttribute("hidden");
-      changeEmailInput?.focus();
-    } else {
-      changeEmailPanel.setAttribute("hidden", "");
-    }
-  });
-
   toggleForgotPassword?.addEventListener("click", () => {
     if (!forgotPasswordPanel) return;
     const isHidden = forgotPasswordPanel.hasAttribute("hidden");
@@ -190,47 +160,6 @@
       forgotPasswordPanel.setAttribute("hidden", "");
       toggleForgotPassword.setAttribute("aria-expanded", "false");
       toggleForgotPassword.textContent = "¿Olvidaste tu contraseña?";
-    }
-  });
-
-  saveAndResendBtn?.addEventListener("click", async () => {
-    const email = (changeEmailInput?.value || "").trim().toLowerCase();
-    const csrfToken = verifyEmailBox?.dataset.csrfToken || "";
-
-    if (!email) {
-      setChangeEmailStatus("Ingresa un correo institucional válido.", "bad");
-      return;
-    }
-
-    saveAndResendBtn.disabled = true;
-    setChangeEmailStatus("Actualizando...");
-
-    try {
-      const response = await fetch("/auth/change-email", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRFToken": csrfToken,
-        },
-        body: JSON.stringify({ email }),
-      });
-      const data = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        const message = data?.error || "No se pudo actualizar el correo.";
-        setChangeEmailStatus(message, "bad");
-        return;
-      }
-
-      verifyEmailBox.dataset.pendingEmail = email;
-      setChangeEmailStatus("Correo actualizado y código reenviado", "good");
-      if (changeEmailPanel) {
-        changeEmailPanel.setAttribute("hidden", "");
-      }
-    } catch (_err) {
-      setChangeEmailStatus("Error de red. Intenta de nuevo.", "bad");
-    } finally {
-      saveAndResendBtn.disabled = false;
     }
   });
 
