@@ -8,7 +8,7 @@
     <p class="page-kicker">Gobernanza</p>
     <h1>Revisión de acciones de cuenta</h1>
     <p class="page-subtitle">
-      Bandeja de revisión para cuentas pendientes y acciones sensibles. La tabla del panel principal solo muestra cuentas ya gestionables.
+      Bandeja de revisión para cuentas pendientes y solicitudes de perfil. El bloque de acciones sensibles fue ocultado de la UI principal.
     </p>
   </div>
 </header>
@@ -37,77 +37,21 @@
           <td data-label="Matrícula">{{ user.matricula or '-' }}</td>
           <td data-label="Creada">{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else '-' }}</td>
           <td data-label="Definir rol">
-            <form method="post" action="{{ url_for('users.assign_role', user_id=user.id) }}" style="display:flex; gap:8px; flex-wrap:wrap;">
-              <div class="select-wrap" style="min-width:200px;">
-                <select name="role" required>
-                  <option value="">Selecciona rol</option>
-                  {% for role_name in pending_accounts_assignable_roles %}
-                  <option value="{{ role_name }}">{{ role_name|role_label }}</option>
-                  {% endfor %}
-                </select>
-                <i class="ph ph-caret-down select-arrow"></i>
-              </div>
-              <button class="btn btn-gold" type="submit">Asignar</button>
-            </form>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% endif %}
-</section>
-
-<section class="table-card">
-  <h3 style="margin-top:0;">Solicitudes de acciones sensibles ({{ requests|length }})</h3>
-  {% if requests|length == 0 %}
-    <p>No hay acciones sensibles registradas.</p>
-  {% else %}
-  <div class="table-wrap">
-    <table class="inventory-table" style="min-width: 1080px;">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Solicitante</th>
-          <th>Usuario objetivo</th>
-          <th>Acción</th>
-          <th>Estado</th>
-          <th>Creada</th>
-          <th>Revisión</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for req in requests %}
-        <tr>
-          <td>#{{ req.id }}</td>
-          <td>{{ req.requester.email if req.requester else ('ID ' ~ req.requester_id) }}</td>
-          <td>{{ req.target_user.email if req.target_user else ('ID ' ~ req.target_user_id) }}</td>
-          <td>{{ action_labels.get(req.action_type, req.action_type) }}</td>
-          <td>
-            <span class="status-badge {% if req.status == 'PENDING' %}status-warn{% elif req.status == 'APPROVED' %}status-ok{% else %}status-bad{% endif %}">
-              {{ req.status|status_label }}
-            </span>
-          </td>
-          <td>{{ req.created_at.strftime('%Y-%m-%d') if req.created_at else '-' }}</td>
-          <td>
-            {% if req.reviewed_at %}
-              {{ req.reviewed_at }}<br>
-              <small>{{ req.reviewer.email if req.reviewer else '-' }}</small>
-            {% else %}
-              -
-            {% endif %}
-          </td>
-          <td>
-            {% if is_superadmin and req.status == 'PENDING' %}
-              <form method="post" action="{{ url_for('users.approve_critical_action_request', request_id=req.id) }}" style="display:inline-block;">
-                <button type="submit" class="btn btn-gold">Aprobar</button>
-              </form>
-              <form method="post" action="{{ url_for('users.reject_critical_action_request', request_id=req.id) }}" style="display:inline-block; margin-left:6px;">
-                <button type="submit" class="btn btn-ghost">Rechazar</button>
+            {% if is_superadmin %}
+              <form method="post" action="{{ url_for('users.assign_role', user_id=user.id) }}" style="display:flex; gap:8px; flex-wrap:wrap;">
+                <div class="select-wrap" style="min-width:200px;">
+                  <select name="role" required>
+                    <option value="">Selecciona rol</option>
+                    {% for role_name in pending_accounts_assignable_roles %}
+                    <option value="{{ role_name }}">{{ role_name|role_label }}</option>
+                    {% endfor %}
+                  </select>
+                  <i class="ph ph-caret-down select-arrow"></i>
+                </div>
+                <button class="btn btn-gold" type="submit">Asignar</button>
               </form>
             {% else %}
-              -
+              <span class="text-dim">Solo SUPERADMIN</span>
             {% endif %}
           </td>
         </tr>

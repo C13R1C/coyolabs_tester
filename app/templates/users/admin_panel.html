@@ -62,14 +62,12 @@
   {% if is_superadmin %}
   <div class="topbar-actions">
     <a href="{{ url_for('users.profile_change_requests') }}" class="btn btn-ghost">Solicitudes de perfil</a>
-    <a href="{{ url_for('users.critical_action_requests') }}" class="btn btn-ghost">Revisión de acciones de cuenta ({{ pending_review_count }})</a>
     <a href="{{ url_for('reports.logbook_admin_view') }}" class="btn btn-ghost">Bitácora</a>
-    <a href="{{ url_for('users.create_admin_account') }}" class="btn btn-gold">Crear cuenta de administrador</a>
+    <a href="{{ url_for('users.create_admin_account') }}" class="btn btn-gold">Asignar administradores</a>
   </div>
   {% else %}
   <div class="topbar-actions">
     <a href="{{ url_for('users.profile_change_requests') }}" class="btn btn-ghost">Solicitudes de perfil</a>
-    <a href="{{ url_for('users.critical_action_requests') }}" class="btn btn-ghost">Revisión de acciones de cuenta ({{ pending_review_count }})</a>
     <a href="{{ url_for('reports.logbook_admin_view') }}" class="btn btn-ghost">Bitácora</a>
   </div>
   {% endif %}
@@ -150,7 +148,7 @@
               <form method="post" action="{{ url_for('users.admin_disable_user', user_id=user.id) }}"><button class="btn btn-ghost users-admin-icon-btn" type="submit" title="Desactivar usuario" aria-label="Desactivar usuario"><i class="ph ph-x-circle"></i></button></form>
               <form method="post" action="{{ url_for('users.admin_unban_user', user_id=user.id) }}"><button class="btn btn-ghost users-admin-icon-btn" type="submit" title="Desbloquear usuario" aria-label="Desbloquear usuario"><i class="ph ph-lock-open"></i></button></form>
               <form method="post" action="{{ url_for('users.admin_ban_user', user_id=user.id) }}"><button class="btn btn-ghost users-admin-icon-btn" type="submit" title="Bloquear usuario" aria-label="Bloquear usuario"><i class="ph ph-prohibit"></i></button></form>
-              {% if is_superadmin and user.id != current_user.id and user.role != 'SUPERADMIN' %}
+              {% if is_superadmin and user.id != current_user.id and (user.role != 'SUPERADMIN' or is_root_superadmin) and user.id != root_superadmin_id %}
               <form method="post" action="{{ url_for('users.superadmin_soft_delete_admin', user_id=user.id) }}"><button class="btn btn-ghost users-admin-icon-btn" type="submit" title="Eliminar administrador" aria-label="Eliminar administrador"><i class="ph ph-trash"></i></button></form>
               {% endif %}
             </div>

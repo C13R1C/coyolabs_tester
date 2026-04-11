@@ -1,46 +1,53 @@
 {% extends "layouts/student_base.html" %}
-{% set crumbs = [("Inicio", url_for('root_home')), ("Administración usuarios", url_for('users.admin_panel')), ("Crear administrador", url_for('users.create_admin_account'))] %}
-{% block title %}Crear administrador{% endblock %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Administración usuarios", url_for('users.admin_panel')), ("Asignar administradores", url_for('users.create_admin_account'))] %}
+{% block title %}Asignar administradores{% endblock %}
 
 {% block content %}
 <header class="topbar">
   <div class="topbar-left">
     <p class="page-kicker">Administrador</p>
-    <h1>Crear cuenta de administrador</h1>
-    <p class="page-subtitle">Crea credenciales iniciales para un nuevo administrador.</p>
+    <h1>Asignar administradores</h1>
+    <p class="page-subtitle">Promueve cuentas existentes del sistema a rol administrativo.</p>
   </div>
 </header>
 
 <section class="table-card">
-  <form method="post" class="toolbar" style="grid-template-columns: 1fr; max-width: 560px;" data-form-mode="create">
+  <form method="post" class="toolbar" style="grid-template-columns: 1fr 1fr auto;" data-form-mode="promote">
     <div class="toolbar-group">
-      <label>Email institucional</label>
-      <div class="search-box">
-        <i class="ph ph-envelope search-icon"></i>
-        <input type="email" name="email" placeholder="usuario@utpn.edu.mx" required>
+      <label>Cuenta existente</label>
+      <div class="select-wrap">
+        <select name="user_id" required>
+          <option value="">Selecciona una cuenta</option>
+          {% for user in eligible_users %}
+          <option value="{{ user.id }}">{{ user.email }}{% if user.full_name %} · {{ user.full_name }}{% endif %}</option>
+          {% endfor %}
+        </select>
+        <i class="ph ph-caret-down select-arrow"></i>
       </div>
     </div>
 
     <div class="toolbar-group">
-      <label>Nombre (opcional)</label>
-      <div class="search-box">
-        <i class="ph ph-user search-icon"></i>
-        <input type="text" name="full_name">
+      <label>Rol a asignar</label>
+      <div class="select-wrap">
+        <select name="role" required>
+          {% for role_name in assignable_admin_roles %}
+          <option value="{{ role_name }}">{{ role_name|role_label }}</option>
+          {% endfor %}
+        </select>
+        <i class="ph ph-caret-down select-arrow"></i>
       </div>
     </div>
 
-    <div class="toolbar-group">
-      <label>Contraseña inicial</label>
-      <div class="search-box">
-        <i class="ph ph-lock search-icon"></i>
-        <input type="password" name="password" required>
-      </div>
-    </div>
-
-    <div class="toolbar-actions">
-      <button type="submit" class="btn btn-gold">Crear administrador</button>
+    <div class="toolbar-actions" style="align-self:end;">
+      <button type="submit" class="btn btn-gold">Promover cuenta</button>
       <a href="{{ url_for('users.admin_panel') }}" class="btn btn-ghost">Cancelar</a>
     </div>
   </form>
+  {% if eligible_users|length == 0 %}
+  <p style="margin-top:12px; color:var(--text-dim);">No hay cuentas elegibles para promoción en este momento.</p>
+  {% endif %}
+  {% if not is_root_superadmin %}
+  <p style="margin-top:8px; color:var(--text-dim);">Solo el SUPERADMIN padre puede promover cuentas a SUPERADMIN.</p>
+  {% endif %}
 </section>
 {% endblock %}
