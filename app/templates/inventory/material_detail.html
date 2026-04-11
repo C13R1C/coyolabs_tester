@@ -3,6 +3,22 @@
 {% block title %}Detalle de material{% endblock %}
 
 {% block content %}
+<style>
+  .material-detail-table td{
+    vertical-align: top;
+    word-break: break-word;
+  }
+  @media (max-width: 900px){
+    .material-detail-actions{
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .material-detail-actions .btn{
+      width: 100%;
+      justify-content: center;
+    }
+  }
+</style>
 <header class="topbar">
   <div class="topbar-left">
     <p class="page-kicker">Inventario</p>
@@ -20,14 +36,14 @@
 </section>
 
 <section class="table-card" style="margin-bottom:18px;">
-  <div class="toolbar-actions" style="margin-bottom: 12px;">
+  <div class="toolbar-actions material-detail-actions" style="margin-bottom: 12px;">
     <a class="btn btn-ghost" href="{{ url_for('inventory.inventory_list') }}"><i class="ph ph-arrow-left"></i><span>Volver al inventario</span></a>
     {% if current_user.is_authenticated and is_admin_role(current_user.role) %}
     <a class="btn btn-gold" href="{{ url_for('inventory.admin_edit_material', material_id=material.id) }}"><i class="ph ph-pencil-simple"></i><span>Editar</span></a>
     {% endif %}
   </div>
   <div class="table-wrap">
-    <table class="inventory-table" style="min-width: 800px;">
+    <table class="inventory-table material-detail-table">
       <tbody>
         <tr><td><strong>ID interno</strong></td><td>{{ material.id }}</td></tr>
         <tr><td><strong>Ubicación</strong></td><td>{{ material.location | smart_title }}</td></tr>

@@ -68,10 +68,15 @@ def material_to_dict(m: Material) -> dict:
 
 
 def ra_material_to_dict(m: Material) -> dict:
+    career_name = m.career.name if m.career else None
+    career_short = "".join(
+        token[0] for token in (career_name or "").split() if token and token[0].isalnum()
+    )[:6].upper() or None
     return {
         "id": m.id,
         "name": m.name,
-        "lab": m.lab.name if m.lab else None,
+        "career": career_name,
+        "career_short": career_short,
         "location": m.location,
         "status": m.status,
         "pieces_text": m.pieces_text,
