@@ -7,7 +7,8 @@ class TeacherAcademicLoad(db.Model):
     id = db.Column(db.Integer, primary_key=True)
 
     teacher_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
-    subject_id = db.Column(db.Integer, db.ForeignKey("subjects.id"), nullable=False, index=True)
+    subject_id = db.Column(db.Integer, db.ForeignKey("subjects.id"), nullable=True, index=True)
+    subject_name = db.Column(db.String(160), nullable=False)
     group_code = db.Column(db.String(20), nullable=False)
 
     created_at = db.Column(db.DateTime, server_default=db.func.now(), nullable=False)
@@ -16,7 +17,7 @@ class TeacherAcademicLoad(db.Model):
     subject = db.relationship("Subject", backref="teacher_loads", foreign_keys=[subject_id])
 
     __table_args__ = (
-        db.UniqueConstraint("teacher_id", "subject_id", "group_code", name="uq_teacher_subject_group"),
+        db.UniqueConstraint("teacher_id", "subject_name", "group_code", name="uq_teacher_subject_name_group"),
     )
 
     def __repr__(self) -> str:

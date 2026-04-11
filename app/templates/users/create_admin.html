@@ -1,46 +1,168 @@
 {% extends "layouts/student_base.html" %}
-{% set crumbs = [("Inicio", url_for('root_home')), ("Administración usuarios", url_for('users.admin_panel')), ("Crear administrador", url_for('users.create_admin_account'))] %}
-{% block title %}Crear administrador{% endblock %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("Administración usuarios", url_for('users.admin_panel')), ("Administrar perfiles y roles", url_for('users.create_admin_account'))] %}
+{% block title %}Administrar perfiles y roles{% endblock %}
 
 {% block content %}
 <header class="topbar">
   <div class="topbar-left">
-    <p class="page-kicker">Administrador</p>
-    <h1>Crear cuenta de administrador</h1>
-    <p class="page-subtitle">Crea credenciales iniciales para un nuevo administrador.</p>
+    <p class="page-kicker">Gobernanza</p>
+    <h1>Administrar perfiles y roles</h1>
+    <p class="page-subtitle">Bandeja central para resolver perfiles pendientes, solicitudes de promoción y cambios de rol.</p>
   </div>
 </header>
 
 <section class="table-card">
-  <form method="post" class="toolbar" style="grid-template-columns: 1fr; max-width: 560px;" data-form-mode="create">
+  <h3 style="margin-top:0;">Perfiles pendientes ({{ pending_accounts|length }})</h3>
+  <p class="text-dim" style="margin-top:0;">Resuelve primero las cuentas con rol pendiente para habilitar su gestión normal.</p>
+  {% if pending_accounts %}
+  <div class="table-wrap">
+    <table class="inventory-table table-mobile-cards" style="min-width:960px;">
+      <thead>
+        <tr>
+          <th>Email</th>
+          <th>Nombre</th>
+          <th>Matrícula</th>
+          <th>Creada</th>
+          <th>Asignar rol</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for user in pending_accounts %}
+        <tr>
+          <td data-label="Email">{{ user.email }}</td>
+          <td data-label="Nombre">{{ user.full_name or '-' }}</td>
+          <td data-label="Matrícula">{{ user.matricula or '-' }}</td>
+          <td data-label="Creada">{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else '-' }}</td>
+          <td data-label="Asignar rol">
+            <form method="post" action="{{ url_for('users.assign_role', user_id=user.id) }}" style="display:flex; gap:8px; flex-wrap:wrap;">
+              <div class="select-wrap" style="min-width:200px;">
+                <select name="role" required>
+                  <option value="">Selecciona rol</option>
+                  {% for role_name in pending_accounts_assignable_roles %}
+                  <option value="{{ role_name }}">{{ role_name|role_label }}</option>
+                  {% endfor %}
+                </select>
+                <i class="ph ph-caret-down select-arrow"></i>
+              </div>
+              <button class="btn btn-gold" type="submit">Asignar</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p>No hay perfiles pendientes por resolver.</p>
+  {% endif %}
+</section>
+
+<section class="table-card">
+  <h3 style="margin-top:0;">Solicitudes de perfil pendientes ({{ pending_profile_requests|length }})</h3>
+  <p class="text-dim" style="margin-top:0;">Se mantienen visibles aquí para no depender del botón anterior de solicitudes de perfil.</p>
+  <div class="toolbar-actions">
+    <a href="{{ url_for('users.profile_change_requests') }}" class="btn btn-ghost">Revisar solicitudes de perfil</a>
+  </div>
+</section>
+
+<section class="table-card">
+  <h3 style="margin-top:0;">Promoción y cambios administrativos</h3>
+  <p class="text-dim" style="margin-top:0;">ADMIN puede solicitar promoción a ADMIN; SUPERADMIN puede aprobar y gestionar revocación de superadministrador según jerarquía.</p>
+
+  <form method="post" class="toolbar" style="grid-template-columns: 1fr 1fr auto; margin-top:12px;">
+    <input type="hidden" name="action" value="promote">
     <div class="toolbar-group">
-      <label>Email institucional</label>
-      <div class="search-box">
-        <i class="ph ph-envelope search-icon"></i>
-        <input type="email" name="email" placeholder="usuario@utpn.edu.mx" required>
+      <label>Cuenta existente</label>
+      <div class="select-wrap">
+        <select name="user_id" required>
+          <option value="">Selecciona una cuenta</option>
+          {% for user in eligible_users %}
+          <option value="{{ user.id }}">{{ user.email }}{% if user.full_name %} · {{ user.full_name }}{% endif %} · {{ user.role|role_label }}</option>
+          {% endfor %}
+        </select>
+        <i class="ph ph-caret-down select-arrow"></i>
       </div>
     </div>
 
     <div class="toolbar-group">
-      <label>Nombre (opcional)</label>
-      <div class="search-box">
-        <i class="ph ph-user search-icon"></i>
-        <input type="text" name="full_name">
+      <label>Acción de rol</label>
+      {% if is_superadmin %}
+      <div class="select-wrap">
+        <select name="role" required>
+          <option value="ADMIN">Cambiar rol a administrador</option>
+          {% if is_root_superadmin %}
+          <option value="SUPERADMIN">Asignar superadministrador</option>
+          {% endif %}
+        </select>
+        <i class="ph ph-caret-down select-arrow"></i>
       </div>
+      {% else %}
+      <div class="select-wrap">
+        <select name="role" required>
+          <option value="ADMIN">Solicitar promoción a administrador</option>
+        </select>
+        <i class="ph ph-caret-down select-arrow"></i>
+      </div>
+      {% endif %}
     </div>
 
-    <div class="toolbar-group">
-      <label>Contraseña inicial</label>
-      <div class="search-box">
-        <i class="ph ph-lock search-icon"></i>
-        <input type="password" name="password" required>
-      </div>
-    </div>
-
-    <div class="toolbar-actions">
-      <button type="submit" class="btn btn-gold">Crear administrador</button>
-      <a href="{{ url_for('users.admin_panel') }}" class="btn btn-ghost">Cancelar</a>
+    <div class="toolbar-actions" style="align-self:end;">
+      <button type="submit" class="btn btn-gold">Enviar</button>
+      <a href="{{ url_for('users.admin_panel') }}" class="btn btn-ghost">Volver</a>
     </div>
   </form>
+</section>
+
+<section class="table-card">
+  <h3 style="margin-top:0;">Solicitudes de promoción a ADMIN ({{ pending_admin_promotions|length }})</h3>
+  {% if pending_admin_promotions %}
+  <div class="table-wrap">
+    <table class="inventory-table" style="min-width:980px;">
+      <thead>
+        <tr>
+          <th>Solicitante</th>
+          <th>Cuenta objetivo</th>
+          <th>Estado</th>
+          <th>Fecha</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for req in pending_admin_promotions %}
+        <tr>
+          <td>{{ req.requester.email if req.requester else '-' }}</td>
+          <td>{{ req.target_user.email if req.target_user else '-' }}</td>
+          <td>
+            <span class="status-badge {% if req.status == 'PENDING' %}status-warn{% elif req.status == 'APPROVED' %}status-ok{% else %}status-bad{% endif %}">
+              {{ req.status|status_label }}
+            </span>
+          </td>
+          <td>{{ req.created_at.strftime('%Y-%m-%d') if req.created_at else '-' }}</td>
+          <td>
+            {% if is_superadmin and req.status == 'PENDING' %}
+            <form method="post" action="{{ url_for('users.create_admin_account') }}" style="display:inline-block;">
+              <input type="hidden" name="action" value="review_promotion">
+              <input type="hidden" name="request_id" value="{{ req.id }}">
+              <input type="hidden" name="decision" value="APPROVE">
+              <button class="btn btn-gold" type="submit">Aprobar</button>
+            </form>
+            <form method="post" action="{{ url_for('users.create_admin_account') }}" style="display:inline-block; margin-left:6px;">
+              <input type="hidden" name="action" value="review_promotion">
+              <input type="hidden" name="request_id" value="{{ req.id }}">
+              <input type="hidden" name="decision" value="REJECT">
+              <button class="btn btn-ghost" type="submit">Rechazar</button>
+            </form>
+            {% else %}
+              -
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p>No hay solicitudes de promoción registradas.</p>
+  {% endif %}
 </section>
 {% endblock %}

@@ -117,6 +117,9 @@
           {% else %}
             <span class="status-badge status-neutral">LEÍDA</span>
           {% endif %}
+          {% if n.is_persistent %}
+            <span class="status-badge status-bad">PERSISTENTE</span>
+          {% endif %}
         </div>
         <p>{{ n.message }}</p>
         <div class="notification-date">{{ n.created_at }}</div>

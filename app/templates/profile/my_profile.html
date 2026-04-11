@@ -267,21 +267,16 @@
     <span class="profile-chip">{{ teacher_loads|length }} asignaciones</span>
   </div>
   <p style="margin:0 0 12px 0; color:var(--text-dim);">
-    Selecciona materia, captura grupo y agrega tu asignación. No se permiten duplicados de la misma materia y grupo.
+    Captura materia y grupo manualmente para agregar tu asignación. No se permiten duplicados de la misma materia y grupo.
   </p>
 
   <form method="post" action="{{ url_for('profile.add_teaching_load') }}" class="toolbar profile-add-load-form" style="grid-template-columns: 1.2fr .8fr auto; margin-top:12px;">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <div class="toolbar-group">
       <label>Materia</label>
-      <div class="select-wrap">
-        <select name="subject_id" required>
-          <option value="">Selecciona una materia</option>
-          {% for s in available_subjects %}
-          <option value="{{ s.id }}">{{ s.name }} · {{ s.career.name if s.career else '-' }} · {{ s.level }} C{{ s.quarter }}</option>
-          {% endfor %}
-        </select>
-        <i class="ph ph-caret-down select-arrow"></i>
+      <div class="search-box">
+        <i class="ph ph-book-open search-icon"></i>
+        <input type="text" name="subject_name" placeholder="Ej.: Programación Web" maxlength="160" required>
       </div>
     </div>
 
@@ -293,13 +288,10 @@
       </div>
     </div>
 
-    <div class="toolbar-actions" style="align-self:end;">
+  <div class="toolbar-actions" style="align-self:end;">
       <button type="submit" class="btn btn-gold">Agregar asignación</button>
     </div>
   </form>
-  {% if available_subjects|length == 0 %}
-    <p style="margin-top:10px; color:var(--text-dim);">No hay materias activas disponibles para asignar.</p>
-  {% endif %}
 
   {% if teacher_loads %}
   <div class="table-wrap" style="margin-top:12px;">
@@ -307,9 +299,6 @@
       <thead>
         <tr>
           <th>Materia</th>
-          <th>Carrera</th>
-          <th>Nivel</th>
-          <th>Cuatrimestre</th>
           <th>Grupo</th>
           <th>Registro</th>
           <th>Acción</th>
@@ -318,10 +307,7 @@
       <tbody>
         {% for load in teacher_loads %}
         <tr>
-          <td>{{ load.subject.name if load.subject else '-' }}</td>
-          <td>{{ load.subject.career.name if load.subject and load.subject.career else '-' }}</td>
-          <td>{{ load.subject.level if load.subject else '-' }}</td>
-          <td>{{ load.subject.quarter if load.subject else '-' }}</td>
+          <td>{{ load.subject_name or (load.subject.name if load.subject else '-') }}</td>
           <td>{{ load.group_code }}</td>
           <td>{{ load.created_at.strftime('%Y-%m-%d') if load.created_at else '-' }}</td>
           <td>
