@@ -61,13 +61,12 @@
   </div>
   {% if is_superadmin %}
   <div class="topbar-actions">
-    <a href="{{ url_for('users.profile_change_requests') }}" class="btn btn-ghost">Solicitudes de perfil</a>
     <a href="{{ url_for('reports.logbook_admin_view') }}" class="btn btn-ghost">Bitácora</a>
-    <a href="{{ url_for('users.create_admin_account') }}" class="btn btn-gold">Asignar administradores</a>
+    <a href="{{ url_for('users.create_admin_account') }}" class="btn btn-gold">Administrar perfiles y roles</a>
   </div>
   {% else %}
   <div class="topbar-actions">
-    <a href="{{ url_for('users.profile_change_requests') }}" class="btn btn-ghost">Solicitudes de perfil</a>
+    <a href="{{ url_for('users.create_admin_account') }}" class="btn btn-gold">Administrar perfiles y roles</a>
     <a href="{{ url_for('reports.logbook_admin_view') }}" class="btn btn-ghost">Bitácora</a>
   </div>
   {% endif %}

@@ -9,7 +9,7 @@ class CriticalActionRequest(db.Model):
     requester_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
     target_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
 
-    action_type = db.Column(db.String(50), nullable=False)  # DISABLE_USER / ENABLE_USER / BAN_USER / UNBAN_USER
+    action_type = db.Column(db.String(50), nullable=False)  # DISABLE_USER / ENABLE_USER / BAN_USER / UNBAN_USER / PROMOTE_TO_ADMIN
     reason = db.Column(db.Text, nullable=True)
     status = db.Column(db.String(20), nullable=False, default="PENDING", index=True)  # PENDING/APPROVED/REJECTED
 
@@ -25,7 +25,7 @@ class CriticalActionRequest(db.Model):
     __table_args__ = (
         db.CheckConstraint("status in ('PENDING','APPROVED','REJECTED')", name="ck_car_status"),
         db.CheckConstraint(
-            "action_type in ('DISABLE_USER','ENABLE_USER','BAN_USER','UNBAN_USER')",
+            "action_type in ('DISABLE_USER','ENABLE_USER','BAN_USER','UNBAN_USER','PROMOTE_TO_ADMIN')",
             name="ck_car_action_type",
         ),
     )

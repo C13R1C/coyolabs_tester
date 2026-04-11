@@ -37,22 +37,18 @@
           <td data-label="Matrícula">{{ user.matricula or '-' }}</td>
           <td data-label="Creada">{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else '-' }}</td>
           <td data-label="Definir rol">
-            {% if is_superadmin %}
-              <form method="post" action="{{ url_for('users.assign_role', user_id=user.id) }}" style="display:flex; gap:8px; flex-wrap:wrap;">
-                <div class="select-wrap" style="min-width:200px;">
-                  <select name="role" required>
-                    <option value="">Selecciona rol</option>
-                    {% for role_name in pending_accounts_assignable_roles %}
-                    <option value="{{ role_name }}">{{ role_name|role_label }}</option>
-                    {% endfor %}
-                  </select>
-                  <i class="ph ph-caret-down select-arrow"></i>
-                </div>
-                <button class="btn btn-gold" type="submit">Asignar</button>
-              </form>
-            {% else %}
-              <span class="text-dim">Solo SUPERADMIN</span>
-            {% endif %}
+            <form method="post" action="{{ url_for('users.assign_role', user_id=user.id) }}" style="display:flex; gap:8px; flex-wrap:wrap;">
+              <div class="select-wrap" style="min-width:200px;">
+                <select name="role" required>
+                  <option value="">Selecciona rol</option>
+                  {% for role_name in pending_accounts_assignable_roles %}
+                  <option value="{{ role_name }}">{{ role_name|role_label }}</option>
+                  {% endfor %}
+                </select>
+                <i class="ph ph-caret-down select-arrow"></i>
+              </div>
+              <button class="btn btn-gold" type="submit">Asignar</button>
+            </form>
           </td>
         </tr>
         {% endfor %}
