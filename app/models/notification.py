@@ -18,7 +18,8 @@ class Notification(db.Model):
 
     created_at = db.Column(db.DateTime, server_default=db.func.now(), nullable=False)
 
-    user = db.relationship("User", backref="notifications")
+    user = db.relationship("User", foreign_keys=[user_id], backref="notifications")
+    related_user = db.relationship("User", foreign_keys=[related_user_id])
 
     def __repr__(self) -> str:
         return f"<Notification {self.id} user={self.user_id} read={self.is_read}>"

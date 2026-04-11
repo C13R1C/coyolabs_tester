@@ -4,7 +4,6 @@ from flask_login import current_user
 from app.constants import ROLE_PENDING
 from app.extensions import db
 from app.models.notification import Notification
-from app.models.profile_change_request import ProfileChangeRequest
 from app.models.critical_action_request import CriticalActionRequest
 from app.models.user import User
 from app.services.audit_service import log_event
@@ -24,10 +23,10 @@ users_bp = Blueprint("users", __name__, url_prefix="/users")
 PENDING_APPROVAL_ROLES = (ROLE_STUDENT, ROLE_TEACHER, ROLE_STAFF, ROLE_ADMIN, ROLE_SUPERADMIN)
 ADMIN_PANEL_ROLE_FILTERS = (ROLE_STUDENT, ROLE_TEACHER, ROLE_STAFF, ROLE_ADMIN, ROLE_SUPERADMIN)
 SUPERADMIN_ASSIGNABLE_ROLES = (ROLE_STUDENT, ROLE_TEACHER, ROLE_STAFF, ROLE_ADMIN)
-ROOT_SUPERADMIN_ASSIGNABLE_ROLES = (ROLE_STUDENT, ROLE_TEACHER, ROLE_STAFF, ROLE_ADMIN, ROLE_SUPERADMIN)
+ROOT_SUPERADMIN_ASSIGNABLE_ROLES = SUPERADMIN_ASSIGNABLE_ROLES
 ADMIN_ASSIGNABLE_ROLES = (ROLE_STUDENT, ROLE_TEACHER, ROLE_STAFF)
 STAFF_PENDING_ASSIGNABLE_ROLES = (ROLE_TEACHER, ROLE_STAFF)
-ADMIN_PENDING_ASSIGNABLE_ROLES = (ROLE_STUDENT, ROLE_TEACHER, ROLE_STAFF)
+ADMIN_PENDING_ASSIGNABLE_ROLES = (ROLE_TEACHER, ROLE_STAFF)
 CRITICAL_ACTION_TYPES = {
     "DISABLE_USER": "desactivar usuario",
     "ENABLE_USER": "reactivar usuario",
@@ -268,10 +267,7 @@ def admin_panel():
         query = query.filter(User.role == role)
 
     users = query.order_by(User.created_at.desc()).limit(300).all()
-    pending_review_count = (
-        User.query.filter(User.role == ROLE_PENDING).count()
-        + ProfileChangeRequest.query.filter(ProfileChangeRequest.status == "PENDING").count()
-    )
+    pending_review_count = User.query.filter(User.role == ROLE_PENDING).count()
 
     assignable_roles = ROOT_SUPERADMIN_ASSIGNABLE_ROLES if _is_current_root_superadmin() else (
         SUPERADMIN_ASSIGNABLE_ROLES if _is_superadmin() else ADMIN_ASSIGNABLE_ROLES
@@ -296,20 +292,8 @@ def admin_panel():
 @users_bp.route("/admin/profile-change-requests", methods=["GET"])
 @min_role_required("ADMIN")
 def profile_change_requests():
-    requests = (
-        ProfileChangeRequest.query
-        .order_by(
-            db.case((ProfileChangeRequest.status == "PENDING", 0), else_=1),
-            ProfileChangeRequest.created_at.desc(),
-        )
-        .limit(300)
-        .all()
-    )
-    return render_template(
-        "users/profile_change_requests.html",
-        requests=requests,
-        active_page="users",
-    )
+    flash("El flujo de solicitudes de perfil fue retirado del sistema operativo.", "info")
+    return redirect(url_for("users.create_admin_account"))
 
 
 @users_bp.route("/admin/critical-action-requests", methods=["GET"])
@@ -320,14 +304,6 @@ def critical_action_requests():
         .filter(User.role == ROLE_PENDING)
         .order_by(User.created_at.asc())
         .limit(300)
-        .all()
-    )
-
-    pending_profile_requests = (
-        ProfileChangeRequest.query
-        .filter(ProfileChangeRequest.status == "PENDING")
-        .order_by(ProfileChangeRequest.created_at.desc())
-        .limit(100)
         .all()
     )
 
@@ -347,7 +323,6 @@ def critical_action_requests():
         "users/critical_action_requests.html",
         requests=critical_requests,
         pending_accounts=pending_accounts,
-        pending_profile_requests=pending_profile_requests,
         pending_accounts_assignable_roles=_pending_assignable_roles(),
         is_superadmin=_is_superadmin(),
         action_labels=CRITICAL_ACTION_TYPES,
@@ -439,65 +414,15 @@ def reject_critical_action_request(request_id: int):
 @users_bp.route("/admin/profile-change-requests/<int:request_id>/approve", methods=["POST"])
 @min_role_required("ADMIN")
 def approve_profile_change_request(request_id: int):
-    req = ProfileChangeRequest.query.get_or_404(request_id)
-    if req.status != "PENDING":
-        flash("La solicitud ya fue procesada.", "warning")
-        return redirect(url_for("users.profile_change_requests"))
-
-    user = User.query.get(req.user_id)
-    if not user:
-        flash("Usuario no encontrado para la solicitud.", "error")
-        return redirect(url_for("users.profile_change_requests"))
-
-    if req.request_type == "PHONE_CHANGE" and req.requested_phone:
-        user.phone = req.requested_phone
-
-    req.status = "APPROVED"
-    req.reviewed_by = current_user.id
-    req.reviewed_at = db.func.now()
-
-    _log_admin_event(
-        action="PROFILE_CHANGE_REQUEST_APPROVED",
-        description=f"{current_user.email} aprobó solicitud #{req.id}",
-        metadata={"request_id": req.id, "user_id": req.user_id, "type": req.request_type},
-    )
-    if req.request_type == "PHONE_CHANGE":
-        _log_admin_event(
-            action="PHONE_CHANGE_APPROVED",
-            description=f"{current_user.email} aprobó cambio de teléfono de user_id={req.user_id}",
-            metadata={"request_id": req.id, "target_user_id": req.user_id},
-        )
-    db.session.commit()
-    flash("Solicitud aprobada.", "success")
-    return redirect(url_for("users.profile_change_requests"))
+    flash("El flujo de solicitudes de perfil fue retirado del sistema operativo.", "info")
+    return redirect(url_for("users.create_admin_account"))
 
 
 @users_bp.route("/admin/profile-change-requests/<int:request_id>/reject", methods=["POST"])
 @min_role_required("ADMIN")
 def reject_profile_change_request(request_id: int):
-    req = ProfileChangeRequest.query.get_or_404(request_id)
-    if req.status != "PENDING":
-        flash("La solicitud ya fue procesada.", "warning")
-        return redirect(url_for("users.profile_change_requests"))
-
-    req.status = "REJECTED"
-    req.reviewed_by = current_user.id
-    req.reviewed_at = db.func.now()
-
-    _log_admin_event(
-        action="PROFILE_CHANGE_REQUEST_REJECTED",
-        description=f"{current_user.email} rechazó solicitud #{req.id}",
-        metadata={"request_id": req.id, "user_id": req.user_id, "type": req.request_type},
-    )
-    if req.request_type == "PHONE_CHANGE":
-        _log_admin_event(
-            action="PHONE_CHANGE_REJECTED",
-            description=f"{current_user.email} rechazó cambio de teléfono de user_id={req.user_id}",
-            metadata={"request_id": req.id, "target_user_id": req.user_id},
-        )
-    db.session.commit()
-    flash("Solicitud rechazada.", "success")
-    return redirect(url_for("users.profile_change_requests"))
+    flash("El flujo de solicitudes de perfil fue retirado del sistema operativo.", "info")
+    return redirect(url_for("users.create_admin_account"))
 
 
 @users_bp.route("/admin/create-admin", methods=["GET", "POST"])
@@ -509,205 +434,57 @@ def create_admin_account():
 
     if request.method == "POST":
         action = (request.form.get("action") or "").strip()
-        selected_user_id = request.form.get("user_id", type=int)
-        requested_role = normalize_role(request.form.get("role"))
-
-        if action == "promote":
-            if not selected_user_id:
-                flash("Debes seleccionar una cuenta existente.", "error")
+        if action == "change_role":
+            if not _is_superadmin():
+                flash("Solo SUPERADMIN puede cambiar roles existentes.", "error")
                 return redirect(url_for("users.create_admin_account"))
 
-            user_to_promote = User.query.get_or_404(selected_user_id)
-            normalized_target_role = normalize_role(user_to_promote.role)
-            if normalized_target_role == ROLE_PENDING:
-                flash("Primero resuelve el perfil pendiente.", "error")
-                return redirect(url_for("users.create_admin_account"))
-            if requested_role == ROLE_ADMIN and normalized_target_role == ROLE_ADMIN and not _is_superadmin():
-                flash("Esa cuenta ya es ADMIN.", "warning")
+            selected_user_id = request.form.get("user_id", type=int)
+            requested_role = normalize_role(request.form.get("role"))
+            if not selected_user_id or requested_role not in SUPERADMIN_ASSIGNABLE_ROLES:
+                flash("Cambio de rol inválido.", "error")
                 return redirect(url_for("users.create_admin_account"))
 
-            if requested_role not in {ROLE_ADMIN, ROLE_SUPERADMIN}:
-                flash("Solo puedes asignar ADMIN o SUPERADMIN en esta sección.", "error")
+            user_to_update = User.query.get_or_404(selected_user_id)
+            target_role = normalize_role(user_to_update.role)
+            if target_role == ROLE_SUPERADMIN:
+                flash("No se permite modificar cuentas SUPERADMIN desde este flujo.", "error")
                 return redirect(url_for("users.create_admin_account"))
 
-            if requested_role == ROLE_ADMIN and not _is_superadmin():
-                pending = (
-                    CriticalActionRequest.query
-                    .filter(CriticalActionRequest.requester_id == current_user.id)
-                    .filter(CriticalActionRequest.target_user_id == user_to_promote.id)
-                    .filter(CriticalActionRequest.action_type == "PROMOTE_TO_ADMIN")
-                    .filter(CriticalActionRequest.status == "PENDING")
-                    .first()
-                )
-                if pending:
-                    flash("Ya existe una solicitud pendiente para esa promoción.", "warning")
-                    return redirect(url_for("users.create_admin_account"))
-
-                req = CriticalActionRequest(
-                    requester_id=current_user.id,
-                    target_user_id=user_to_promote.id,
-                    action_type="PROMOTE_TO_ADMIN",
-                    reason="Solicitud de promoción a ADMIN creada desde Administrar perfiles y roles.",
-                    status="PENDING",
-                )
-                db.session.add(req)
-                superadmins = User.query.filter(User.role == ROLE_SUPERADMIN).all()
-                for superadmin in superadmins:
-                    db.session.add(
-                        Notification(
-                            user_id=superadmin.id,
-                            title="Solicitud de promoción a ADMIN",
-                            message=f"{current_user.email} solicitó promover a {user_to_promote.email} a ADMIN.",
-                            link=url_for("users.create_admin_account"),
-                        )
-                    )
-                _log_admin_event(
-                    action="ADMIN_PROMOTION_REQUEST_CREATED",
-                    description=f"{current_user.email} solicitó promoción ADMIN para {user_to_promote.email}",
-                    metadata={"target_user_id": user_to_promote.id},
-                )
-                db.session.commit()
-                flash("Solicitud enviada a SUPERADMIN para aprobación.", "success")
-                return redirect(url_for("users.create_admin_account"))
-
-            if requested_role == ROLE_SUPERADMIN:
-                if not _is_superadmin():
-                    flash("Solo SUPERADMIN puede asignar SUPERADMIN.", "error")
-                    return redirect(url_for("users.create_admin_account"))
-                if not _is_current_root_superadmin():
-                    flash("Solo el SUPERADMIN padre puede asignar SUPERADMIN.", "error")
-                    return redirect(url_for("users.create_admin_account"))
-                if user_to_promote.id == current_user.id:
-                    flash("No puedes autoasignarte rol SUPERADMIN en este flujo.", "error")
-                    return redirect(url_for("users.create_admin_account"))
-            if requested_role == ROLE_ADMIN and normalized_target_role == ROLE_SUPERADMIN and not _is_current_root_superadmin():
-                flash("Solo el SUPERADMIN padre puede revocar SUPERADMIN.", "error")
-                return redirect(url_for("users.create_admin_account"))
-            if requested_role == ROLE_ADMIN and normalized_target_role == ROLE_SUPERADMIN and user_to_promote.id == current_user.id:
-                flash("No puedes revocarte a ti mismo el rol SUPERADMIN.", "error")
-                return redirect(url_for("users.create_admin_account"))
-
-            if requested_role == ROLE_ADMIN and not _is_superadmin():
-                flash("Solo SUPERADMIN puede aprobar promociones a ADMIN.", "error")
-                return redirect(url_for("users.create_admin_account"))
-
-            old_role = user_to_promote.role
-            user_to_promote.role = requested_role
+            old_role = user_to_update.role
+            user_to_update.role = requested_role
             _log_admin_event(
-                action="USER_ROLE_PROMOTED",
-                description=f"{current_user.email} cambió rol de {user_to_promote.email} a {requested_role}",
-                metadata={"user_id": user_to_promote.id, "old_role": old_role, "new_role": requested_role},
+                action="USER_ROLE_CHANGED_BY_SUPERADMIN",
+                description=f"{current_user.email} cambió rol de {user_to_update.email} a {requested_role}",
+                metadata={"user_id": user_to_update.id, "old_role": old_role, "new_role": requested_role},
             )
             db.session.commit()
-            flash(f"Rol actualizado a {requested_role}.", "success")
+            flash("Rol actualizado.", "success")
             return redirect(url_for("users.create_admin_account"))
 
-        if action == "review_promotion":
-            if not _is_superadmin():
-                flash("Solo SUPERADMIN puede revisar solicitudes de promoción.", "error")
-                return redirect(url_for("users.create_admin_account"))
-            request_id = request.form.get("request_id", type=int)
-            decision = (request.form.get("decision") or "").strip().upper()
-            req = CriticalActionRequest.query.get_or_404(request_id)
-            if req.action_type != "PROMOTE_TO_ADMIN":
-                flash("Solicitud no válida para esta bandeja.", "error")
-                return redirect(url_for("users.create_admin_account"))
-            if req.status != "PENDING":
-                flash("La solicitud ya fue procesada.", "warning")
-                return redirect(url_for("users.create_admin_account"))
-            target = User.query.get(req.target_user_id)
-            if not target:
-                flash("Usuario objetivo no encontrado.", "error")
-                return redirect(url_for("users.create_admin_account"))
+        flash("Acción no válida.", "error")
+        return redirect(url_for("users.create_admin_account"))
 
-            if decision == "APPROVE":
-                old_role = target.role
-                target.role = ROLE_ADMIN
-                req.status = "APPROVED"
-                req.reviewed_by = current_user.id
-                req.reviewed_at = db.func.now()
-                db.session.add(
-                    Notification(
-                        user_id=req.requester_id,
-                        title="Solicitud de promoción aprobada",
-                        message=f"Se aprobó la promoción de {target.email} a ADMIN.",
-                        link=url_for("users.create_admin_account"),
-                    )
-                )
-                _log_admin_event(
-                    action="ADMIN_PROMOTION_REQUEST_APPROVED",
-                    description=f"{current_user.email} aprobó promoción ADMIN para {target.email}",
-                    metadata={"request_id": req.id, "target_user_id": target.id, "old_role": old_role},
-                )
-                db.session.commit()
-                flash("Solicitud aprobada y rol actualizado.", "success")
-                return redirect(url_for("users.create_admin_account"))
-
-            if decision == "REJECT":
-                req.status = "REJECTED"
-                req.reviewed_by = current_user.id
-                req.reviewed_at = db.func.now()
-                db.session.add(
-                    Notification(
-                        user_id=req.requester_id,
-                        title="Solicitud de promoción rechazada",
-                        message=f"Se rechazó la promoción de {target.email} a ADMIN.",
-                        link=url_for("users.create_admin_account"),
-                    )
-                )
-                _log_admin_event(
-                    action="ADMIN_PROMOTION_REQUEST_REJECTED",
-                    description=f"{current_user.email} rechazó promoción ADMIN para {target.email}",
-                    metadata={"request_id": req.id, "target_user_id": target.id},
-                )
-                db.session.commit()
-                flash("Solicitud rechazada.", "success")
-                return redirect(url_for("users.create_admin_account"))
-
-            flash("Decisión inválida.", "error")
-            return redirect(url_for("users.create_admin_account"))
-
-    eligible_users = (
-        User.query
-        .filter(User.role != ROLE_PENDING)
-        .order_by(User.email.asc())
-        .all()
-    )
+    eligible_users = []
+    if _is_superadmin():
+        eligible_users = (
+            User.query
+            .filter(User.role.notin_([ROLE_PENDING, ROLE_SUPERADMIN]))
+            .order_by(User.email.asc())
+            .all()
+        )
     pending_accounts = (
         User.query
         .filter(User.role == ROLE_PENDING)
         .order_by(User.created_at.asc())
         .all()
     )
-    pending_profile_requests = (
-        ProfileChangeRequest.query
-        .filter(ProfileChangeRequest.status == "PENDING")
-        .order_by(ProfileChangeRequest.created_at.desc())
-        .limit(150)
-        .all()
-    )
-    pending_admin_promotions = (
-        CriticalActionRequest.query
-        .filter(CriticalActionRequest.action_type == "PROMOTE_TO_ADMIN")
-        .order_by(
-            db.case((CriticalActionRequest.status == "PENDING", 0), else_=1),
-            CriticalActionRequest.created_at.desc(),
-        )
-        .limit(150)
-        .all()
-    )
-    assignable_admin_roles = [ROLE_ADMIN] if _is_superadmin() else []
-    if _is_current_root_superadmin():
-        assignable_admin_roles.append(ROLE_SUPERADMIN)
 
     return render_template(
         "users/create_admin.html",
         eligible_users=eligible_users,
-        assignable_admin_roles=assignable_admin_roles,
         pending_accounts=pending_accounts,
-        pending_profile_requests=pending_profile_requests,
         pending_accounts_assignable_roles=_pending_assignable_roles(),
-        pending_admin_promotions=pending_admin_promotions,
         is_superadmin=_is_superadmin(),
         is_root_superadmin=_is_current_root_superadmin(),
         active_page="users",
