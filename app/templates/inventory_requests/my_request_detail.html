@@ -39,8 +39,7 @@
 <section class="table-card" style="margin-top:16px;">
   <h3 style="margin:0 0 12px 0;">Materiales solicitados</h3>
   <div class="table-wrap">
-    <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-<table class="inventory-table table-mobile-cards" style="min-width: 760px;">
+    <table class="inventory-table" style="min-width:760px;">
       <thead>
         <tr>
           <th>Material</th>
@@ -54,16 +53,16 @@
         {% for item in ticket.items %}
         {% set missing_qty = (item.quantity_delivered or 0) - (item.quantity_returned or 0) %}
         <tr>
-          <td data-label="Material">{{ item.material.name if item.material else ('ID ' ~ item.material_id) }}</td>
-          <td data-label="Solicitado">{{ item.quantity_requested }}</td>
-          <td data-label="Entregado">{{ item.quantity_delivered }}</td>
-          <td data-label="Devuelto">{{ item.quantity_returned }}</td>
-          <td data-label="Adeudo">{{ missing_qty if missing_qty > 0 else 0 }}</td>
+          <td>{{ item.material.name if item.material else ('ID ' ~ item.material_id) }}</td>
+          <td>{{ item.quantity_requested }}</td>
+          <td>{{ item.quantity_delivered }}</td>
+          <td>{{ item.quantity_returned }}</td>
+          <td>{{ missing_qty if missing_qty > 0 else 0 }}</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
-</div>
+  </div>
 </section>
 
 <section class="table-card" style="margin-top:16px;">
@@ -72,8 +71,7 @@
     <p>Sin adeudos relacionados a esta solicitud.</p>
   {% else %}
     <div class="table-wrap">
-      <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-<table class="inventory-table table-mobile-cards" style="min-width: 760px;">
+      <table class="inventory-table" style="min-width:760px;">
         <thead>
           <tr>
             <th>Material</th>
@@ -85,15 +83,15 @@
         <tbody>
           {% for debt in related_debts %}
           <tr>
-            <td data-label="Material">{{ debt.material.name if debt.material else '-' }}</td>
-            <td data-label="Pendiente">{{ debt.remaining_amount or debt.amount or 0 }}</td>
-            <td data-label="Estado">{{ debt.status|status_label if debt.status else '-' }}</td>
-            <td data-label="Motivo">{{ debt.reason or '-' }}</td>
+            <td>{{ debt.material.name if debt.material else '-' }}</td>
+            <td>{{ debt.remaining_amount or debt.amount or 0 }}</td>
+            <td>{{ debt.status|status_label if debt.status else '-' }}</td>
+            <td>{{ debt.reason or '-' }}</td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
-</div>
+    </div>
   {% endif %}
 </section>
 {% endblock %}

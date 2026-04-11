@@ -69,15 +69,6 @@
     padding-bottom:4px;
   }
 }
-
-@media (max-width: 768px) {
-  .table-mobile-cards thead { display: none; }
-  .table-mobile-cards tbody tr { display: block; margin-bottom: 1rem; border: 1px solid var(--stroke, #e5e7eb); border-radius: 8px; padding: 0.75rem; background: var(--panel-2, #fff); }
-  .table-mobile-cards tbody td { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid var(--stroke, #e5e7eb) !important; }
-  .table-mobile-cards tbody td:last-child { border-bottom: none !important; }
-  .table-mobile-cards tbody td::before { content: attr(data-label); font-weight: 600; font-size: 0.85em; margin-right: 1rem; color: var(--text-dim, #6b7280); white-space: nowrap; }
-}
-
 </style>
 
 <header class="topbar">
@@ -127,8 +118,7 @@
   </div>
 
   <div class="table-wrap">
-    <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-<table class="inventory-table lostfound-detail-specs table-mobile-cards" style="min-width: 800px;">
+    <table class="inventory-table lostfound-detail-specs" style="min-width:800px;">
       <tbody>
         <tr><td><strong>Nombre</strong></td><td>{{ item.title }}</td></tr>
         <tr><td><strong>Estado del caso</strong></td><td>{{ status_label_fn(item.status) }}</td></tr>
@@ -137,7 +127,7 @@
         <tr><td><strong>Nota admin</strong></td><td>{{ item.admin_note or '-' }}</td></tr>
       </tbody>
     </table>
-</div>
+  </div>
   <div class="lostfound-cta {% if is_found %}lostfound-cta--found{% else %}lostfound-cta--reported{% endif %}">
     {% if is_found %}
       Caso bajo resguardo administrativo. Si reconoces el objeto, contacta a administración.
@@ -161,12 +151,14 @@
         </select>
         <i class="ph ph-caret-down select-arrow"></i>
       </div>
+    </div>
     <div class="toolbar-group">
       <label for="admin_note">Nota (opcional)</label>
       <div class="search-box">
         <i class="ph ph-note search-icon"></i>
         <input id="admin_note" type="text" name="admin_note" placeholder="Ejemplo: Entregado en coordinación">
       </div>
+    </div>
     <div class="toolbar-actions">
       <button type="submit" class="btn btn-gold">Actualizar</button>
     </div>

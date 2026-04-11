@@ -27,8 +27,7 @@
 {% else %}
   <section class="table-card">
     <div class="table-wrap">
-      <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
-<table class="inventory-table table-mobile-cards" style="min-width: 1300px;">
+      <table class="inventory-table" style="min-width:1300px;">
       <thead>
         <tr>
           <th>Ticket</th>
@@ -44,13 +43,13 @@
       <tbody>
         {% for ticket in tickets %}
         <tr>
-          <td data-label="Ticket">#{{ ticket.id }}</td>
-          <td data-label="Reserva">#{{ ticket.reservation_id or '-' }}</td>
-          <td data-label="Usuario">{{ ticket.owner_user.email if ticket.owner_user else '-' }}</td>
-          <td data-label="Salón">{{ ticket.room or '-' }}</td>
-          <td data-label="Fecha">{{ ticket.date or '-' }}</td>
-          <td data-label="Estado"><span class="status-badge status-warn">{{ ticket.status|status_label }}</span></td>
-          <td data-label="Materiales">
+          <td>#{{ ticket.id }}</td>
+          <td>#{{ ticket.reservation_id or '-' }}</td>
+          <td>{{ ticket.owner_user.email if ticket.owner_user else '-' }}</td>
+          <td>{{ ticket.room or '-' }}</td>
+          <td>{{ ticket.date or '-' }}</td>
+          <td><span class="status-badge status-warn">{{ ticket.status|status_label }}</span></td>
+          <td>
             {% if ticket.items %}
               <ul style="padding-left:16px; margin:0;">
                 {% for item in ticket.items[:3] %}
@@ -64,7 +63,7 @@
               -
             {% endif %}
           </td>
-          <td data-label="Acciones">
+          <td>
             <a class="btn btn-gold" href="{{ url_for('reservations.admin_ticket_detail', ticket_id=ticket.id) }}">
               Revisar y cerrar
             </a>
@@ -73,7 +72,7 @@
         {% endfor %}
       </tbody>
       </table>
-</div>
+    </div>
   </section>
 {% endif %}
 </div>
