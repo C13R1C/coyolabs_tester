@@ -15,14 +15,15 @@
   <h3 style="margin-top:0;">Perfiles pendientes ({{ pending_accounts|length }})</h3>
   {% if pending_accounts %}
   <div class="table-wrap">
-    <table class="inventory-table table-mobile-cards" style="min-width:960px;">
+    <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+<table class="inventory-table table-mobile-cards" style="min-width: 960px;">
       <thead><tr><th>Email</th><th>Nombre</th><th>Matrícula</th><th>Creada</th><th>Asignar rol</th></tr></thead>
       <tbody>
         {% for user in pending_accounts %}
         <tr>
-          <td>{{ user.email }}</td><td>{{ user.full_name or '-' }}</td><td>{{ user.matricula or '-' }}</td>
-          <td>{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else '-' }}</td>
-          <td>
+          <td data-label="Email">{{ user.email }}</td><td data-label="Nombre">{{ user.full_name or '-' }}</td><td data-label="Matrícula">{{ user.matricula or '-' }}</td>
+          <td data-label="Creada">{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else '-' }}</td>
+          <td data-label="Asignar rol">
             <form method="post" action="{{ url_for('users.assign_role', user_id=user.id) }}" style="display:flex; gap:8px; flex-wrap:wrap;">
               <div class="select-wrap" style="min-width:200px;">
                 <select name="role" required>
@@ -39,7 +40,7 @@
         {% endfor %}
       </tbody>
     </table>
-  </div>
+</div>
   {% else %}<p>No hay perfiles pendientes por resolver.</p>{% endif %}
 </section>
 
@@ -56,10 +57,9 @@
         <input type="hidden" id="roleUserId" name="user_id" required>
       </div>
       <div id="roleUserAutocomplete" class="autocomplete-list" style="position:absolute; top:100%; left:0; right:0; z-index:30; background:#fff; border:1px solid rgba(0,0,0,.08); border-radius:10px; margin-top:6px; max-height:220px; overflow:auto;"></div>
-    </div>
     <div class="toolbar-group"><label>Nuevo rol</label><div class="select-wrap"><select name="role" required>
       <option value="STUDENT">Estudiante</option><option value="TEACHER">Profesor</option><option value="STAFF">Staff</option><option value="ADMIN">Administrador</option>
-    </select><i class="ph ph-caret-down select-arrow"></i></div></div>
+    </select><i class="ph ph-caret-down select-arrow"></i></div>
     <div class="toolbar-actions" style="align-self:end;"><button type="submit" class="btn btn-gold">Cambiar rol</button></div>
   </form>
 </section>

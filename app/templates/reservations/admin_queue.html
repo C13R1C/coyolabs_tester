@@ -52,6 +52,15 @@
     background:transparent;
   }
 }
+
+@media (max-width: 768px) {
+  .table-mobile-cards thead { display: none; }
+  .table-mobile-cards tbody tr { display: block; margin-bottom: 1rem; border: 1px solid var(--stroke, #e5e7eb); border-radius: 8px; padding: 0.75rem; background: var(--panel-2, #fff); }
+  .table-mobile-cards tbody td { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid var(--stroke, #e5e7eb) !important; }
+  .table-mobile-cards tbody td:last-child { border-bottom: none !important; }
+  .table-mobile-cards tbody td::before { content: attr(data-label); font-weight: 600; font-size: 0.85em; margin-right: 1rem; color: var(--text-dim, #6b7280); white-space: nowrap; }
+}
+
 </style>
 
 <header class="topbar">
@@ -81,7 +90,8 @@
   {% else %}
     <section class="table-card">
       <div class="table-wrap">
-        <table class="inventory-table table-mobile-cards" style="min-width: 1450px;">
+        <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+<table class="inventory-table table-mobile-cards" style="min-width: 1450px;">
           <thead>
             <tr>
               <th>Solicitante</th>
@@ -120,7 +130,7 @@
             {% endfor %}
           </tbody>
         </table>
-      </div>
+</div>
     </section>
   {% endif %}
 </div>
@@ -131,7 +141,7 @@
 
 <div id="reservationSlotModal" class="signature-modal" aria-hidden="true" style="display:none;">
   <div class="signature-modal-backdrop" onclick="closeReservationSlotModal()"></div>
-  <div class="signature-modal-content" role="dialog" aria-modal="true" aria-labelledby="reservationSlotModalTitle" style="max-width:500px;">
+  <div class="signature-modal-content" role="dialog" aria-modal="true" aria-labelledby="reservationSlotModalTitle" style="max-width: 100%; max-width: 500px;">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;">
       <h3 id="reservationSlotModalTitle" style="margin:0;">Detalle de reservación</h3>
       <button type="button" class="btn btn-ghost" onclick="closeReservationSlotModal()">Cerrar</button>
@@ -142,7 +152,6 @@
       <p><strong>Materia:</strong> <span id="slotSubject">-</span></p>
       <p><strong>Estado:</strong> <span id="slotStatus">-</span></p>
     </div>
-  </div>
 </div>
 
 <script>

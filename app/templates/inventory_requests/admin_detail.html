@@ -88,6 +88,15 @@
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 768px) {
+  .table-mobile-cards thead { display: none; }
+  .table-mobile-cards tbody tr { display: block; margin-bottom: 1rem; border: 1px solid var(--stroke, #e5e7eb); border-radius: 8px; padding: 0.75rem; background: var(--panel-2, #fff); }
+  .table-mobile-cards tbody td { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid var(--stroke, #e5e7eb) !important; }
+  .table-mobile-cards tbody td:last-child { border-bottom: none !important; }
+  .table-mobile-cards tbody td::before { content: attr(data-label); font-weight: 600; font-size: 0.85em; margin-right: 1rem; color: var(--text-dim, #6b7280); white-space: nowrap; }
+}
+
 </style>
 <header class="topbar">
   <div class="topbar-left">
@@ -151,7 +160,8 @@
 <section class="table-card" style="margin-top:16px;">
   <h3 style="margin-top:0;">Materiales solicitados</h3>
   <div class="table-wrap">
-    <table class="inventory-table" style="min-width:780px;">
+    <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+<table class="inventory-table table-mobile-cards" style="min-width: 780px;">
       <thead>
         <tr>
           <th>Material</th>
@@ -164,16 +174,16 @@
       <tbody>
         {% for item in ticket.items %}
         <tr>
-          <td>{{ item.material.name if item.material else ('ID ' ~ item.material_id) }}</td>
-          <td>{{ item.quantity_requested }}</td>
-          <td>{{ item.quantity_delivered }}</td>
-          <td>{{ item.quantity_returned }}</td>
-          <td>{{ [0, (item.quantity_delivered or 0) - (item.quantity_returned or 0)]|max }}</td>
+          <td data-label="Material">{{ item.material.name if item.material else ('ID ' ~ item.material_id) }}</td>
+          <td data-label="Cantidad solicitada">{{ item.quantity_requested }}</td>
+          <td data-label="Cantidad entregada">{{ item.quantity_delivered }}</td>
+          <td data-label="Cantidad devuelta">{{ item.quantity_returned }}</td>
+          <td data-label="Faltante">{{ [0, (item.quantity_delivered or 0) - (item.quantity_returned or 0)]|max }}</td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
-  </div>
+</div>
 </section>
 
 <section class="table-card" style="margin-top:16px;">
@@ -184,7 +194,8 @@
     <h4 style="margin:0;">Entrega de material</h4>
     <form method="post" action="{{ url_for('inventory_requests.admin_mark_ready', ticket_id=ticket.id) }}" style="display:grid; gap:10px;">
       <div class="table-wrap">
-        <table class="inventory-table" style="min-width:780px;">
+        <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+<table class="inventory-table table-mobile-cards" style="min-width: 780px;">
           <thead>
             <tr>
               <th>Material</th>
@@ -195,16 +206,16 @@
           <tbody>
             {% for item in ticket.items %}
             <tr>
-              <td>{{ item.material.name if item.material else ('ID ' ~ item.material_id) }}</td>
-              <td>{{ item.quantity_requested }}</td>
-              <td>
+              <td data-label="Material">{{ item.material.name if item.material else ('ID ' ~ item.material_id) }}</td>
+              <td data-label="Solicitado">{{ item.quantity_requested }}</td>
+              <td data-label="Entregar">
                 <input type="number" min="0" max="{{ item.quantity_requested }}" name="delivered_{{ item.id }}" value="{{ item.quantity_delivered if item.quantity_delivered is not none and item.quantity_delivered > 0 else item.quantity_requested }}" class="form-control" style="max-width:140px;">
               </td>
             </tr>
             {% endfor %}
           </tbody>
         </table>
-      </div>
+</div>
       <div class="toolbar-group">
         <label for="partial_delivery_note">Nota administrativa (obligatoria si la entrega es parcial)</label>
         <textarea id="partial_delivery_note" name="partial_delivery_note" rows="2" class="form-control" placeholder="Ejemplo: Se entregaron menos piezas por disponibilidad."></textarea>
@@ -229,7 +240,8 @@
     <h4 style="margin:0;">Registrar devolución y cierre</h4>
     <form method="post" action="{{ url_for('inventory_requests.admin_register_return', ticket_id=ticket.id) }}" style="display:grid; gap:10px;">
       <div class="table-wrap">
-        <table class="inventory-table" style="min-width:780px;">
+        <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+<table class="inventory-table table-mobile-cards" style="min-width: 780px;">
           <thead>
             <tr>
               <th>Material</th>
@@ -240,16 +252,16 @@
           <tbody>
             {% for item in ticket.items %}
             <tr>
-              <td>{{ item.material.name if item.material else ('ID ' ~ item.material_id) }}</td>
-              <td>{{ item.quantity_delivered }}</td>
-              <td>
+              <td data-label="Material">{{ item.material.name if item.material else ('ID ' ~ item.material_id) }}</td>
+              <td data-label="Entregado">{{ item.quantity_delivered }}</td>
+              <td data-label="Devuelto">
                 <input type="number" min="0" max="{{ item.quantity_delivered }}" name="returned_{{ item.id }}" value="{{ item.quantity_returned }}" class="form-control" style="max-width:140px;">
               </td>
             </tr>
             {% endfor %}
           </tbody>
         </table>
-      </div>
+</div>
       <div class="toolbar-group">
         <label for="cancel_reason">Motivo de cierre/cancelación</label>
         <textarea id="cancel_reason" name="cancel_reason" rows="2" class="form-control" placeholder="Motivo obligatorio" required></textarea>

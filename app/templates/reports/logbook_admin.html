@@ -24,23 +24,18 @@
     <div class="toolbar-group">
       <label for="action">Acción contiene</label>
       <div class="search-box"><i class="ph ph-lightning search-icon"></i><input type="text" id="action" name="action" value="{{ action or '' }}" placeholder="Ejemplo: RA_SCAN o LOGIN"></div>
-    </div>
     <div class="toolbar-group">
       <label for="module">Módulo</label>
       <div class="search-box"><i class="ph ph-squares-four search-icon"></i><input type="text" id="module" name="module" value="{{ module or '' }}" placeholder="Ejemplo: RESERVATIONS o USERS"></div>
-    </div>
     <div class="toolbar-group">
       <label for="user_id">ID de usuario</label>
       <div class="search-box"><i class="ph ph-user search-icon"></i><input type="number" id="user_id" name="user_id" value="{{ user_id or '' }}" placeholder="Ejemplo: 42"></div>
-    </div>
     <div class="toolbar-group">
       <label for="material_id">ID de material</label>
       <div class="search-box"><i class="ph ph-hash search-icon"></i><input type="number" id="material_id" name="material_id" value="{{ material_id or '' }}" placeholder="Ejemplo: 128"></div>
-    </div>
     <div class="toolbar-group">
       <label for="description">Descripción contiene</label>
       <div class="search-box"><i class="ph ph-text-align-left search-icon"></i><input type="text" id="description" name="description" value="{{ description or '' }}" placeholder="Texto libre"></div>
-    </div>
     <div class="toolbar-group">
       <label for="date_from">Desde</label>
       <input class="form-control" type="date" id="date_from" name="date_from" value="{{ date_from or '' }}">
@@ -77,7 +72,8 @@
 {% else %}
 <section class="table-card">
   <div class="table-wrap">
-    <table class="inventory-table" style="min-width: 1100px;">
+    <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+<table class="inventory-table table-mobile-cards" style="min-width: 1100px;">
       <thead>
         <tr>
           {% for col in columns %}
@@ -89,13 +85,13 @@
         {% for row in rows %}
           <tr>
             {% for value in row %}
-              <td>{{ value if value is not none and value != '' else '-' }}</td>
+              <td data-label="{{ report_column_labels.get(col, col|replace('_', ' ')|title) }}">{{ value if value is not none and value != '' else '-' }}</td>
             {% endfor %}
           </tr>
         {% endfor %}
       </tbody>
     </table>
-  </div>
+</div>
 </section>
 {% endif %}
 {% endblock %}

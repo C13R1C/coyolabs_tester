@@ -21,9 +21,7 @@
           <strong>{{ (current_user.role|role_label) if current_user.is_authenticated else 'Usuario' }}</strong>
           <span>Acceso institucional</span>
         </div>
-      </div>
     </div>
-  </div>
 </header>
 
 <section class="toolbar-card">
@@ -34,7 +32,6 @@
         <i class="ph ph-magnifying-glass search-icon"></i>
         <input type="text" id="q" name="q" value="{{ q }}" placeholder="Buscar por nombre, ubicación, código, serie o notas" autocomplete="off">
       </div>
-    </div>
 
     <div class="toolbar-group toolbar-group-select">
       <label for="career_id">Carrera</label>
@@ -47,7 +44,6 @@
         </select>
         <i class="ph ph-caret-down select-arrow"></i>
       </div>
-    </div>
     <div class="toolbar-group toolbar-group-select">
       <label for="category">Categoría</label>
       <div class="select-wrap">
@@ -59,7 +55,6 @@
         </select>
         <i class="ph ph-caret-down select-arrow"></i>
       </div>
-    </div>
 
     <div class="toolbar-actions">
       <button type="submit" class="btn btn-gold"><i class="ph ph-funnel"></i><span>Aplicar filtros</span></button>
@@ -84,7 +79,8 @@
 {% if materials %}
 <section class="table-card">
   <div class="table-wrap">
-    <table class="inventory-table">
+    <div style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+<table class="inventory-table table-mobile-cards">
       <thead>
         <tr>
           <th>Nombre</th><th>Imagen</th>
@@ -101,8 +97,8 @@
           {% set active_state = status_parts[0] if status_parts|length > 1 else ('Baja' if ('baja' in status_value|lower or 'inactivo' in status_value|lower) else 'Alta') %}
           {% set condition = status_parts[1] if status_parts|length > 1 else ('Regular' if 'frágil' in status_value|lower else 'Bueno') %}
           <tr class="inventory-row">
-            <td><a href="{{ url_for('inventory.material_detail', material_id=m.id) }}" class="item-link material-name">{{ m.name | smart_title }}</a></td>
-            <td>
+            <td data-label="Nombre"><a href="{{ url_for('inventory.material_detail', material_id=m.id) }}" class="item-link material-name">{{ m.name | smart_title }}</a></td>
+            <td data-label="Imagen">
               {% set preview_img = material_image_map.get(m.id) if material_image_map else None %}
               {% if preview_img %}
                 <img src="{{ preview_img }}" alt="{{ m.name }}" style="width:44px;height:44px;object-fit:cover;border-radius:8px;border:1px solid rgba(0,0,0,.08);background:#fff;">
@@ -110,19 +106,19 @@
                 <div style="width:44px;height:44px;border-radius:8px;border:1px dashed var(--stroke);background:rgba(255,255,255,.45);display:flex;align-items:center;justify-content:center;color:var(--text-dim);font-size:.72rem;">IMG</div>
               {% endif %}
             </td>
-            <td>{{ m.career.name if m.career else 'Sin carrera' }}</td>
-            <td class="td-center">
+            <td data-label="Carrera">{{ m.career.name if m.career else 'Sin carrera' }}</td>
+            <td data-label="Estado" class="td-center">
               <span class="status-badge {% if active_state|lower == 'alta' and condition|lower == 'bueno' %}status-ok{% elif active_state|lower == 'baja' %}status-bad{% else %}status-warn{% endif %}">
                 {{ active_state | smart_title }} · {{ condition | smart_title }}
               </span>
             </td>
-            <td class="td-center">{{ m.pieces_qty if m.pieces_qty is not none else (m.pieces_text or '-') }}</td>
-            <td>{{ (m.location or '-') | smart_title }}</td>
+            <td data-label="Cantidad" class="td-center">{{ m.pieces_qty if m.pieces_qty is not none else (m.pieces_text or '-') }}</td>
+            <td data-label="Ubicación">{{ (m.location or '-') | smart_title }}</td>
           </tr>
         {% endfor %}
       </tbody>
     </table>
-  </div>
+</div>
 
   <div class="pagination">
     {% if page > 1 %}
