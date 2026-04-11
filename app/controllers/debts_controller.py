@@ -28,6 +28,10 @@ debts_bp = Blueprint("debts", __name__, url_prefix="/debts")
 logger = logging.getLogger(__name__)
 
 
+def _safe_lower(value) -> str:
+    return (value or "").lower()
+
+
 def _log_debt_event(action: str, debt: Debt, description: str, metadata: dict | None = None) -> None:
     payload = {
         "debt_id": debt.id,
@@ -168,7 +172,7 @@ def _build_admin_debt_rows(debts: list[Debt]) -> list[dict]:
                 paid_items, total_items, progress_pct = _case_item_progress(case_items_sorted)
 
                 case_material_names = " ".join(
-                    (item.material.name if item.material else "").lower()
+                    _safe_lower(item.material.name if item.material else "")
                     for item in case_items_sorted
                 ).strip()
                 rows.append({
@@ -191,14 +195,14 @@ def _build_admin_debt_rows(debts: list[Debt]) -> list[dict]:
                     "payment_debt_id": None,
                     "payment_max": 0,
                     "search_blob": " ".join([
-                        case_visible_id.lower(),
-                        (case_items_sorted[0].user.email if case_items_sorted[0].user else "").lower(),
-                        (case_items_sorted[0].user.full_name if case_items_sorted[0].user else "").lower(),
-                        (case_items_sorted[0].user.matricula if case_items_sorted[0].user else "").lower(),
-                        case_status.lower(),
+                        _safe_lower(case_visible_id),
+                        _safe_lower(case_items_sorted[0].user.email if case_items_sorted[0].user else ""),
+                        _safe_lower(case_items_sorted[0].user.full_name if case_items_sorted[0].user else ""),
+                        _safe_lower(case_items_sorted[0].user.matricula if case_items_sorted[0].user else ""),
+                        _safe_lower(case_status),
                         "conjunto",
                         case_material_names,
-                        next((item.reason for item in case_items_sorted if item.reason), "").lower(),
+                        _safe_lower(next((item.reason for item in case_items_sorted if item.reason), "")),
                     ]).strip(),
                 })
                 continue
@@ -206,7 +210,7 @@ def _build_admin_debt_rows(debts: list[Debt]) -> list[dict]:
         consumed_ids.add(debt.id)
         original, pending = _debt_amounts(debt)
         visible_id = _visible_case_id("ADEUDO-SG", debt.id)
-        singular_material = debt.material.name if debt.material else "-"
+        singular_material = debt.material.name if debt.material and debt.material.name else "-"
         singular_status = _case_status_from_items([debt])
         rows.append({
             "row_type": "single",
@@ -228,14 +232,14 @@ def _build_admin_debt_rows(debts: list[Debt]) -> list[dict]:
             "payment_debt_id": debt.id,
             "payment_max": pending,
             "search_blob": " ".join([
-                visible_id.lower(),
-                (debt.user.email if debt.user else "").lower(),
-                (debt.user.full_name if debt.user else "").lower(),
-                (debt.user.matricula if debt.user else "").lower(),
-                singular_status.lower(),
+                _safe_lower(visible_id),
+                _safe_lower(debt.user.email if debt.user else ""),
+                _safe_lower(debt.user.full_name if debt.user else ""),
+                _safe_lower(debt.user.matricula if debt.user else ""),
+                _safe_lower(singular_status),
                 "singular",
-                singular_material.lower(),
-                (debt.reason or "").lower(),
+                _safe_lower(singular_material),
+                _safe_lower(debt.reason),
             ]).strip(),
         })
 
