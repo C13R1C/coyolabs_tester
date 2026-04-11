@@ -8,6 +8,7 @@ from sqlalchemy import and_, or_
 from app.extensions import db
 from app.models.debt import Debt
 from app.models.lab_ticket import LabTicket
+from app.models.material import Material
 from app.models.notification import Notification
 from app.models.ticket_item import TicketItem
 from app.models.user import User
@@ -155,13 +156,7 @@ def sync_ticket_after_debt_resolution(debt: Debt) -> ServiceResult:
 
 
 def _should_restock_on_payment(debt: Debt) -> bool:
-    if not debt.material_id:
-        return False
-    reason = (debt.reason or "").strip().lower()
-    if debt.ticket_id:
-        return True
-    markers = ("faltante", "devoluci", "ticket #", "solicitud #")
-    return any(marker in reason for marker in markers)
+    return bool(debt.material_id)
 
 
 def resolve_debt(debt: Debt, actor_user: User, payment_amount: str | int | float | Decimal | None = None) -> ServiceResult:
@@ -196,8 +191,11 @@ def resolve_debt(debt: Debt, actor_user: User, payment_amount: str | int | float
     paid_in_full = new_remaining == Decimal("0.00")
 
     should_restock = _should_restock_on_payment(debt)
-    if should_restock and debt.material and debt.material.pieces_qty is not None:
-        debt.material.pieces_qty += int(payment)
+    if should_restock:
+        material = debt.material or Material.query.get(debt.material_id)
+        if material is not None:
+            current_qty = int(material.pieces_qty or 0)
+            material.pieces_qty = current_qty + int(payment)
 
     debt.original_amount = original
     debt.remaining_amount = new_remaining

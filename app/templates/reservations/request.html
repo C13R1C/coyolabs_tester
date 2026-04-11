@@ -166,12 +166,12 @@
       </div>
     </div>
 
-    <div class="toolbar-group">
+    <div class="toolbar-group" id="groupField" style="order:3;">
       <label>Grupo</label>
       {% if is_professor %}
         {% if professor_subjects %}
           <div class="select-wrap">
-            <select name="group_name" id="groupSelect" required>
+            <select name="group_name" id="groupSelect" required style="text-transform: uppercase;">
               <option value="">Selecciona un grupo</option>
             </select>
             <i class="ph ph-caret-down select-arrow"></i>
@@ -187,11 +187,11 @@
           <i class="ph ph-users search-icon"></i>
           <input type="text" value="{{ student_group_name }}" readonly>
         </div>
-        <input type="hidden" name="group_name" value="{{ student_group_name }}">
+        <input type="hidden" name="group_name" value="{{ student_group_name|upper }}">
       {% endif %}
     </div>
 
-    <div class="toolbar-group">
+    <div class="toolbar-group" style="order:4;">
       <label>Solicitante</label>
       <div class="search-box">
         <i class="ph ph-user search-icon"></i>
@@ -203,12 +203,12 @@
       </div>
     </div>
 
-    <div class="toolbar-group">
+    <div class="toolbar-group" id="subjectField" style="order:2;">
       <label>Materia</label>
       {% if is_professor %}
         {% if professor_subjects %}
           <div class="select-wrap">
-            <select name="subject" id="subjectSelect" required>
+            <select name="subject" id="subjectSelect" required style="text-transform: uppercase;">
               <option value="">Selecciona una materia</option>
               {% for professor_subject in professor_subjects %}
               <option value="{{ professor_subject }}">{{ professor_subject }}</option>
@@ -228,7 +228,7 @@
       {% else %}
         <div class="search-box">
           <i class="ph ph-book search-icon"></i>
-          <input type="text" name="subject" placeholder="Ejemplo: Programación Web" required>
+          <input type="text" name="subject" placeholder="Ejemplo: Programación Web" required style="text-transform: uppercase;">
         </div>
       {% endif %}
     </div>
@@ -748,7 +748,7 @@ reservationForm?.addEventListener("submit", (event) => {
 function renderGroupOptionsForSelectedSubject() {
   if (!subjectSelect || !groupSelect) return;
 
-  const selectedSubject = subjectSelect.value;
+  const selectedSubject = (subjectSelect.value || "").toUpperCase();
   const groups = professorGroupsBySubject[selectedSubject] || [];
   const previousValue = groupSelect.value;
 
@@ -761,8 +761,8 @@ function renderGroupOptionsForSelectedSubject() {
 
   groups.forEach((groupCode) => {
     const option = document.createElement("option");
-    option.value = groupCode;
-    option.textContent = groupCode;
+    option.value = (groupCode || "").toUpperCase();
+    option.textContent = (groupCode || "").toUpperCase();
     groupSelect.appendChild(option);
   });
 

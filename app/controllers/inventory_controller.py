@@ -1,8 +1,11 @@
+import os
 from math import ceil
+from uuid import uuid4
 
 from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user
 from sqlalchemy import func
+from werkzeug.utils import secure_filename
 
 from app.extensions import db
 from app.models.career import Career
@@ -30,6 +33,55 @@ MATERIAL_CATEGORIES = (
 
 
 NEW_LOCATION_SENTINEL = "__new__"
+ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "webp", "gif"}
+
+
+def _is_allowed_image(filename: str) -> bool:
+    if "." not in (filename or ""):
+        return False
+    ext = filename.rsplit(".", 1)[1].lower()
+    return ext in ALLOWED_IMAGE_EXTENSIONS
+
+
+def _save_material_image(file_storage) -> tuple[str | None, str | None]:
+    if not file_storage or not file_storage.filename:
+        return None, None
+    if not _is_allowed_image(file_storage.filename):
+        return None, "Formato de imagen inválido. Usa PNG, JPG, JPEG, WEBP o GIF."
+
+    safe_name = secure_filename(file_storage.filename)
+    ext = safe_name.rsplit(".", 1)[1].lower()
+    rel_dir = os.path.join("uploads", "materials")
+    abs_dir = os.path.join(current_app.root_path, "static", rel_dir)
+    os.makedirs(abs_dir, exist_ok=True)
+
+    filename = f"{uuid4().hex}.{ext}"
+    abs_path = os.path.join(abs_dir, filename)
+    file_storage.save(abs_path)
+    return f"{rel_dir}/{filename}", None
+
+
+def _material_image_src(material: Material | None) -> str | None:
+    if not material:
+        return None
+    image_url = (material.image_url or "").strip()
+    if image_url:
+        if image_url.startswith(("http://", "https://")):
+            return image_url
+        if image_url.startswith("/static/"):
+            rel = image_url.replace("/static/", "", 1)
+            abs_path = os.path.join(current_app.root_path, "static", rel)
+            if os.path.exists(abs_path):
+                return image_url
+    image_ref = (material.image_ref or "").strip()
+    if not image_ref:
+        return None
+    if image_ref.startswith(("http://", "https://", "/")):
+        return image_ref
+    abs_ref = os.path.join(current_app.root_path, "static", image_ref)
+    if not os.path.exists(abs_ref):
+        return None
+    return url_for("static", filename=image_ref)
 
 
 def _normalize_location(value: str | None) -> str:
@@ -161,8 +213,11 @@ def _material_payload_from_form(material: Material | None = None) -> tuple[dict,
         return {}, "Selecciona una categoría válida."
 
     tutorial_url = normalize_spaces(request.form.get("tutorial_url") or "")
+    image_url = normalize_spaces(request.form.get("image_url") or "")
     if tutorial_url and not (tutorial_url.startswith("http://") or tutorial_url.startswith("https://")):
         return {}, "La URL del tutorial debe iniciar con http:// o https://."
+    if image_url and not (image_url.startswith("http://") or image_url.startswith("https://")):
+        return {}, "La URL de imagen debe iniciar con http:// o https://."
 
     selected_location = normalize_spaces(request.form.get("location_choice") or "")
     if selected_location == NEW_LOCATION_SENTINEL:
@@ -187,6 +242,7 @@ def _material_payload_from_form(material: Material | None = None) -> tuple[dict,
         "code": normalize_spaces(request.form.get("code") or "") or None,
         "serial": normalize_spaces(request.form.get("serial") or "") or None,
         "tutorial_url": tutorial_url or None,
+        "image_url": image_url or None,
         "notes": normalize_spaces(request.form.get("notes") or "") or None,
     }
     if material is None and _is_inactive_status(status):
@@ -264,6 +320,7 @@ def inventory_list():
         page = total_pages
 
     materials = query.offset((page - 1) * PER_PAGE).limit(PER_PAGE).all()
+    material_image_map = {m.id: _material_image_src(m) for m in materials}
 
     return render_template(
         "inventory/inventory_list.html",
@@ -280,6 +337,7 @@ def inventory_list():
         total=total,
         total_pages=total_pages,
         per_page=PER_PAGE,
+        material_image_map=material_image_map,
         active_page="inventory",
     )
 
@@ -300,7 +358,12 @@ def material_detail(material_id: int):
     if normalize_role(current_user.role) == ROLE_STUDENT and m.career_id != current_user.career_id:
         flash("No tienes acceso a materiales de otra carrera.", "error")
         return redirect(url_for("inventory.inventory_list"))
-    return render_template("inventory/material_detail.html", material=m, active_page="inventory")
+    return render_template(
+        "inventory/material_detail.html",
+        material=m,
+        material_image_src=_material_image_src(m),
+        active_page="inventory",
+    )
 
 
 @inventory_bp.route("/admin/new", methods=["GET", "POST"])
@@ -314,6 +377,9 @@ def admin_new_material():
         payload, error = _material_payload_from_form()
         form_data = dict(request.form)
         active_state_default, tool_condition_default = _status_form_defaults(None, form_data)
+        image_ref, image_error = _save_material_image(request.files.get("image_file"))
+        if not error and image_error:
+            error = image_error
         if error:
             flash(error, "error")
             return render_template(
@@ -331,10 +397,14 @@ def admin_new_material():
                 form_data=form_data,
                 active_state_default=active_state_default,
                 tool_condition_default=tool_condition_default,
+                image_preview_src=None,
                 active_page="inventory",
             )
 
         material = Material(**payload)
+        if image_ref:
+            material.image_ref = image_ref
+            material.image_url = url_for("static", filename=image_ref)
         db.session.add(material)
         db.session.flush()
         log_event(
@@ -368,6 +438,7 @@ def admin_new_material():
         form_data=form_data,
         active_state_default=active_state_default,
         tool_condition_default=tool_condition_default,
+        image_preview_src=None,
         active_page="inventory",
     )
 
@@ -384,6 +455,10 @@ def admin_edit_material(material_id: int):
         form_data = dict(request.form)
         active_state_default, tool_condition_default = _status_form_defaults(material, form_data)
         reason_value = normalize_spaces(request.form.get("status_change_reason") or "")
+        remove_image = (request.form.get("remove_image") or "").strip() == "1"
+        new_image_ref, image_error = _save_material_image(request.files.get("image_file"))
+        if not error and image_error:
+            error = image_error
 
         reason_type, reason_label = _status_change_reason_requirement(material.status, payload.get("status") if payload else None)
         if not error and reason_type and not reason_value:
@@ -407,12 +482,19 @@ def admin_edit_material(material_id: int):
                 form_data=form_data,
                 active_state_default=active_state_default,
                 tool_condition_default=tool_condition_default,
+                image_preview_src=_material_image_src(material),
                 active_page="inventory",
             )
 
         old_status = material.status
         for key, value in payload.items():
             setattr(material, key, value)
+        if remove_image:
+            material.image_ref = None
+            material.image_url = None
+        if new_image_ref:
+            material.image_ref = new_image_ref
+            material.image_url = url_for("static", filename=new_image_ref)
 
         log_event(
             module="INVENTORY",
@@ -447,6 +529,7 @@ def admin_edit_material(material_id: int):
         form_data=form_data,
         active_state_default=active_state_default,
         tool_condition_default=tool_condition_default,
+        image_preview_src=_material_image_src(material),
         active_page="inventory",
     )
 

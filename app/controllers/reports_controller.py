@@ -73,8 +73,8 @@ DEFAULT_XLSX_CURATED_COLUMNS = DEFAULT_PDF_CURATED_COLUMNS[:]
 REPORT_COLUMN_LABELS = {
     "id": "ID",
     "lab_id": "Laboratorio",
-    "user_id": "Usuario",
-    "material_id": "Material",
+    "user_id": "ID de usuario",
+    "material_id": "ID de material",
     "name": "Nombre",
     "pieces_qty": "Cantidad",
     "brand": "Marca",
@@ -187,7 +187,8 @@ def parse_selected_columns(headers: list[str]) -> list[str]:
         return curated or headers
     allowed = set(headers)
     normalized = [col for col in selected if col in allowed]
-    return normalized or headers
+    limited = normalized or headers
+    return limited[:9]
 
 
 def parse_pdf_selected_columns(headers: list[str]) -> list[str]:
@@ -201,14 +202,14 @@ def parse_pdf_selected_columns(headers: list[str]) -> list[str]:
     if selected:
         normalized = [col for col in selected if col in allowed and col not in PDF_TECHNICAL_EXCLUDED_COLUMNS]
         if normalized:
-            return normalized[:10]
+            return normalized[:9]
 
     curated = [col for col in DEFAULT_PDF_CURATED_COLUMNS if col in allowed]
     if curated:
         return curated
 
     fallback = [col for col in headers if col not in PDF_TECHNICAL_EXCLUDED_COLUMNS]
-    return (fallback or headers)[:10]
+    return (fallback or headers)[:9]
 
 
 def parse_excel_selected_columns(headers: list[str]) -> list[str]:
@@ -222,14 +223,14 @@ def parse_excel_selected_columns(headers: list[str]) -> list[str]:
     if selected:
         normalized = [col for col in selected if col in allowed and col not in PDF_TECHNICAL_EXCLUDED_COLUMNS]
         if normalized:
-            return normalized[:10]
+            return normalized[:9]
 
     curated = [col for col in DEFAULT_XLSX_CURATED_COLUMNS if col in allowed]
     if curated:
         return curated
 
     fallback = [col for col in headers if col not in PDF_TECHNICAL_EXCLUDED_COLUMNS]
-    return (fallback or headers)[:10]
+    return (fallback or headers)[:9]
 
 
 def _limit_selected_columns(selected_columns: list[str], max_columns: int) -> tuple[list[str], bool]:
@@ -760,7 +761,7 @@ def report_debts_view():
 
 
 @reports_bp.route("/logbook.csv", methods=["GET"])
-@min_role_required("STAFF")
+@min_role_required("ADMIN")
 def report_logbook():
     action = (request.args.get("action") or "").strip()
     module = (request.args.get("module") or "").strip()
@@ -785,7 +786,7 @@ def report_logbook():
 
 
 @reports_bp.route("/logbook.xlsx", methods=["GET"])
-@min_role_required("STAFF")
+@min_role_required("ADMIN")
 def report_logbook_excel():
     action = (request.args.get("action") or "").strip()
     module = (request.args.get("module") or "").strip()
@@ -810,7 +811,7 @@ def report_logbook_excel():
 
 
 @reports_bp.route("/view/logbook", methods=["GET"])
-@min_role_required("STAFF")
+@min_role_required("ADMIN")
 def report_logbook_view():
     action = (request.args.get("action") or "").strip()
     module = (request.args.get("module") or "").strip()
@@ -833,11 +834,11 @@ def report_logbook_view():
     selected_columns = parse_selected_columns(headers)
     headers, rows = project_rows(headers, rows, selected_columns)
     return render_report_view(
-        report_title="Bitácora",
+        report_title="LOGS",
         headers=headers,
         rows=rows,
         download_url=build_download_url("reports.report_logbook"),
-        report_description="Vista completa de la bitácora.",
+        report_description="Vista completa de LOGS.",
         filter_fields=[
             {"name": "action", "label": "Acción contiene", "type": "text", "value": action, "placeholder": "Ejemplo: LOGIN"},
             {"name": "module", "label": "Módulo", "type": "text", "value": module, "placeholder": "Ejemplo: USERS"},
@@ -976,7 +977,7 @@ def report_software_view():
 
 
 @reports_bp.route("/logbook", methods=["GET"])
-@min_role_required("STAFF")
+@min_role_required("ADMIN")
 def logbook_admin_view():
     action = (request.args.get("action") or "").strip()
     module = (request.args.get("module") or "").strip()
@@ -1007,6 +1008,7 @@ def logbook_admin_view():
         rows=visible_rows[:500],
         all_columns=headers,
         selected_columns=selected_columns,
+        report_column_labels=REPORT_COLUMN_LABELS,
         export_url=export_url,
         export_excel_url=export_excel_url,
         export_pdf_url=export_pdf_url,
@@ -1075,7 +1077,7 @@ def report_debts_pdf():
 
 
 @reports_bp.route("/logbook.pdf", methods=["GET"])
-@min_role_required("STAFF")
+@min_role_required("ADMIN")
 def report_logbook_pdf():
     action = (request.args.get("action") or "").strip()
     module = (request.args.get("module") or "").strip()
@@ -1099,7 +1101,7 @@ def report_logbook_pdf():
     headers, rows = project_rows(headers, rows, selected_columns)
     return pdf_response(
         filename="logbook.pdf",
-        report_title="Reporte de Bitácora",
+        report_title="Reporte de LOGS",
         headers=headers,
         rows=rows,
         subtitle="Eventos administrativos y de operación",

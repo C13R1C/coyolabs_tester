@@ -87,7 +87,7 @@
     <table class="inventory-table">
       <thead>
         <tr>
-          <th>Nombre</th>
+          <th>Nombre</th><th>Imagen</th>
           <th>Carrera</th>
           <th>Estado</th>
           <th class="td-center">Cantidad</th>
@@ -101,8 +101,14 @@
           {% set active_state = status_parts[0] if status_parts|length > 1 else ('Baja' if ('baja' in status_value|lower or 'inactivo' in status_value|lower) else 'Alta') %}
           {% set condition = status_parts[1] if status_parts|length > 1 else ('Regular' if 'frágil' in status_value|lower else 'Bueno') %}
           <tr class="inventory-row">
+            <td><a href="{{ url_for('inventory.material_detail', material_id=m.id) }}" class="item-link material-name">{{ m.name | smart_title }}</a></td>
             <td>
-              <a href="{{ url_for('inventory.material_detail', material_id=m.id) }}" class="item-link material-name">{{ m.name | smart_title }}</a>
+              {% set preview_img = material_image_map.get(m.id) if material_image_map else None %}
+              {% if preview_img %}
+                <img src="{{ preview_img }}" alt="{{ m.name }}" style="width:44px;height:44px;object-fit:cover;border-radius:8px;border:1px solid rgba(0,0,0,.08);background:#fff;">
+              {% else %}
+                <div style="width:44px;height:44px;border-radius:8px;border:1px dashed var(--stroke);background:rgba(255,255,255,.45);display:flex;align-items:center;justify-content:center;color:var(--text-dim);font-size:.72rem;">IMG</div>
+              {% endif %}
             </td>
             <td>{{ m.career.name if m.career else 'Sin carrera' }}</td>
             <td class="td-center">
