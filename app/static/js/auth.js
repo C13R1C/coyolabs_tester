@@ -115,13 +115,21 @@
 
     const raw = registerEmail.value || "";
     const email = raw.trim().toLowerCase();
+    if (raw !== email) {
+      registerEmail.value = email;
+    }
+
     if (!email) {
+      registerEmail.setCustomValidity("");
       emailRegHint.textContent = "";
       emailRegHint.className = "hint";
       return true;
     }
 
     const ok = institutionalEmailRe.test(email);
+    registerEmail.setCustomValidity(
+      ok ? "" : "Usa matrícula@utpn.edu.mx o nombre.apellido@utpn.edu.mx"
+    );
     emailRegHint.textContent = ok
       ? "✅ Correo institucional válido."
       : "❌ Usa matrícula@utpn.edu.mx o nombre.apellido@utpn.edu.mx";
@@ -135,10 +143,11 @@
   registerForm?.addEventListener("submit", (e) => {
     const isEmailOk = validateRegisterEmail();
     const isConfirmOk = validateConfirm();
-    if (!isEmailOk || !isConfirmOk) {
+    if (!isEmailOk || !isConfirmOk || !registerForm.checkValidity()) {
       e.preventDefault();
-      if (!isEmailOk) {
+      if (!isEmailOk || !registerEmail?.checkValidity()) {
         registerEmail?.focus();
+        registerEmail?.reportValidity();
       } else {
         pw2?.focus();
       }
