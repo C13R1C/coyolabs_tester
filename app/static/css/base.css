@@ -1723,3 +1723,196 @@ textarea.form-control{
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+
+/* === responsive system harmonization === */
+:root{
+  --bp-desktop: 1200px;
+  --bp-tablet: 992px;
+  --bp-phone: 768px;
+  --bp-phone-sm: 480px;
+  --tap-min: 42px;
+}
+
+a,
+button,
+.btn,
+input,
+select,
+textarea,
+[role="button"]{
+  touch-action: manipulation;
+}
+
+button,
+.btn,
+input,
+select,
+textarea{
+  min-height: var(--tap-min);
+}
+
+a + a,
+a + button,
+button + button,
+button + a,
+.btn + .btn,
+.form-control + .form-control{
+  margin-top: 8px;
+}
+
+@media (min-width: 769px){
+  a + a,
+  a + button,
+  button + button,
+  button + a,
+  .btn + .btn,
+  .form-control + .form-control{
+    margin-top: 0;
+  }
+}
+
+.table-wrap,
+.table-responsive,
+.pre-wrap,
+pre,
+code{
+  max-width: 100%;
+}
+
+pre,
+code,
+pre code{
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.empty-state{
+  display: grid;
+  place-items: center;
+  text-align: center;
+  min-height: clamp(180px, 28vh, 280px);
+}
+
+/* === tablet === */
+@media (max-width: 992px){
+  .page-shell,
+  .main-content{
+    transition: padding 0.24s ease, gap 0.24s ease;
+  }
+
+  .toolbar-card,
+  .table-card,
+  .stat-card,
+  .empty-state{
+    padding: 1rem;
+    border-radius: 14px;
+    box-shadow: 0 8px 20px color-mix(in srgb, var(--text) 8%, transparent);
+    transition: box-shadow 0.24s ease, transform 0.24s ease, border-radius 0.24s ease;
+  }
+
+  .stats-row,
+  .toolbar,
+  .form-grid,
+  .cards-grid{
+    gap: 0.75rem;
+    transition: gap 0.24s ease;
+  }
+}
+
+/* === phone === */
+@media (max-width: 768px){
+  html{
+    font-size: 15px;
+  }
+
+  .main-content{
+    padding: 0.75rem;
+  }
+
+  .toolbar-card,
+  .table-card,
+  .stat-card,
+  .empty-state{
+    padding: 0.875rem;
+    border-radius: 12px;
+    box-shadow: 0 6px 16px color-mix(in srgb, var(--text) 6%, transparent);
+  }
+
+  h1{ font-size: clamp(1.38rem, 5.5vw, 1.8rem); }
+  h2{ font-size: clamp(1.2rem, 4.7vw, 1.5rem); }
+  h3{ font-size: clamp(1.05rem, 4vw, 1.28rem); }
+
+  .toolbar-actions,
+  .topbar-actions{
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .toolbar-actions .btn,
+  .topbar-actions .btn{
+    width: 100%;
+  }
+
+  .grid-2,
+  .grid-3,
+  .split-layout,
+  .content-layout{
+    grid-template-columns: 1fr;
+  }
+}
+
+/* === phone small === */
+@media (max-width: 480px){
+  html{
+    font-size: 14px;
+  }
+
+  body,
+  p,
+  li,
+  .status-badge,
+  small,
+  .text-dim{
+    font-size: max(0.68rem, 0.85em);
+  }
+
+  .main-content{
+    padding: 0.75rem;
+  }
+
+  .toolbar-card,
+  .table-card,
+  .stat-card,
+  .empty-state{
+    padding: 0.75rem;
+    border-radius: 10px;
+  }
+
+  .crumbs,
+  .breadcrumb{
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-width: thin;
+  }
+}
+
+@media (hover: hover) and (pointer: fine){
+  .table-card:hover,
+  .toolbar-card:hover,
+  .stat-card:hover{
+    transform: translateY(-1px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce){
+  *, *::before, *::after{
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
