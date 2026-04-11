@@ -763,15 +763,15 @@ body {
       <div class="tech-tools-inner">
         <div class="input-group full">
           <label>Base URL</label>
-          <input type="text" id="cfgBaseUrl" value="http://localhost:5000/api/v1">
+          <input type="text" id="cfgBaseUrl" value="{{ ra_api_base_url }}">
         </div>
         <div class="input-group">
           <label>API Key</label>
-          <input type="text" id="cfgApiKey" value="coyo_dev_xK9mP2qL">
+          <input type="text" id="cfgApiKey" value="{{ ra_api_key }}">
         </div>
         <div class="input-group">
           <label>User Email</label>
-          <input type="email" id="cfgEmail" value="admin@coyolabs.mx">
+          <input type="email" id="cfgEmail" value="{{ ra_user_email }}">
         </div>
         <div class="input-group">
           <label>Material ID (manual)</label>
@@ -834,116 +834,6 @@ body {
 
 <script>
 /* ============================================================
-   DATASET MOCK DE MATERIALES
-   ============================================================ */
-const materials = [
-  {
-    id: 1,
-    name: "Cautin Weller WE1010",
-    lab: "Lab. Electronica",
-    location: "Estante A-03",
-    pieces_text: "1 pieza",
-    status: "Disponible",
-    category: "Herramienta de soldadura",
-    career: "Ing. Electronica",
-    notes: "Punta nueva instalada. Incluir funda protectora al guardar.",
-    manual_url: "https://www.weller.com/manuals/we1010",
-    image_url: "https://picsum.photos/seed/cautin10/520/300.jpg"
-  },
-  {
-    id: 2,
-    name: "Multimetro Fluke 115",
-    lab: "Lab. Mediciones",
-    location: "Armario M-12",
-    pieces_text: "3 piezas",
-    status: "Disponible",
-    category: "Instrumento de medicion",
-    career: "Ing. Electronica",
-    notes: "Calibracion vigente hasta dic 2025. Incluir cables de prueba.",
-    manual_url: "https://www.fluke.com/manuals/115",
-    image_url: "https://picsum.photos/seed/multimetro2/520/300.jpg"
-  },
-  {
-    id: 3,
-    name: "Proyector Epson PowerLite",
-    lab: "Lab. Multimedia",
-    location: "Techo — Fija",
-    pieces_text: "1 pieza",
-    status: "En uso",
-    category: "Equipo de presentacion",
-    career: "Ing. en Sistemas",
-    notes: "Resolucion 1080p. Cambiar filtro cada 500h. Prox: 120h restantes.",
-    manual_url: "https://www.epson.com/manuals/powerlite",
-    image_url: "https://picsum.photos/seed/proyector3/520/300.jpg"
-  },
-  {
-    id: 4,
-    name: "Osciloscopio Rigol DS1054Z",
-    lab: "Lab. Senales",
-    location: "Mesa 4-B",
-    pieces_text: "2 piezas",
-    status: "Disponible",
-    category: "Instrumento de analisis",
-    career: "Ing. Electronica",
-    notes: "4 canales, 50MHz. Sondas guardadas en cajon inferior.",
-    manual_url: "https://www.rigol.com/manuals/ds1054z",
-    image_url: "https://picsum.photos/seed/osciloscopio4/520/300.jpg"
-  },
-  {
-    id: 5,
-    name: "Impresora 3D Creality Ender 3 V3",
-    lab: "Lab. Fabricacion Digital",
-    location: "Mesa larga — Pos. 2",
-    pieces_text: "1 pieza",
-    status: "Mantenimiento",
-    category: "Fabricacion aditiva",
-    career: "Ing. Mecanica",
-    notes: "Boquilla obstruida. Pendiente limpieza con aguna. No encender sin autorizacion.",
-    manual_url: "https://www.creality.com/manuals/ender3v3",
-    image_url: "https://picsum.photos/seed/impresora3d5/520/300.jpg"
-  },
-  {
-    id: 6,
-    name: "Guantes Dielectricos Clase 00",
-    lab: "Lab. Alta Tension",
-    location: "Locker Seguridad — N2",
-    pieces_text: "6 pares",
-    status: "Disponible",
-    category: "Equipo de proteccion",
-    career: "Ing. Electrica",
-    notes: "Prueba dielectrica vigente hasta mar 2026. Inspeccionar antes de cada uso.",
-    manual_url: "https://www.example.com/manuals/guantes-diel",
-    image_url: "https://picsum.photos/seed/guantes6/520/300.jpg"
-  },
-  {
-    id: 7,
-    name: "Tarjeta Arduino UNO R4 WiFi",
-    lab: "Lab. Prototipado",
-    location: "Kit movil — Caja 7",
-    pieces_text: "10 piezas",
-    status: "Disponible",
-    category: "Plataforma de desarrollo",
-    career: "Ing. Electronica",
-    notes: "Incluye cable USB-C. No mezclar con R3. Guardar en bolsas antiestaticas.",
-    manual_url: "https://docs.arduino.cc/hardware/uno-r4-wifi",
-    image_url: "https://picsum.photos/seed/arduino7/520/300.jpg"
-  },
-  {
-    id: 8,
-    name: "Laptop Dell Latitude 5540",
-    lab: "Lab. Computo",
-    location: "Caretilla movil — Slot 3",
-    pieces_text: "1 pieza",
-    status: "Danado",
-    category: "Equipo de computo",
-    career: "Ing. en Sistemas",
-    notes: "Pantalla con lineas verticales. Pendiente diagnostico de tarjeta de video.",
-    manual_url: "https://www.dell.com/manuals/latitude5540",
-    image_url: "https://picsum.photos/seed/laptop8/520/300.jpg"
-  }
-];
-
-/* ============================================================
    ESTADO GLOBAL
    ============================================================ */
 let scanner = null;
@@ -975,6 +865,31 @@ function escapeHtml(str) {
   const d = document.createElement('div');
   d.textContent = str;
   return d.innerHTML;
+}
+
+function readRuntimeConfig() {
+  return {
+    raApiBaseUrl: document.getElementById('cfgBaseUrl').value,
+    raApiKey: document.getElementById('cfgApiKey').value,
+    raUserEmail: document.getElementById('cfgEmail').value
+  };
+}
+
+function toUiMaterial(payload) {
+  const m = payload?.material || payload || {};
+  const pieces = m.pieces_text || (m.pieces_qty !== null && m.pieces_qty !== undefined ? `${m.pieces_qty}` : "N/D");
+  return {
+    id: m.id,
+    name: m.name || "Sin nombre",
+    lab: m.lab || "N/D",
+    location: m.location || "N/D",
+    status: m.status || "N/D",
+    pieces_text: pieces,
+    pieces_qty: m.pieces_qty,
+    tutorial_url: m.tutorial_url || "",
+    image_ref: m.image_ref || "",
+    notes: m.notes || "Sin observaciones"
+  };
 }
 
 /* ============================================================
@@ -1020,13 +935,6 @@ function normalizeQR(raw) {
 }
 
 /* ============================================================
-   BUSCAR MATERIAL
-   ============================================================ */
-function findMaterial(id) {
-  return materials.find(m => m.id === id) || null;
-}
-
-/* ============================================================
    BADGE DE ESTADO
    ============================================================ */
 function statusBadgeClass(status) {
@@ -1049,8 +957,6 @@ function showOverlay(mat) {
     <div class="overlay-field"><strong>Ubicacion:</strong> ${escapeHtml(mat.location)}</div>
     <div class="overlay-field"><strong>Piezas:</strong> ${escapeHtml(mat.pieces_text)}</div>
     <div class="overlay-field"><strong>Estado:</strong> <span class="badge-status ${statusBadgeClass(mat.status)}">${escapeHtml(mat.status)}</span></div>
-    <div class="overlay-field"><strong>Categoria:</strong> ${escapeHtml(mat.category)}</div>
-    <div class="overlay-field"><strong>Carrera:</strong> ${escapeHtml(mat.career)}</div>
   `;
   document.getElementById('overlayNotes').textContent = mat.notes;
   document.getElementById('materialOverlay').classList.add('visible');
@@ -1099,17 +1005,13 @@ function openModal() {
   if (!lastDetectedMaterial) return;
   const mat = lastDetectedMaterial;
   document.getElementById('modalTitle').textContent = mat.name;
-  document.getElementById('modalImage').src = mat.image_url;
+  document.getElementById('modalImage').src = mat.image_ref || '';
   document.getElementById('modalImage').alt = mat.name;
   document.getElementById('modalGrid').innerHTML = `
     <span class="modal-detail-label"><i class="fa-solid fa-hashtag"></i> ID</span>
     <span class="modal-detail-value">${mat.id}</span>
     <span class="modal-detail-label"><i class="fa-solid fa-flask"></i> Laboratorio</span>
     <span class="modal-detail-value">${escapeHtml(mat.lab)}</span>
-    <span class="modal-detail-label"><i class="fa-solid fa-graduation-cap"></i> Carrera</span>
-    <span class="modal-detail-value">${escapeHtml(mat.career)}</span>
-    <span class="modal-detail-label"><i class="fa-solid fa-tag"></i> Categoria</span>
-    <span class="modal-detail-value">${escapeHtml(mat.category)}</span>
     <span class="modal-detail-label"><i class="fa-solid fa-circle-info"></i> Estado</span>
     <span class="modal-detail-value"><span class="badge-status ${statusBadgeClass(mat.status)}">${escapeHtml(mat.status)}</span></span>
     <span class="modal-detail-label"><i class="fa-solid fa-cubes"></i> Cantidad</span>
@@ -1118,7 +1020,7 @@ function openModal() {
     <span class="modal-detail-value">${escapeHtml(mat.location)}</span>
   `;
   document.getElementById('modalNotes').innerHTML = `<strong>Observaciones</strong>${escapeHtml(mat.notes)}`;
-  document.getElementById('modalLink').href = mat.manual_url;
+  document.getElementById('modalLink').href = mat.tutorial_url || '#';
   document.getElementById('modalBackdrop').classList.add('visible');
 }
 
@@ -1152,50 +1054,86 @@ function onScanFailure() {
 }
 
 /* ============================================================
-   GET MATERIAL (mock)
+   GET MATERIAL (API real)
    ============================================================ */
-function getMaterial(materialId) {
-  const baseUrl = document.getElementById('cfgBaseUrl').value;
-  const apiKey = document.getElementById('cfgApiKey').value;
-  logConsole('GET', `GET ${baseUrl}/materials/${materialId}`);
-  logConsole('GET', `Headers: { "X-API-Key": "${apiKey}" }`);
+async function getMaterial(materialId) {
+  const { raApiBaseUrl, raApiKey, raUserEmail } = readRuntimeConfig();
+  const url = `${raApiBaseUrl}/materials/${materialId}?user_email=${encodeURIComponent(raUserEmail)}`;
+  logConsole('GET', `Request enviado: GET ${url}`);
 
-  const mat = findMaterial(materialId);
-  if (!mat) {
-    logConsole('ERROR', `Material ${materialId} no encontrado en dataset`);
-    showToast(`Material #${materialId} no encontrado`, 'error');
-    return;
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'X-API-Key': raApiKey
+      },
+      credentials: 'same-origin'
+    });
+    const data = await response.json();
+    logConsole('GET', `Response recibida: ${response.status} ${JSON.stringify(data)}`);
+
+    if (!response.ok || !data.ok || !data.material) {
+      throw new Error(data.error || `Error ${response.status} al consultar material`);
+    }
+
+    const mat = toUiMaterial(data);
+    lastDetectedMaterial = mat;
+
+    updateStatus('detected', 'Material detectado');
+    showOverlay(mat);
+    updateLastResult(mat);
+    showToast(`Material detectado: ${mat.name}`, 'success');
+
+    await postEvent(mat.id);
+  } catch (err) {
+    logConsole('ERROR', `Error GET material: ${err.message}`);
+    showToast(err.message, 'error');
   }
-  lastDetectedMaterial = mat;
-  logConsole('OK', `Material encontrado: ${mat.name} [${mat.status}]`);
-  logConsole('GET', `Response 200 OK — ${JSON.stringify({ id: mat.id, name: mat.name, status: mat.status })}`);
-
-  updateStatus('detected', 'Material detectado');
-  showOverlay(mat);
-  updateLastResult(mat);
-  showToast(`Material detectado: ${mat.name}`, 'success');
 }
 
 /* ============================================================
-   POST EVENTO (mock)
+   POST EVENTO (API real)
    ============================================================ */
-function postEvent(materialId) {
-  const baseUrl = document.getElementById('cfgBaseUrl').value;
-  const apiKey = document.getElementById('cfgApiKey').value;
-  const email = document.getElementById('cfgEmail').value;
-  const ts = new Date().toISOString();
+async function postEvent(materialId) {
   const mid = materialId || (lastDetectedMaterial ? lastDetectedMaterial.id : null);
   if (!mid) {
     logConsole('WARN', 'No hay material para registrar evento');
     showToast('Escanea un material primero', 'warning');
     return;
   }
-  const payload = { material_id: mid, user_email: email, action: 'scan_qr', timestamp: ts };
-  logConsole('POST', `POST ${baseUrl}/events`);
-  logConsole('POST', `Headers: { "X-API-Key": "${apiKey}", "Content-Type": "application/json" }`);
+
+  const { raApiBaseUrl, raApiKey, raUserEmail } = readRuntimeConfig();
+  const payload = {
+    material_id: mid,
+    event_type: 'scan',
+    user_email: raUserEmail
+  };
+  logConsole('POST', `Request enviado: POST ${raApiBaseUrl}/events`);
   logConsole('POST', `Body: ${JSON.stringify(payload)}`);
-  logConsole('OK', `Evento registrado — Response 201 Created`);
-  showToast('Evento de escaneo registrado', 'success');
+
+  try {
+    const response = await fetch(`${raApiBaseUrl}/events`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': raApiKey
+      },
+      credentials: 'same-origin',
+      body: JSON.stringify(payload)
+    });
+
+    const data = await response.json();
+    logConsole('POST', `Response recibida: ${response.status} ${JSON.stringify(data)}`);
+
+    if (!response.ok || !data.ok) {
+      throw new Error(data.error || `Error ${response.status} al registrar evento`);
+    }
+
+    showToast('Evento de escaneo registrado', 'success');
+  } catch (err) {
+    logConsole('ERROR', `Error POST evento: ${err.message}`);
+    showToast(err.message, 'error');
+  }
 }
 
 /* ============================================================
@@ -1312,104 +1250,10 @@ document.addEventListener('keydown', (e) => {
    INIT
    ============================================================ */
 logConsole('INFO', 'Escaneo RA — CoyoLabs v1.0');
-logConsole('INFO', `Dataset cargado: ${materials.length} materiales`);
 logConsole('INFO', 'Formatos QR soportados: numero, MAT:N, /inventory/materials/N');
 </script>
 {% endblock %}
 
 {% block extra_js %}
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-
-<script>
-/* =========================================
-   CONFIG DESDE BACKEND
-========================================= */
-
-const API_BASE = "/api/ra";
-const API_KEY = "coyo_dev_xK9mP2qL";
-const USER_EMAIL = "{{ current_user.email }}";
-
-/* =========================================
-   ELIMINA COMPLETAMENTE:
-   const materials = [...]
-========================================= */
-
-
-/* =========================================
-   REEMPLAZA getMaterial COMPLETO
-========================================= */
-
-async function getMaterial(materialId) {
-  logConsole('GET', `GET ${API_BASE}/materials/${materialId}`);
-
-  try {
-    const response = await fetch(
-      `${API_BASE}/materials/${materialId}?user_email=${encodeURIComponent(USER_EMAIL)}`,
-      {
-        headers: {
-          "X-API-Key": API_KEY
-        },
-        credentials: "same-origin"
-      }
-    );
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error || "Error al obtener material");
-    }
-
-    const mat = data;
-    lastDetectedMaterial = mat;
-
-    logConsole('OK', `Material encontrado: ${mat.name}`);
-
-    updateStatus('detected', 'Material detectado');
-    showOverlay(mat);
-    updateLastResult(mat);
-    showToast(`Material detectado: ${mat.name}`, 'success');
-
-    postEvent(mat.id);
-
-  } catch (err) {
-    logConsole('ERROR', err.message);
-    showToast(err.message, 'error');
-  }
-}
-
-
-/* =========================================
-   REEMPLAZA postEvent COMPLETO
-========================================= */
-
-async function postEvent(materialId) {
-  try {
-    const response = await fetch(`${API_BASE}/events`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-API-Key": API_KEY
-      },
-      credentials: "same-origin",
-      body: JSON.stringify({
-        material_id: materialId,
-        event_type: "scan",
-        user_email: USER_EMAIL
-      })
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error || "Error en evento");
-    }
-
-    logConsole("OK", "Evento registrado");
-
-  } catch (err) {
-    logConsole("ERROR", err.message);
-  }
-}
-
-</script>
 {% endblock %}
