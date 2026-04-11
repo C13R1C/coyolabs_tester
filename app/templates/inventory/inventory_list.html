@@ -87,7 +87,7 @@
     <table class="inventory-table">
       <thead>
         <tr>
-          <th>Nombre</th>
+          <th>Nombre</th><th>Imagen</th>
           <th>Carrera</th>
           <th>Estado</th>
           <th class="td-center">Cantidad</th>
@@ -101,8 +101,10 @@
           {% set active_state = status_parts[0] if status_parts|length > 1 else ('Baja' if ('baja' in status_value|lower or 'inactivo' in status_value|lower) else 'Alta') %}
           {% set condition = status_parts[1] if status_parts|length > 1 else ('Regular' if 'frágil' in status_value|lower else 'Bueno') %}
           <tr class="inventory-row">
+            <td><a href="{{ url_for('inventory.material_detail', material_id=m.id) }}" class="item-link material-name">{{ m.name | smart_title }}</a></td>
             <td>
-              <a href="{{ url_for('inventory.material_detail', material_id=m.id) }}" class="item-link material-name">{{ m.name | smart_title }}</a>
+              {% set preview_img = m.image_url or (url_for('static', filename=m.image_ref) if m.image_ref and not m.image_ref.startswith('http') and not m.image_ref.startswith('/') else m.image_ref) %}
+              {% if preview_img %}<img src="{{ preview_img }}" alt="{{ m.name }}" style="width:44px;height:44px;object-fit:cover;border-radius:8px;">{% else %}-{% endif %}
             </td>
             <td>{{ m.career.name if m.career else 'Sin carrera' }}</td>
             <td class="td-center">

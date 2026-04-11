@@ -39,7 +39,7 @@ def _search_reports_base() -> list[dict]:
             "link": url_for("reports.report_debts_view"),
         },
         {
-            "title": "Bitácora",
+            "title": "LOGS",
             "description": "Eventos administrativos y de operación.",
             "tags": "bitácora auditoría eventos logs",
             "link": url_for("reports.report_logbook_view"),

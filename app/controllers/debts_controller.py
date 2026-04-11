@@ -329,7 +329,7 @@ def admin_create():
             flash("No existe un usuario con ese correo.", "error")
             return redirect(url_for("debts.admin_create"))
 
-        if (user.role or "").upper() not in {"STUDENT", "TEACHER", "ADMIN", "STAFF", "SUPERADMIN"}:
+        if (user.role or "").upper() not in {"STUDENT", "TEACHER"}:
             flash("El usuario seleccionado no es válido para asignación de adeudos.", "error")
             return redirect(url_for("debts.admin_create"))
 
@@ -427,7 +427,7 @@ def admin_create():
     debt_receivers = (
         User.query
         .options(joinedload(User.career_rel))
-        .filter(User.role.in_(["STUDENT", "TEACHER", "ADMIN", "STAFF", "SUPERADMIN"]))
+        .filter(User.role.in_(["STUDENT", "TEACHER"]))
         .order_by(User.full_name.asc(), User.email.asc())
         .limit(1000)
         .all()
