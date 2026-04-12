@@ -17,9 +17,9 @@ def _rate_limit_exceeded() -> bool:
     if limit <= 0 or window_seconds <= 0:
         return False
 
-    api_key = request.headers.get("X-API-Key") or "anonymous"
+    actor = f"user:{getattr(current_user, 'id', 'anonymous')}" if current_user.is_authenticated else "anonymous"
     source = request.headers.get("X-Forwarded-For", request.remote_addr or "unknown")
-    bucket_key = f"{api_key}:{source}"
+    bucket_key = f"{actor}:{source}"
     now = time()
 
     with _API_RATE_LOCK:
@@ -39,11 +39,7 @@ def api_key_required(fn):
     @wraps(fn)
     def wrapper(*args, **kwargs):
         if not current_user.is_authenticated:
-            expected = current_app.config.get("RA_API_KEY")
-            provided = request.headers.get("X-API-Key")
-
-            if not expected or not provided or provided != expected:
-                return jsonify({"error": "Unauthorized"}), 401
+            return jsonify({"error": "Unauthorized"}), 401
 
         if _rate_limit_exceeded():
             return jsonify({"error": "Too Many Requests"}), 429

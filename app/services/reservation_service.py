@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from flask import url_for
 
 from app.extensions import db
@@ -68,3 +70,52 @@ def reject_reservation(reservation: Reservation, admin_user: User, admin_note: s
 
     db.session.commit()
     return rejection_notification
+
+
+def expire_unapproved_reservations(now_dt: datetime | None = None) -> int:
+    """Auto-cancel pending reservations whose start time has already begun."""
+    now = now_dt or datetime.now()
+    cancel_reason = "Cancelada por falta de confirmación"
+
+    pending_reservations = (
+        Reservation.query
+        .filter(Reservation.status == ReservationStatus.PENDING)
+        .all()
+    )
+
+    expired_count = 0
+    for reservation in pending_reservations:
+        if not reservation.date or not reservation.start_time:
+            continue
+
+        reservation_start = datetime.combine(reservation.date, reservation.start_time)
+        if reservation_start > now:
+            continue
+
+        reservation.status = ReservationStatus.CANCELLED
+        if hasattr(reservation, "admin_note"):
+            reservation.admin_note = cancel_reason
+
+        build_notification(
+            user_id=reservation.user_id,
+            title="Reservación cancelada",
+            message="Tu reservación fue cancelada automáticamente por falta de confirmación.",
+            link=url_for("reservations.my_reservations"),
+            priority="medium",
+            dedup_seconds=3,
+        )
+
+        log_event(
+            module="RESERVATIONS",
+            action="RESERVATION_AUTO_CANCELED",
+            user_id=None,
+            entity_label=f"Reservation #{reservation.id}",
+            description="Reservación cancelada automáticamente por falta de confirmación.",
+            metadata={"reservation_id": reservation.id, "target_user_id": reservation.user_id},
+        )
+        expired_count += 1
+
+    if expired_count:
+        db.session.commit()
+
+    return expired_count

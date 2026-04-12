@@ -5,6 +5,7 @@ import threading
 from datetime import datetime
 
 from app.models.notification import Notification
+from app.services.push_service import dispatch_push_for_notification
 
 
 class NotificationBroker:
@@ -95,6 +96,10 @@ def publish_notification_created(notification: Notification) -> None:
     unread_count = get_unread_count(notification.user_id)
     payload = notification_to_dict(notification, unread_count=unread_count)
     notification_broker.publish(notification.user_id, "notification_created", payload)
+    try:
+        dispatch_push_for_notification(notification)
+    except Exception:
+        _logger.warning("Web push dispatch failed", exc_info=True)
 
 
 def sse_pack(event_name: str, payload: dict) -> str:
