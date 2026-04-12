@@ -23,7 +23,7 @@ users_bp = Blueprint("users", __name__, url_prefix="/users")
 PENDING_APPROVAL_ROLES = (ROLE_STUDENT, ROLE_TEACHER, ROLE_STAFF, ROLE_ADMIN, ROLE_SUPERADMIN)
 ADMIN_PANEL_ROLE_FILTERS = (ROLE_STUDENT, ROLE_TEACHER, ROLE_STAFF, ROLE_ADMIN, ROLE_SUPERADMIN)
 SUPERADMIN_ASSIGNABLE_ROLES = (ROLE_STUDENT, ROLE_TEACHER, ROLE_STAFF, ROLE_ADMIN)
-ROOT_SUPERADMIN_ASSIGNABLE_ROLES = SUPERADMIN_ASSIGNABLE_ROLES
+ROOT_SUPERADMIN_ASSIGNABLE_ROLES = (ROLE_STUDENT, ROLE_TEACHER, ROLE_STAFF, ROLE_ADMIN, ROLE_SUPERADMIN)
 ADMIN_ASSIGNABLE_ROLES = (ROLE_STUDENT, ROLE_TEACHER, ROLE_STAFF)
 STAFF_PENDING_ASSIGNABLE_ROLES = (ROLE_TEACHER, ROLE_STAFF)
 ADMIN_PENDING_ASSIGNABLE_ROLES = (ROLE_TEACHER, ROLE_STAFF)
@@ -441,7 +441,8 @@ def create_admin_account():
 
             selected_user_id = request.form.get("user_id", type=int)
             requested_role = normalize_role(request.form.get("role"))
-            if not selected_user_id or requested_role not in SUPERADMIN_ASSIGNABLE_ROLES:
+            assignable_roles = ROOT_SUPERADMIN_ASSIGNABLE_ROLES if _is_current_root_superadmin() else SUPERADMIN_ASSIGNABLE_ROLES
+            if not selected_user_id or requested_role not in assignable_roles:
                 flash("Cambio de rol inválido.", "error")
                 return redirect(url_for("users.create_admin_account"))
 

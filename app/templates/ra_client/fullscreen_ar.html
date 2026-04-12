@@ -1039,18 +1039,22 @@ function statusBadgeClass(status) {
   return map[status] || 'badge-disponible';
 }
 
+function formatCareerWithShort(careerName) {
+  const name = careerName || 'Sin carrera';
+  const short = name.split(/\s+/).filter(Boolean).map((part) => part[0]).join('').slice(0, 6).toUpperCase();
+  return `${name} (${short || 'N/D'})`;
+}
+
 /* ============================================================
    OVERLAY DEL MATERIAL
    ============================================================ */
 function showOverlay(mat) {
   document.getElementById('overlayName').textContent = mat.name;
   document.getElementById('overlayGrid').innerHTML = `
-    <div class="overlay-field"><strong>Lab:</strong> ${escapeHtml(mat.lab)}</div>
+    <div class="overlay-field"><strong>Carrera:</strong> ${escapeHtml(formatCareerWithShort(mat.career))}</div>
     <div class="overlay-field"><strong>Ubicacion:</strong> ${escapeHtml(mat.location)}</div>
     <div class="overlay-field"><strong>Piezas:</strong> ${escapeHtml(mat.pieces_text)}</div>
     <div class="overlay-field"><strong>Estado:</strong> <span class="badge-status ${statusBadgeClass(mat.status)}">${escapeHtml(mat.status)}</span></div>
-    <div class="overlay-field"><strong>Categoria:</strong> ${escapeHtml(mat.category)}</div>
-    <div class="overlay-field"><strong>Carrera:</strong> ${escapeHtml(mat.career)}</div>
   `;
   document.getElementById('overlayNotes').textContent = mat.notes;
   document.getElementById('materialOverlay').classList.add('visible');
@@ -1070,9 +1074,9 @@ function updateLastResult(mat) {
   document.getElementById('resultName').textContent = mat.name;
   document.getElementById('resultFields').innerHTML = `
     <div class="result-row">
-      <i class="fa-solid fa-flask"></i>
-      <span class="label">Lab</span>
-      <span class="value">${escapeHtml(mat.lab)}</span>
+      <i class="fa-solid fa-graduation-cap"></i>
+      <span class="label">Carrera</span>
+      <span class="value">${escapeHtml(formatCareerWithShort(mat.career))}</span>
     </div>
     <div class="result-row">
       <i class="fa-solid fa-location-dot"></i>
@@ -1104,12 +1108,8 @@ function openModal() {
   document.getElementById('modalGrid').innerHTML = `
     <span class="modal-detail-label"><i class="fa-solid fa-hashtag"></i> ID</span>
     <span class="modal-detail-value">${mat.id}</span>
-    <span class="modal-detail-label"><i class="fa-solid fa-flask"></i> Laboratorio</span>
-    <span class="modal-detail-value">${escapeHtml(mat.lab)}</span>
     <span class="modal-detail-label"><i class="fa-solid fa-graduation-cap"></i> Carrera</span>
-    <span class="modal-detail-value">${escapeHtml(mat.career)}</span>
-    <span class="modal-detail-label"><i class="fa-solid fa-tag"></i> Categoria</span>
-    <span class="modal-detail-value">${escapeHtml(mat.category)}</span>
+    <span class="modal-detail-value">${escapeHtml(formatCareerWithShort(mat.career))}</span>
     <span class="modal-detail-label"><i class="fa-solid fa-circle-info"></i> Estado</span>
     <span class="modal-detail-value"><span class="badge-status ${statusBadgeClass(mat.status)}">${escapeHtml(mat.status)}</span></span>
     <span class="modal-detail-label"><i class="fa-solid fa-cubes"></i> Cantidad</span>

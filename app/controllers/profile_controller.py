@@ -488,6 +488,9 @@ def complete_profile():
         if group_name_error:
             flash(group_name_error)
             return redirect(url_for("profile.complete_profile"))
+        if is_student and not group_name:
+            flash("El grupo es obligatorio para estudiantes.")
+            return redirect(url_for("profile.complete_profile"))
 
         if not confirm_data:
             flash("Debes confirmar que tus datos son correctos para continuar.")

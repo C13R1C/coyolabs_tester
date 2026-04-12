@@ -43,6 +43,10 @@
     color:var(--text-dim);
     font-weight:600;
   }
+  .profile-kv-item span{
+    text-align:right;
+    overflow-wrap:anywhere;
+  }
   .profile-chip{
     display:inline-flex;
     align-items:center;
@@ -94,6 +98,20 @@
   .profile-filter-form .toolbar-actions .btn,
   .profile-add-load-form .toolbar-actions .btn{
     width: 100%;
+  }
+  .profile-group-form,
+  .profile-password-form{
+    grid-template-columns: 1fr !important;
+  }
+  .profile-layout{
+    grid-template-columns: 1fr;
+  }
+  .profile-kv-item{
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .profile-kv-item span{
+    text-align:left;
   }
 }
 </style>
@@ -207,7 +225,7 @@
         <p style="margin-top:0; color:var(--text-dim);">
           Puedes actualizar tu grupo cuando cambie tu asignación académica.
         </p>
-        <form method="post" action="{{ url_for('profile.update_group_name') }}" class="toolbar" style="grid-template-columns:1fr auto;">
+        <form method="post" action="{{ url_for('profile.update_group_name') }}" class="toolbar profile-group-form" style="grid-template-columns:1fr auto;">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
           <div class="toolbar-group">
             <label>Grupo</label>
@@ -225,7 +243,7 @@
 
       <hr style="margin:16px 0; border:none; border-top:1px solid var(--stroke);">
       <div style="display:flex; flex-direction:column; gap:10px;">
-        <form id="passwordChangeForm" method="post" action="{{ url_for('profile.change_password') }}" class="toolbar" style="grid-template-columns:1fr;">
+        <form id="passwordChangeForm" method="post" action="{{ url_for('profile.change_password') }}" class="toolbar profile-password-form" style="grid-template-columns:1fr;">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
           <div class="toolbar-group">
