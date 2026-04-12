@@ -14,6 +14,7 @@ from app.models.material import Material
 from app.services.audit_service import log_event
 from app.utils.authz import min_role_required
 from app.utils.roles import ROLE_STUDENT, is_admin_role, normalize_role
+from app.utils.media import resolve_media_url
 from app.utils.text import normalize_spaces
 
 
@@ -64,24 +65,10 @@ def _save_material_image(file_storage) -> tuple[str | None, str | None]:
 def _material_image_src(material: Material | None) -> str | None:
     if not material:
         return None
-    image_url = (material.image_url or "").strip()
+    image_url = resolve_media_url(material.image_url, ensure_static_file=True)
     if image_url:
-        if image_url.startswith(("http://", "https://")):
-            return image_url
-        if image_url.startswith("/static/"):
-            rel = image_url.replace("/static/", "", 1)
-            abs_path = os.path.join(current_app.root_path, "static", rel)
-            if os.path.exists(abs_path):
-                return image_url
-    image_ref = (material.image_ref or "").strip()
-    if not image_ref:
-        return None
-    if image_ref.startswith(("http://", "https://", "/")):
-        return image_ref
-    abs_ref = os.path.join(current_app.root_path, "static", image_ref)
-    if not os.path.exists(abs_ref):
-        return None
-    return url_for("static", filename=image_ref)
+        return image_url
+    return resolve_media_url(material.image_ref, ensure_static_file=True)
 
 
 def _normalize_location(value: str | None) -> str:
