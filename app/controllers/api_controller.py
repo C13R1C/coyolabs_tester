@@ -6,6 +6,7 @@ from app.models.material import Material
 from app.models.user import User
 from app.services.audit_service import log_event
 from app.services.debt_service import user_has_open_debts
+from app.utils.media import resolve_media_url
 from app.utils.roles import role_at_least
 from app.utils.security import api_key_required
 
@@ -68,16 +69,22 @@ def material_to_dict(m: Material) -> dict:
 
 
 def ra_material_to_dict(m: Material) -> dict:
+    career_name = m.career.name if m.career else None
+    career_short = "".join(
+        token[0] for token in (career_name or "").split() if token and token[0].isalnum()
+    )[:6].upper() or None
     return {
         "id": m.id,
         "name": m.name,
-        "lab": m.lab.name if m.lab else None,
+        "career": career_name,
+        "career_short": career_short,
         "location": m.location,
         "status": m.status,
         "pieces_text": m.pieces_text,
         "pieces_qty": m.pieces_qty,
         "tutorial_url": m.tutorial_url,
         "image_ref": m.image_ref,
+        "image_url": resolve_media_url(m.image_ref, ensure_static_file=True),
         "notes": m.notes,
     }
 

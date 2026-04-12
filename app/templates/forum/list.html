@@ -62,7 +62,6 @@
           <div class="forum-post-meta">
             <strong class="forum-post-title">{{ post.title }}</strong>
             <span class="status-badge status-neutral">{{ post.category }}</span>
-            <span class="status-badge status-neutral">{{ comment_counts.get(post.id, 0) }} comentario(s)</span>
             {% if post.is_anonymous %}<span class="status-badge status-warn">ANÓNIMO</span>{% endif %}
             {% if post.is_hidden %}<span class="status-badge status-danger">OCULTA</span>{% endif %}
           </div>
@@ -84,7 +83,7 @@
             {% endif %}
           </div>
           {% endif %}
-          <div class="forum-post-meta-bottom">Autor: {{ author_label_fn(post.author, post.is_anonymous) }} · {{ format_forum_datetime(post.created_at) }}</div>
+          <div class="forum-post-meta-bottom">Autor: {{ author_label_fn(post.author, post.is_anonymous) }} · {{ format_forum_datetime(post.created_at) }} · {{ comment_counts.get(post.id, 0) }} comentario(s)</div>
         </div>
       </div>
     </a>

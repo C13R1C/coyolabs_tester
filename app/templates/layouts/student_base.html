@@ -363,6 +363,10 @@
 
           {% set is_admin_nav = current_user.is_authenticated and is_admin_role(current_user.role) %}
           {% set is_staff_only_nav = current_user.is_authenticated and (current_user.role or '')|upper == 'STAFF' %}
+          {% set current_role = (current_user.role or '')|upper %}
+          {% set can_view_inventory_nav = current_role in ['TEACHER', 'STAFF', 'ADMIN', 'SUPERADMIN'] %}
+          {% set can_view_reports_nav = current_role in ['STAFF', 'ADMIN', 'SUPERADMIN'] %}
+          {% set can_view_users_nav = current_role in ['ADMIN', 'SUPERADMIN'] %}
           {% if is_admin_nav %}
           <a href="{{ url_for('dashboard.dashboard_home') }}" class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
             <i class="ph ph-gauge nav-icon"></i>
@@ -412,7 +416,7 @@
               <i class="ph ph-clipboard-text nav-subicon"></i>
               <span>Solicitud de material</span>
             </a>
-            {% if current_user.is_authenticated and current_user.role in ["STUDENT", "TEACHER", "ADMIN", "SUPERADMIN"] %}
+            {% if current_user.is_authenticated and can_view_inventory_nav %}
             <a href="{{ url_for('inventory.inventory_list') }}" class="nav-subitem {% if active_page == 'inventory' %}active{% endif %}">
               <i class="ph ph-package nav-subicon"></i>
               <span>Inventario</span>
@@ -452,11 +456,13 @@
 
           <p class="nav-section-title">Gestión</p>
           <div class="nav-submenu nav-submenu-static">
-            {% if current_user.is_authenticated and current_user.role in ["STUDENT", "TEACHER", "ADMIN", "SUPERADMIN"] %}
+            {% if current_user.is_authenticated and can_view_reports_nav %}
             <a href="{{ url_for('reports.reports_home') }}" class="nav-subitem {% if active_page == 'reports' %}active{% endif %}">
               <i class="ph ph-chart-bar nav-subicon"></i>
               <span>Reportes</span>
             </a>
+            {% endif %}
+            {% if current_user.is_authenticated and can_view_users_nav %}
             <a href="{{ url_for('users.admin_panel') }}" class="nav-subitem {% if active_page == 'users' %}active{% endif %}">
               <i class="ph ph-users-three nav-subicon"></i>
               <span>Usuarios</span>
