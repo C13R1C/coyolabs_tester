@@ -430,7 +430,7 @@
 
           <p class="nav-section-title">Servicios</p>
           <div class="nav-submenu nav-submenu-static">
-            <a href="{% if current_user.is_authenticated and current_user.role in ["STUDENT", "TEACHER", "ADMIN", "SUPERADMIN"] %}{{ url_for('print3d.admin_list') }}{% else %}{{ url_for('print3d.my_jobs') }}{% endif %}" class="nav-subitem {% if active_page == 'prints3d' %}active{% endif %}">
+            <a href="{% if current_user.is_authenticated and is_admin_role(current_user.role) %}{{ url_for('print3d.admin_list') }}{% else %}{{ url_for('print3d.my_jobs') }}{% endif %}" class="nav-subitem {% if active_page == 'prints3d' %}active{% endif %}">
               <i class="ph ph-cube nav-subicon"></i>
               <span>Impresiones 3D</span>
             </a>
@@ -614,17 +614,42 @@
         };
         const toast = document.createElement("article");
         toast.className = `notification notification--${toastType}`;
-        toast.innerHTML = `
-          <div class="notification__progress" style="animation-duration:${duration}ms"></div>
-          <div class="notification__body">
-            <span class="notification__icon"><i class="ph ${iconByType[toastType]}"></i></span>
-            <div>
-              <div class="notification__header">${title || "Notificación"}</div>
-              <p class="notification__text">${message || ""}</p>
-            </div>
-            <button type="button" class="notification__close" aria-label="Cerrar"><i class="ph ph-x"></i></button>
-          </div>
-        `;
+        const progress = document.createElement("div");
+        progress.className = "notification__progress";
+        progress.style.animationDuration = `${duration}ms`;
+
+        const body = document.createElement("div");
+        body.className = "notification__body";
+
+        const iconWrap = document.createElement("span");
+        iconWrap.className = "notification__icon";
+        const icon = document.createElement("i");
+        icon.className = `ph ${iconByType[toastType]}`;
+        iconWrap.appendChild(icon);
+
+        const textWrap = document.createElement("div");
+        const header = document.createElement("div");
+        header.className = "notification__header";
+        header.textContent = title || "Notificación";
+        const text = document.createElement("p");
+        text.className = "notification__text";
+        text.textContent = message || "";
+        textWrap.appendChild(header);
+        textWrap.appendChild(text);
+
+        const closeBtn = document.createElement("button");
+        closeBtn.type = "button";
+        closeBtn.className = "notification__close";
+        closeBtn.setAttribute("aria-label", "Cerrar");
+        const closeIcon = document.createElement("i");
+        closeIcon.className = "ph ph-x";
+        closeBtn.appendChild(closeIcon);
+
+        body.appendChild(iconWrap);
+        body.appendChild(textWrap);
+        body.appendChild(closeBtn);
+        toast.appendChild(progress);
+        toast.appendChild(body);
         notificationContainer.appendChild(toast);
 
         let timer = null;
@@ -649,29 +674,52 @@
         startTimer();
         toast.addEventListener("mouseenter", pauseTimer);
         toast.addEventListener("mouseleave", startTimer);
-        toast.querySelector(".notification__close")?.addEventListener("click", closeToast);
+        closeBtn.addEventListener("click", closeToast);
       }
 
       function renderNotificationPanel() {
+        panelList.textContent = "";
         if (!state.items.length) {
-          panelList.innerHTML = '<div class="notification-center__empty">Sin notificaciones recientes.</div>';
+          const empty = document.createElement("div");
+          empty.className = "notification-center__empty";
+          empty.textContent = "Sin notificaciones recientes.";
+          panelList.appendChild(empty);
           return;
         }
 
-        panelList.innerHTML = "";
         state.items.slice(0, 5).forEach((n) => {
           const wrapper = document.createElement("div");
           wrapper.className = `notification-center-item ${n.is_read ? "" : "notification-center-item--unread"}`;
-          wrapper.innerHTML = `
-            <div class="notification-center-item__title">${n.title}</div>
-            <div class="notification-center-item__message">${n.message}</div>
-            <div class="notification-center-item__meta">
-              <span>${n.created_at_label || ""}</span>
-              <span style="display:flex; gap:6px;">
-                ${n.link ? `<a href="${n.link}" class="btn btn-ghost">Abrir</a>` : ""}
-              </span>
-            </div>
-          `;
+          const titleEl = document.createElement("div");
+          titleEl.className = "notification-center-item__title";
+          titleEl.textContent = n.title || "";
+
+          const messageEl = document.createElement("div");
+          messageEl.className = "notification-center-item__message";
+          messageEl.textContent = n.message || "";
+
+          const meta = document.createElement("div");
+          meta.className = "notification-center-item__meta";
+
+          const createdAt = document.createElement("span");
+          createdAt.textContent = n.created_at_label || "";
+
+          const actions = document.createElement("span");
+          actions.style.display = "flex";
+          actions.style.gap = "6px";
+          if (n.link) {
+            const link = document.createElement("a");
+            link.href = n.link;
+            link.className = "btn btn-ghost";
+            link.textContent = "Abrir";
+            actions.appendChild(link);
+          }
+
+          meta.appendChild(createdAt);
+          meta.appendChild(actions);
+          wrapper.appendChild(titleEl);
+          wrapper.appendChild(messageEl);
+          wrapper.appendChild(meta);
           panelList.appendChild(wrapper);
         });
       }
