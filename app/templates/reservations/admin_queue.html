@@ -46,6 +46,9 @@
 .signature-modal{position:fixed;inset:0;z-index:1200;align-items:center;justify-content:center}
 .signature-modal-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.72)}
 .signature-modal-content{position:relative;width:min(520px,92vw);border-radius:14px;background:#fff;padding:14px;box-shadow:0 24px 50px rgba(0,0,0,.28)}
+.signature-preview-wrap{display:flex;align-items:center;justify-content:center;min-height:220px;border-radius:10px;background:#fafafa;overflow:auto}
+.signature-preview{width:100%;max-height:72vh;object-fit:contain;border-radius:10px;border:1px solid rgba(0,0,0,.08);background:#fff}
+.signature-empty{display:none;padding:24px;color:var(--text-dim);font-weight:600}
 @media (max-width: 768px){
   #reservations-admin-queue-container .table-wrap{
     border:none;
@@ -91,6 +94,7 @@
               <th>Inicio</th>
               <th>Fin</th>
               <th>Motivo</th>
+              <th>Firma</th>
               <th class="th-actions">Acciones</th>
             </tr>
           </thead>
@@ -104,6 +108,16 @@
               <td data-label="Inicio">{{ r.start_time }}</td>
               <td data-label="Fin">{{ r.end_time }}</td>
               <td data-label="Motivo">{{ r.purpose or '-' }}</td>
+              <td data-label="Firma">
+                {% set sign_url = signature_url_map.get(r.id) if signature_url_map else None %}
+                {% if sign_url %}
+                  <button type="button" class="btn btn-ghost" onclick="openSignatureModal('{{ sign_url }}')">Ver firma</button>
+                {% elif r.signed %}
+                  <span class="status-badge status-warn">Firma no disponible</span>
+                {% else %}
+                  <span class="status-badge status-bad">Sin firma</span>
+                {% endif %}
+              </td>
               <td data-label="Acciones">
                 <form method="post" class="reservation-admin-action-form">
                   <label for="admin-note-{{ r.id }}" style="font-size:.86rem; color:var(--text-dim); font-weight:700;">
@@ -129,6 +143,20 @@
   {% include "reservations/_admin_weekly_calendar_content.html" %}
 </div>
 
+<div id="queueSignatureModal" class="signature-modal" style="display:none;" aria-hidden="true">
+  <div class="signature-modal-backdrop" onclick="closeSignatureModal()"></div>
+  <div class="signature-modal-content" role="dialog" aria-modal="true" aria-label="Firma digital">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;">
+      <h3 style="margin:0;">Firma digital</h3>
+      <button type="button" class="btn btn-ghost" onclick="closeSignatureModal()">Cerrar</button>
+    </div>
+    <div class="signature-preview-wrap">
+      <img id="queueSignaturePreview" class="signature-preview" src="" alt="Firma digital">
+      <div id="queueSignatureEmpty" class="signature-empty">Firma no disponible</div>
+    </div>
+  </div>
+</div>
+
 <div id="reservationSlotModal" class="signature-modal" aria-hidden="true" style="display:none;">
   <div class="signature-modal-backdrop" onclick="closeReservationSlotModal()"></div>
   <div class="signature-modal-content" role="dialog" aria-modal="true" aria-labelledby="reservationSlotModalTitle" style="max-width:500px;">
@@ -146,6 +174,54 @@
 </div>
 
 <script>
+let queueSignatureEscHandler = null;
+
+function openSignatureModal(url) {
+  const modal = document.getElementById("queueSignatureModal");
+  const img = document.getElementById("queueSignaturePreview");
+  const empty = document.getElementById("queueSignatureEmpty");
+  if (!modal || !img || !empty) return;
+  img.style.display = "none";
+  empty.style.display = "none";
+  img.src = "";
+  img.onload = () => {
+    img.style.display = "block";
+    empty.style.display = "none";
+  };
+  img.onerror = () => {
+    img.style.display = "none";
+    empty.style.display = "block";
+  };
+  img.src = url || "";
+  modal.style.display = "flex";
+  modal.setAttribute("aria-hidden", "false");
+  document.body.classList.add("modal-open");
+  document.body.style.overflow = "hidden";
+
+  queueSignatureEscHandler = (event) => {
+    if (event.key === "Escape") closeSignatureModal();
+  };
+  document.addEventListener("keydown", queueSignatureEscHandler);
+}
+
+function closeSignatureModal() {
+  const modal = document.getElementById("queueSignatureModal");
+  const img = document.getElementById("queueSignaturePreview");
+  const empty = document.getElementById("queueSignatureEmpty");
+  if (!modal || !img || !empty) return;
+  modal.style.display = "none";
+  modal.setAttribute("aria-hidden", "true");
+  img.src = "";
+  img.style.display = "none";
+  empty.style.display = "none";
+  document.body.classList.remove("modal-open");
+  document.body.style.overflow = "";
+  if (queueSignatureEscHandler) {
+    document.removeEventListener("keydown", queueSignatureEscHandler);
+    queueSignatureEscHandler = null;
+  }
+}
+
 function openReservationSlotModal(data) {
   const modal = document.getElementById('reservationSlotModal');
   if (!modal) return;

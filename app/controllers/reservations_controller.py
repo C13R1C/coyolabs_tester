@@ -49,6 +49,7 @@ from app.utils.statuses import (
     is_lab_ticket_closure_requested,
 )
 from app.utils.validators import normalize_and_validate_group_code
+from app.utils.media import resolve_media_url
 from app.constants import ROOMS
 from app.utils.text import lab_room_code_variants, normalize_lab_room_code
 
@@ -157,17 +158,7 @@ def _save_signature_image(signature_data_url: str) -> tuple[str | None, str | No
 
 
 def _signature_asset_url(signature_ref: str | None) -> str | None:
-    value = (signature_ref or "").strip()
-    if not value:
-        return None
-    if value.startswith(("http://", "https://", "/")):
-        return value
-    if value.startswith("static/"):
-        return f"/{value}"
-    abs_path = os.path.join(current_app.root_path, "static", value)
-    if not os.path.exists(abs_path):
-        return None
-    return url_for("static", filename=value)
+    return resolve_media_url(signature_ref, ensure_static_file=True)
 
 
 def parse_date(value: str):
@@ -732,8 +723,10 @@ def admin_queue():
         .order_by(Reservation.created_at.asc())
         .all()
     )
+    signature_url_map = {r.id: _signature_asset_url(getattr(r, "signature_ref", None)) for r in pending}
     base_context = dict(
         reservations=pending,
+        signature_url_map=signature_url_map,
         week_days=week_days,
         week_start=week_start,
         week_end=week_end,
