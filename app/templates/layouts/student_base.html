@@ -347,7 +347,7 @@
             <header class="notification-center__header">
               <strong>Notificaciones</strong>
               <div class="notification-center__header-actions">
-                <button id="pushEnableBtn" type="button" class="notification-center__action-btn">Activar notificaciones</button>
+                <button id="pushEnableBtn" data-push-enable-btn type="button" class="notification-center__action-btn">Activar notificaciones</button>
                 <button id="notifMarkAllBtn" type="button" class="notification-center__action-btn">Marcar todo leído</button>
                 <button id="notifClearReadBtn" type="button" class="notification-center__action-btn">Limpiar leídas</button>
                 <a href="{{ url_for('notifications.list_notifications') }}" class="btn btn-ghost">Ver todo</a>
@@ -578,7 +578,7 @@
       const panelList = document.getElementById("notificationPanelList");
       const center = document.getElementById("notificationCenter");
       const logoToggle = document.getElementById("logoNotificationToggle");
-      const pushEnableBtn = document.getElementById("pushEnableBtn");
+      const pushEnableButtons = Array.from(document.querySelectorAll("[data-push-enable-btn]"));
       const markAllBtn = document.getElementById("notifMarkAllBtn");
       const clearReadBtn = document.getElementById("notifClearReadBtn");
       const csrfToken = "{{ csrf_token }}";
@@ -741,25 +741,40 @@
       }
 
       function setPushButtonState(state) {
-        if (!pushEnableBtn) return;
-        pushEnableBtn.dataset.state = state;
+        if (!pushEnableButtons.length) return;
+        const setLabel = (btn, label) => {
+          const textNode = btn.querySelector("span");
+          if (textNode) textNode.textContent = label;
+          else btn.textContent = label;
+        };
+        pushEnableButtons.forEach((btn) => {
+          btn.dataset.state = state;
+        });
         if (state === "active") {
-          pushEnableBtn.textContent = "Notificaciones activas";
-          pushEnableBtn.disabled = false;
+          pushEnableButtons.forEach((btn) => {
+            setLabel(btn, "Notificaciones activas");
+            btn.disabled = false;
+          });
           return;
         }
         if (state === "blocked") {
-          pushEnableBtn.textContent = "Permiso bloqueado";
-          pushEnableBtn.disabled = true;
+          pushEnableButtons.forEach((btn) => {
+            setLabel(btn, "Permiso bloqueado");
+            btn.disabled = true;
+          });
           return;
         }
         if (state === "unsupported") {
-          pushEnableBtn.textContent = "Push no disponible";
-          pushEnableBtn.disabled = true;
+          pushEnableButtons.forEach((btn) => {
+            setLabel(btn, "No compatible");
+            btn.disabled = true;
+          });
           return;
         }
-        pushEnableBtn.textContent = "Activar notificaciones";
-        pushEnableBtn.disabled = false;
+        pushEnableButtons.forEach((btn) => {
+          setLabel(btn, "Activar notificaciones");
+          btn.disabled = false;
+        });
       }
 
       async function unsubscribeCurrentSubscription() {
@@ -782,7 +797,7 @@
       }
 
       async function syncPushButtonState() {
-        if (!pushEnableBtn) return;
+        if (!pushEnableButtons.length) return;
         if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
           setPushButtonState("unsupported");
           return;
@@ -804,14 +819,14 @@
       }
 
       async function enableWebPush() {
-        if (!pushEnableBtn) return;
+        if (!pushEnableButtons.length) return;
         if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
           setPushButtonState("unsupported");
           createNotification({ title: "Push no disponible", message: "Tu navegador no soporta notificaciones push.", type: "warning" });
           return;
         }
 
-        if (pushEnableBtn.dataset.state === "active") {
+        if (pushEnableButtons[0].dataset.state === "active") {
           try {
             await unsubscribeCurrentSubscription();
             createNotification({ title: "Notificaciones desactivadas", message: "La suscripción push fue eliminada.", type: "info" });
@@ -828,7 +843,7 @@
           return;
         }
 
-        pushEnableBtn.disabled = true;
+        pushEnableButtons.forEach((btn) => { btn.disabled = true; });
         try {
           const permission = await Notification.requestPermission();
           if (permission !== "granted") {
@@ -872,7 +887,7 @@
           createNotification({ title: "Error de activación", message: "No fue posible activar notificaciones push.", type: "error" });
           setPushButtonState("idle");
         } finally {
-          pushEnableBtn.disabled = false;
+          pushEnableButtons.forEach((btn) => { btn.disabled = false; });
         }
       }
 
@@ -1115,9 +1130,11 @@
       });
 
       loadInitialFeed();
-      if (pushEnableBtn) {
+      if (pushEnableButtons.length) {
         syncPushButtonState().catch(() => setPushButtonState("idle"));
-        pushEnableBtn.addEventListener("click", enableWebPush);
+        pushEnableButtons.forEach((btn) => {
+          btn.addEventListener("click", enableWebPush);
+        });
         if ("serviceWorker" in navigator) {
           navigator.serviceWorker.addEventListener("message", (event) => {
             if (event?.data?.type === "PUSH_SUBSCRIPTION_CHANGED") {
