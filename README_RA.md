@@ -1,12 +1,8 @@
 # Integración Realidad Aumentada (RA) - Backend API
 
-## Seguridad (API Key)
-Todas las llamadas RA requieren header:
-
-- Header: `X-API-Key: <RA_API_KEY>`
-
-La clave se define en `.env`:
-- `RA_API_KEY=...`
+## Seguridad (Sesión)
+Las llamadas RA en esta app usan sesión autenticada (cookie same-origin).
+No se debe enviar `X-API-Key` desde el cliente web.
 
 ## Base URL (local)
 - `http://127.0.0.1:5000`
@@ -20,9 +16,7 @@ La clave se define en `.env`:
 
 ### Ejemplo (PowerShell)
 ```powershell
-$API_KEY = "TU_RA_API_KEY"
-
 Invoke-RestMethod `
   -Uri "http://127.0.0.1:5000/api/ra/materials/1" `
   -Method Get `
-  -Headers @{ "X-API-Key" = $API_KEY }
+  -WebSession $session

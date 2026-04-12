@@ -347,6 +347,7 @@
             <header class="notification-center__header">
               <strong>Notificaciones</strong>
               <div class="notification-center__header-actions">
+                <button id="pushEnableBtn" type="button" class="notification-center__action-btn">Activar notificaciones</button>
                 <button id="notifMarkAllBtn" type="button" class="notification-center__action-btn">Marcar todo leído</button>
                 <button id="notifClearReadBtn" type="button" class="notification-center__action-btn">Limpiar leídas</button>
                 <a href="{{ url_for('notifications.list_notifications') }}" class="btn btn-ghost">Ver todo</a>
@@ -430,7 +431,7 @@
 
           <p class="nav-section-title">Servicios</p>
           <div class="nav-submenu nav-submenu-static">
-            <a href="{% if current_user.is_authenticated and current_user.role in ["STUDENT", "TEACHER", "ADMIN", "SUPERADMIN"] %}{{ url_for('print3d.admin_list') }}{% else %}{{ url_for('print3d.my_jobs') }}{% endif %}" class="nav-subitem {% if active_page == 'prints3d' %}active{% endif %}">
+            <a href="{% if current_user.is_authenticated and is_admin_role(current_user.role) %}{{ url_for('print3d.admin_list') }}{% else %}{{ url_for('print3d.my_jobs') }}{% endif %}" class="nav-subitem {% if active_page == 'prints3d' %}active{% endif %}">
               <i class="ph ph-cube nav-subicon"></i>
               <span>Impresiones 3D</span>
             </a>
@@ -577,6 +578,7 @@
       const panelList = document.getElementById("notificationPanelList");
       const center = document.getElementById("notificationCenter");
       const logoToggle = document.getElementById("logoNotificationToggle");
+      const pushEnableBtn = document.getElementById("pushEnableBtn");
       const markAllBtn = document.getElementById("notifMarkAllBtn");
       const clearReadBtn = document.getElementById("notifClearReadBtn");
       const csrfToken = "{{ csrf_token }}";
@@ -614,17 +616,42 @@
         };
         const toast = document.createElement("article");
         toast.className = `notification notification--${toastType}`;
-        toast.innerHTML = `
-          <div class="notification__progress" style="animation-duration:${duration}ms"></div>
-          <div class="notification__body">
-            <span class="notification__icon"><i class="ph ${iconByType[toastType]}"></i></span>
-            <div>
-              <div class="notification__header">${title || "Notificación"}</div>
-              <p class="notification__text">${message || ""}</p>
-            </div>
-            <button type="button" class="notification__close" aria-label="Cerrar"><i class="ph ph-x"></i></button>
-          </div>
-        `;
+        const progress = document.createElement("div");
+        progress.className = "notification__progress";
+        progress.style.animationDuration = `${duration}ms`;
+
+        const body = document.createElement("div");
+        body.className = "notification__body";
+
+        const iconWrap = document.createElement("span");
+        iconWrap.className = "notification__icon";
+        const icon = document.createElement("i");
+        icon.className = `ph ${iconByType[toastType]}`;
+        iconWrap.appendChild(icon);
+
+        const textWrap = document.createElement("div");
+        const header = document.createElement("div");
+        header.className = "notification__header";
+        header.textContent = title || "Notificación";
+        const text = document.createElement("p");
+        text.className = "notification__text";
+        text.textContent = message || "";
+        textWrap.appendChild(header);
+        textWrap.appendChild(text);
+
+        const closeBtn = document.createElement("button");
+        closeBtn.type = "button";
+        closeBtn.className = "notification__close";
+        closeBtn.setAttribute("aria-label", "Cerrar");
+        const closeIcon = document.createElement("i");
+        closeIcon.className = "ph ph-x";
+        closeBtn.appendChild(closeIcon);
+
+        body.appendChild(iconWrap);
+        body.appendChild(textWrap);
+        body.appendChild(closeBtn);
+        toast.appendChild(progress);
+        toast.appendChild(body);
         notificationContainer.appendChild(toast);
 
         let timer = null;
@@ -649,29 +676,52 @@
         startTimer();
         toast.addEventListener("mouseenter", pauseTimer);
         toast.addEventListener("mouseleave", startTimer);
-        toast.querySelector(".notification__close")?.addEventListener("click", closeToast);
+        closeBtn.addEventListener("click", closeToast);
       }
 
       function renderNotificationPanel() {
+        panelList.textContent = "";
         if (!state.items.length) {
-          panelList.innerHTML = '<div class="notification-center__empty">Sin notificaciones recientes.</div>';
+          const empty = document.createElement("div");
+          empty.className = "notification-center__empty";
+          empty.textContent = "Sin notificaciones recientes.";
+          panelList.appendChild(empty);
           return;
         }
 
-        panelList.innerHTML = "";
         state.items.slice(0, 5).forEach((n) => {
           const wrapper = document.createElement("div");
           wrapper.className = `notification-center-item ${n.is_read ? "" : "notification-center-item--unread"}`;
-          wrapper.innerHTML = `
-            <div class="notification-center-item__title">${n.title}</div>
-            <div class="notification-center-item__message">${n.message}</div>
-            <div class="notification-center-item__meta">
-              <span>${n.created_at_label || ""}</span>
-              <span style="display:flex; gap:6px;">
-                ${n.link ? `<a href="${n.link}" class="btn btn-ghost">Abrir</a>` : ""}
-              </span>
-            </div>
-          `;
+          const titleEl = document.createElement("div");
+          titleEl.className = "notification-center-item__title";
+          titleEl.textContent = n.title || "";
+
+          const messageEl = document.createElement("div");
+          messageEl.className = "notification-center-item__message";
+          messageEl.textContent = n.message || "";
+
+          const meta = document.createElement("div");
+          meta.className = "notification-center-item__meta";
+
+          const createdAt = document.createElement("span");
+          createdAt.textContent = n.created_at_label || "";
+
+          const actions = document.createElement("span");
+          actions.style.display = "flex";
+          actions.style.gap = "6px";
+          if (n.link) {
+            const link = document.createElement("a");
+            link.href = n.link;
+            link.className = "btn btn-ghost";
+            link.textContent = "Abrir";
+            actions.appendChild(link);
+          }
+
+          meta.appendChild(createdAt);
+          meta.appendChild(actions);
+          wrapper.appendChild(titleEl);
+          wrapper.appendChild(messageEl);
+          wrapper.appendChild(meta);
           panelList.appendChild(wrapper);
         });
       }
@@ -681,6 +731,149 @@
         if (idx >= 0) state.items[idx] = payload;
         else state.items.unshift(payload);
         state.items = state.items.slice(0, 20);
+      }
+
+      function urlBase64ToUint8Array(base64String) {
+        const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+        const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+        const rawData = window.atob(base64);
+        return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)));
+      }
+
+      function setPushButtonState(state) {
+        if (!pushEnableBtn) return;
+        pushEnableBtn.dataset.state = state;
+        if (state === "active") {
+          pushEnableBtn.textContent = "Notificaciones activas";
+          pushEnableBtn.disabled = false;
+          return;
+        }
+        if (state === "blocked") {
+          pushEnableBtn.textContent = "Permiso bloqueado";
+          pushEnableBtn.disabled = true;
+          return;
+        }
+        if (state === "unsupported") {
+          pushEnableBtn.textContent = "Push no disponible";
+          pushEnableBtn.disabled = true;
+          return;
+        }
+        pushEnableBtn.textContent = "Activar notificaciones";
+        pushEnableBtn.disabled = false;
+      }
+
+      async function unsubscribeCurrentSubscription() {
+        if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+        const registration = await navigator.serviceWorker.getRegistration("{{ url_for('static', filename='sw.js') }}");
+        if (!registration) return;
+        const existingSub = await registration.pushManager.getSubscription();
+        if (!existingSub) return;
+
+        await fetch("{{ url_for('notifications.push_unsubscribe') }}", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": csrfToken,
+          },
+          body: JSON.stringify({ endpoint: existingSub.endpoint }),
+        });
+        await existingSub.unsubscribe();
+      }
+
+      async function syncPushButtonState() {
+        if (!pushEnableBtn) return;
+        if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
+          setPushButtonState("unsupported");
+          return;
+        }
+
+        if (Notification.permission === "denied") {
+          try { await unsubscribeCurrentSubscription(); } catch (_) {}
+          setPushButtonState("blocked");
+          return;
+        }
+
+        const registration = await navigator.serviceWorker.getRegistration("{{ url_for('static', filename='sw.js') }}");
+        const existingSub = registration ? await registration.pushManager.getSubscription() : null;
+        if (existingSub && Notification.permission === "granted") {
+          setPushButtonState("active");
+          return;
+        }
+        setPushButtonState("idle");
+      }
+
+      async function enableWebPush() {
+        if (!pushEnableBtn) return;
+        if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
+          setPushButtonState("unsupported");
+          createNotification({ title: "Push no disponible", message: "Tu navegador no soporta notificaciones push.", type: "warning" });
+          return;
+        }
+
+        if (pushEnableBtn.dataset.state === "active") {
+          try {
+            await unsubscribeCurrentSubscription();
+            createNotification({ title: "Notificaciones desactivadas", message: "La suscripción push fue eliminada.", type: "info" });
+            setPushButtonState("idle");
+          } catch (_) {
+            createNotification({ title: "Error", message: "No se pudo desactivar la suscripción push.", type: "error" });
+          }
+          return;
+        }
+
+        if (Notification.permission === "denied") {
+          setPushButtonState("blocked");
+          createNotification({ title: "Permiso bloqueado", message: "Habilita notificaciones en la configuración del navegador.", type: "warning" });
+          return;
+        }
+
+        pushEnableBtn.disabled = true;
+        try {
+          const permission = await Notification.requestPermission();
+          if (permission !== "granted") {
+            setPushButtonState(permission === "denied" ? "blocked" : "idle");
+            createNotification({ title: "Permiso denegado", message: "No se activaron notificaciones push.", type: "warning" });
+            return;
+          }
+
+          const keyResp = await fetch("{{ url_for('notifications.push_public_key') }}", { credentials: "same-origin" });
+          const keyData = await keyResp.json();
+          if (!keyResp.ok || !keyData.ok || !keyData.public_key) {
+            createNotification({ title: "Push no configurado", message: "No fue posible activar notificaciones push.", type: "warning" });
+            return;
+          }
+
+          const registration = await navigator.serviceWorker.register("{{ url_for('static', filename='sw.js') }}");
+          const existingSub = await registration.pushManager.getSubscription();
+          const subscription = existingSub || await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(keyData.public_key),
+          });
+
+          const subscribeResp = await fetch("{{ url_for('notifications.push_subscribe') }}", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRFToken": csrfToken,
+            },
+            body: JSON.stringify(subscription.toJSON()),
+          });
+          const subscribeData = await subscribeResp.json();
+          if (!subscribeResp.ok || !subscribeData.ok) {
+            createNotification({ title: "Error de activación", message: "No se pudo guardar la suscripción push.", type: "error" });
+            return;
+          }
+
+          createNotification({ title: "Notificaciones activadas", message: "Ahora recibirás notificaciones push del sistema.", type: "success" });
+          setPushButtonState("active");
+        } catch (_) {
+          createNotification({ title: "Error de activación", message: "No fue posible activar notificaciones push.", type: "error" });
+          setPushButtonState("idle");
+        } finally {
+          pushEnableBtn.disabled = false;
+        }
       }
 
       async function loadInitialFeed() {
@@ -922,6 +1115,17 @@
       });
 
       loadInitialFeed();
+      if (pushEnableBtn) {
+        syncPushButtonState().catch(() => setPushButtonState("idle"));
+        pushEnableBtn.addEventListener("click", enableWebPush);
+        if ("serviceWorker" in navigator) {
+          navigator.serviceWorker.addEventListener("message", (event) => {
+            if (event?.data?.type === "PUSH_SUBSCRIPTION_CHANGED") {
+              syncPushButtonState().catch(() => setPushButtonState("idle"));
+            }
+          });
+        }
+      }
       connectSSE();
     })();
   </script>

@@ -824,8 +824,8 @@ html { font-size: 15px; }
           <input type="text" id="cfgBaseUrl" value="{{ ra_api_base_url }}">
         </div>
         <div class="input-group">
-          <label>API Key</label>
-          <input type="text" id="cfgApiKey" value="{{ ra_api_key }}">
+          <label>Sesion</label>
+          <input type="text" value="Autenticada por cookie" readonly>
         </div>
         <div class="input-group">
           <label>User Email</label>
@@ -895,7 +895,6 @@ html { font-size: 15px; }
 
 {% if not can_view_ra_tools %}
 <input type="hidden" id="cfgBaseUrl" value="{{ ra_api_base_url }}">
-<input type="hidden" id="cfgApiKey" value="{{ ra_api_key }}">
 <input type="hidden" id="cfgEmail" value="{{ ra_user_email }}">
 {% endif %}
 
@@ -938,7 +937,6 @@ function escapeHtml(str) {
 function readRuntimeConfig() {
   return {
     raApiBaseUrl: document.getElementById('cfgBaseUrl').value,
-    raApiKey: document.getElementById('cfgApiKey').value,
     raUserEmail: document.getElementById('cfgEmail').value
   };
 }
@@ -1139,16 +1137,13 @@ function onScanFailure() {
    GET MATERIAL (API real)
    ============================================================ */
 async function getMaterial(materialId) {
-  const { raApiBaseUrl, raApiKey, raUserEmail } = readRuntimeConfig();
+  const { raApiBaseUrl, raUserEmail } = readRuntimeConfig();
   const url = `${raApiBaseUrl}/materials/${materialId}?user_email=${encodeURIComponent(raUserEmail)}`;
   logConsole('GET', `Request enviado: GET ${url}`);
 
   try {
     const response = await fetch(url, {
       method: 'GET',
-      headers: {
-        'X-API-Key': raApiKey
-      },
       credentials: 'same-origin'
     });
     const data = await response.json();
@@ -1184,7 +1179,7 @@ async function postEvent(materialId) {
     return;
   }
 
-  const { raApiBaseUrl, raApiKey, raUserEmail } = readRuntimeConfig();
+  const { raApiBaseUrl, raUserEmail } = readRuntimeConfig();
   const payload = {
     material_id: mid,
     event_type: 'scan',
@@ -1197,8 +1192,7 @@ async function postEvent(materialId) {
     const response = await fetch(`${raApiBaseUrl}/events`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'X-API-Key': raApiKey
+        'Content-Type': 'application/json'
       },
       credentials: 'same-origin',
       body: JSON.stringify(payload)
