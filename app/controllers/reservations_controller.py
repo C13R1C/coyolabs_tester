@@ -29,7 +29,7 @@ from app.services.notification_service import (
     notify_roles,
     publish_notifications_safe,
 )
-from app.services.reservation_service import approve_reservation, reject_reservation
+from app.services.reservation_service import approve_reservation, reject_reservation, expire_unapproved_reservations
 from app.services.ticket_service import (
     add_material_to_ticket,
     apply_ticket_item_status,
@@ -365,6 +365,8 @@ def reservations_home():
 @reservations_bp.route("/my", methods=["GET"])
 @min_role_required("STUDENT")
 def my_reservations():
+    expire_unapproved_reservations()
+
     reservations = (
         Reservation.query
         .options(
@@ -420,6 +422,8 @@ def my_ticket_request_close(ticket_id: int):
 @reservations_bp.route("/request", methods=["GET", "POST"])
 @min_role_required("STUDENT")
 def request_reservation():
+    expire_unapproved_reservations()
+
     if user_has_open_debts(current_user.id):
         flash("Tienes un adeudo activo. No puedes solicitar reservas.", "error")
         return redirect(url_for("reservations.my_reservations"))
@@ -688,6 +692,8 @@ def request_reservation():
 @reservations_bp.route("/admin", methods=["GET"])
 @min_role_required("ADMIN")
 def admin_queue():
+    expire_unapproved_reservations()
+
     week_start_s = (request.args.get("week_start") or "").strip()
     calendar_room = (request.args.get("calendar_room") or "").strip()
     calendar_building = (request.args.get("calendar_building") or "").strip().upper()

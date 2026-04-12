@@ -7,6 +7,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.utils.authz import min_role_required
 from app.extensions import db
 from app.models.notification import Notification
+from app.models.push_subscription import PushSubscription
 from app.services.audit_service import log_event
 from app.services.notification_realtime_service import (
     get_unread_count,
@@ -15,6 +16,7 @@ from app.services.notification_realtime_service import (
     notification_to_dict,
     sse_pack,
 )
+from app.services.push_service import get_vapid_public_key
 
 notifications_bp = Blueprint("notifications", __name__, url_prefix="/notifications")
 
@@ -183,3 +185,75 @@ def clear_read():
         "deleted": int(deleted_rows or 0),
         "unread_count": unread_count,
     })
+
+
+@notifications_bp.route("/push/public-key", methods=["GET"], strict_slashes=False)
+@min_role_required("STUDENT")
+def push_public_key():
+    key = get_vapid_public_key()
+    if not key:
+        return jsonify({"ok": False, "error": "Push no configurado."}), 404
+    return jsonify({"ok": True, "public_key": key})
+
+
+@notifications_bp.route("/push/subscribe", methods=["POST"], strict_slashes=False)
+@min_role_required("STUDENT")
+def push_subscribe():
+    data = request.get_json(silent=True) or {}
+    endpoint = (data.get("endpoint") or "").strip()
+    keys = data.get("keys") or {}
+    p256dh = (keys.get("p256dh") or "").strip()
+    auth = (keys.get("auth") or "").strip()
+
+    if not endpoint or not p256dh or not auth:
+        return jsonify({"ok": False, "error": "Suscripción inválida."}), 400
+
+    (
+        PushSubscription.query
+        .filter(PushSubscription.endpoint == endpoint, PushSubscription.user_id != current_user.id)
+        .update({PushSubscription.is_active: False}, synchronize_session=False)
+    )
+
+    existing = (
+        PushSubscription.query
+        .filter(PushSubscription.user_id == current_user.id, PushSubscription.endpoint == endpoint)
+        .first()
+    )
+    if existing:
+        existing.p256dh = p256dh
+        existing.auth = auth
+        existing.user_agent = (request.headers.get("User-Agent") or "")[:255] or None
+        existing.is_active = True
+    else:
+        existing = PushSubscription(
+            user_id=current_user.id,
+            endpoint=endpoint,
+            p256dh=p256dh,
+            auth=auth,
+            user_agent=(request.headers.get("User-Agent") or "")[:255] or None,
+            is_active=True,
+        )
+        db.session.add(existing)
+
+    db.session.commit()
+    return jsonify({"ok": True})
+
+
+@notifications_bp.route("/push/unsubscribe", methods=["POST"], strict_slashes=False)
+@min_role_required("STUDENT")
+def push_unsubscribe():
+    data = request.get_json(silent=True) or {}
+    endpoint = (data.get("endpoint") or "").strip()
+    if not endpoint:
+        return jsonify({"ok": False, "error": "Endpoint requerido."}), 400
+
+    sub = (
+        PushSubscription.query
+        .filter(PushSubscription.user_id == current_user.id, PushSubscription.endpoint == endpoint)
+        .first()
+    )
+    if sub:
+        sub.is_active = False
+        db.session.commit()
+
+    return jsonify({"ok": True})

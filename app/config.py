@@ -29,6 +29,9 @@ class Config:
     ).strip().rstrip("/")
 
     RA_API_KEY = (os.getenv("RA_API_KEY") or "dev-ra-key-cambia-esto").strip()
+    VAPID_PUBLIC_KEY = (os.getenv("VAPID_PUBLIC_KEY") or "").strip()
+    VAPID_PRIVATE_KEY = (os.getenv("VAPID_PRIVATE_KEY") or "").strip()
+    VAPID_CLAIMS_SUBJECT = (os.getenv("VAPID_CLAIMS_SUBJECT") or "mailto:admin@coyolabs.local").strip()
 
     _INSECURE_DEFAULTS = {
         "SECRET_KEY": "dev-secret",
