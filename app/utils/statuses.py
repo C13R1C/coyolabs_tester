@@ -5,6 +5,8 @@ class ReservationStatus:
     PENDING = "PENDING"
     APPROVED = "APPROVED"
     REJECTED = "REJECTED"
+    CANCELED = "CANCELLED"
+    CANCELLED = CANCELED
 
 
 class LabTicketStatus:

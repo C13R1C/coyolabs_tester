@@ -1,3 +1,6 @@
 .env
 __pycache__/
 *.pyc
+
+# Sensitive database dumps
+sqldump/*.sql
