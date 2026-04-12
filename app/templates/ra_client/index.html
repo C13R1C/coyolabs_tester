@@ -1074,6 +1074,20 @@ function updateLastResult(mat) {
   `;
 }
 
+function showBlockedResult(message) {
+  document.getElementById('resultEmpty').style.display = 'none';
+  const content = document.getElementById('resultContent');
+  content.classList.add('visible');
+  document.getElementById('resultName').textContent = 'NO TIENES PERMITIDO ESE MATERIAL';
+  document.getElementById('resultFields').innerHTML = `
+    <div class="result-row">
+      <i class="fa-solid fa-ban"></i>
+      <span class="label">Acceso</span>
+      <span class="value">${escapeHtml(message || 'No tienes permitido usar este material porque no pertenece a tu carrera.')}</span>
+    </div>
+  `;
+}
+
 /* ============================================================
    MODAL
    ============================================================ */
@@ -1148,6 +1162,17 @@ async function getMaterial(materialId) {
     });
     const data = await response.json();
     logConsole('GET', `Response recibida: ${response.status} ${JSON.stringify(data)}`);
+
+    if (response.status === 403) {
+      const blockedMessage = data.error || 'No tienes permitido usar este material porque no pertenece a tu carrera.';
+      lastDetectedMaterial = null;
+      closeOverlay();
+      updateStatus('error', 'Acceso denegado');
+      showBlockedResult(blockedMessage);
+      logConsole('WARN', `Acceso denegado por backend: ${blockedMessage}`);
+      showToast('NO TIENES PERMITIDO ESE MATERIAL', 'error');
+      return;
+    }
 
     if (!response.ok || !data.ok || !data.material) {
       throw new Error(data.error || `Error ${response.status} al consultar material`);

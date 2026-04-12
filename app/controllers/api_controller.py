@@ -7,7 +7,7 @@ from app.models.user import User
 from app.services.audit_service import log_event
 from app.services.debt_service import user_has_open_debts
 from app.utils.media import resolve_media_url
-from app.utils.roles import role_at_least
+from app.utils.roles import ROLE_STUDENT, normalize_role, role_at_least
 from app.utils.security import api_key_required
 
 api_bp = Blueprint("api", __name__, url_prefix="/api")
@@ -46,6 +46,21 @@ def _resolve_ra_user(raw_email: str | None) -> tuple[User | None, tuple[dict, in
 
     user = User.query.filter_by(email=user_email).first()
     return _validate_ra_user(user)
+
+
+def _can_user_access_ra_material(user: User, material: Material) -> tuple[bool, str | None]:
+    # Reutiliza la misma regla aplicada en Solicitud de material:
+    # el alumno sólo usa materiales de su propia carrera.
+    if normalize_role(user.role) != ROLE_STUDENT:
+        return True, None
+
+    if material.career_id != user.career_id:
+        return (
+            False,
+            "No tienes permitido usar este material porque no pertenece a tu carrera.",
+        )
+
+    return True, None
 
 
 def material_to_dict(m: Material) -> dict:
@@ -135,6 +150,10 @@ def ra_get_material(material_id: int):
     if not m:
         return jsonify({"error": "Material no encontrado"}), 404
 
+    is_allowed, access_error = _can_user_access_ra_material(user, m)
+    if not is_allowed:
+        return jsonify({"error": access_error}), 403
+
     return jsonify({"ok": True, "material": ra_material_to_dict(m)}), 200
 
 
@@ -157,6 +176,9 @@ def ra_event():
         m = Material.query.get(material_id)
         if not m:
             return jsonify({"error": "material_id no existe"}), 400
+        is_allowed, access_error = _can_user_access_ra_material(user, m)
+        if not is_allowed:
+            return jsonify({"error": access_error}), 403
 
     current_app.logger.info("RA EVENT %s material %s", event_type, material_id)
 
