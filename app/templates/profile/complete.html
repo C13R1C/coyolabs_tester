@@ -380,9 +380,9 @@
 
             <div class="field field-full">
               <label for="career_id">
-                {% if is_professor %}Área académica / Carrera{% else %}Carrera *{% endif %}
+                {% if is_professor %}Área académica / Carrera *{% else %}Carrera *{% endif %}
               </label>
-              <select id="career_id" name="career_id" {% if is_student %}required{% endif %}>
+              <select id="career_id" name="career_id" required>
                 <option value="">
                   {% if is_professor %}Selecciona un área o carrera{% else %}Selecciona una carrera{% endif %}
                 </option>
@@ -413,6 +413,7 @@
                 name="group_name"
                 placeholder="Ej. MTMXX / TRM51 / etc."
                 maxlength="80"
+                required
               >
             </div>
             {% endif %}

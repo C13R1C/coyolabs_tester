@@ -46,6 +46,9 @@
 {% if is_superadmin %}
 <section class="table-card">
   <h3 style="margin-top:0;">Cambios de rol</h3>
+  {% if is_root_superadmin %}
+  <p class="text-dim" style="margin:6px 0 0 0;">Como SUPERADMIN padre, puedes promover usuarios al rol SUPERADMIN cuando sea necesario.</p>
+  {% endif %}
   <form method="post" class="toolbar" style="grid-template-columns: 1fr 1fr auto; margin-top:12px;">
     <input type="hidden" name="action" value="change_role">
     <div class="toolbar-group" style="position:relative;">
@@ -58,7 +61,7 @@
       <div id="roleUserAutocomplete" class="autocomplete-list" style="position:absolute; top:100%; left:0; right:0; z-index:30; background:#fff; border:1px solid rgba(0,0,0,.08); border-radius:10px; margin-top:6px; max-height:220px; overflow:auto;"></div>
     </div>
     <div class="toolbar-group"><label>Nuevo rol</label><div class="select-wrap"><select name="role" required>
-      <option value="STUDENT">Estudiante</option><option value="TEACHER">Profesor</option><option value="STAFF">Staff</option><option value="ADMIN">Administrador</option>
+      <option value="STUDENT">Estudiante</option><option value="TEACHER">Profesor</option><option value="STAFF">Staff</option><option value="ADMIN">Administrador</option>{% if is_root_superadmin %}<option value="SUPERADMIN">Superadministrador</option>{% endif %}
     </select><i class="ph ph-caret-down select-arrow"></i></div></div>
     <div class="toolbar-actions" style="align-self:end;"><button type="submit" class="btn btn-gold">Cambiar rol</button></div>
   </form>
