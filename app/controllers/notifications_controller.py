@@ -187,7 +187,7 @@ def clear_read():
     })
 
 
-@notifications_bp.route("/push/public-key", methods=["GET"])
+@notifications_bp.route("/push/public-key", methods=["GET"], strict_slashes=False)
 @min_role_required("STUDENT")
 def push_public_key():
     key = get_vapid_public_key()
@@ -196,7 +196,7 @@ def push_public_key():
     return jsonify({"ok": True, "public_key": key})
 
 
-@notifications_bp.route("/push/subscribe", methods=["POST"])
+@notifications_bp.route("/push/subscribe", methods=["POST"], strict_slashes=False)
 @min_role_required("STUDENT")
 def push_subscribe():
     data = request.get_json(silent=True) or {}
@@ -239,7 +239,7 @@ def push_subscribe():
     return jsonify({"ok": True})
 
 
-@notifications_bp.route("/push/unsubscribe", methods=["POST"])
+@notifications_bp.route("/push/unsubscribe", methods=["POST"], strict_slashes=False)
 @min_role_required("STUDENT")
 def push_unsubscribe():
     data = request.get_json(silent=True) or {}
