@@ -6,6 +6,7 @@ from app.models.material import Material
 from app.models.user import User
 from app.services.audit_service import log_event
 from app.services.debt_service import user_has_open_debts
+from app.utils.media import resolve_media_url
 from app.utils.roles import role_at_least
 from app.utils.security import api_key_required
 
@@ -83,6 +84,7 @@ def ra_material_to_dict(m: Material) -> dict:
         "pieces_qty": m.pieces_qty,
         "tutorial_url": m.tutorial_url,
         "image_ref": m.image_ref,
+        "image_url": resolve_media_url(m.image_ref, ensure_static_file=True),
         "notes": m.notes,
     }
 

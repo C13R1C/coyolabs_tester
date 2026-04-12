@@ -1,4 +1,5 @@
 {% extends "layouts/student_base.html" %}
+{% set crumbs = [("Inicio", url_for('root_home')), ("RA Cliente", url_for('ra_client.ra_client_home'))] %}
 
 {% block title %}Escaneo RA{% endblock %}
 
@@ -232,7 +233,7 @@ html { font-size: 15px; }
   z-index: 20;
   transform: translateY(100%);
   transition: transform 0.45s cubic-bezier(0.16,1,0.3,1);
-  background: linear-gradient(to top, rgba(12,14,20,0.97) 60%, rgba(12,14,20,0.85) 85%, transparent);
+  background: linear-gradient(to top, rgba(7,10,15,0.98) 64%, rgba(7,10,15,0.92) 84%, rgba(7,10,15,0.2) 100%);
   padding: 2.5rem 1rem 1rem;
 }
 .material-overlay.visible { transform: translateY(0); }
@@ -253,10 +254,32 @@ html { font-size: 15px; }
 }
 .overlay-name {
   font-family: var(--font-display);
-  font-size: 1.15rem;
+  font-size: 1.22rem;
   font-weight: 700;
   margin-bottom: 0.5rem;
-  color: var(--fg);
+  color: #f8fbff;
+  text-shadow: 0 1px 2px rgba(0,0,0,.35);
+}
+.overlay-media {
+  margin-bottom: 0.65rem;
+}
+.overlay-media img{
+  width: 100%;
+  max-height: 140px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.25);
+}
+.overlay-media-fallback{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:90px;
+  border-radius:10px;
+  background: rgba(255,255,255,.08);
+  border:1px dashed rgba(255,255,255,.28);
+  color:#dbe5ef;
+  font-size:.8rem;
 }
 .overlay-grid {
   display: grid;
@@ -265,16 +288,16 @@ html { font-size: 15px; }
   margin-bottom: 0.75rem;
 }
 .overlay-field {
-  font-size: 0.75rem;
-  color: var(--fg-muted);
+  font-size: 0.78rem;
+  color: #d2dde8;
 }
 .overlay-field strong {
-  color: var(--fg-secondary);
-  font-weight: 500;
+  color: #f3f8fc;
+  font-weight: 700;
 }
 .overlay-notes {
-  font-size: 0.72rem;
-  color: var(--fg-muted);
+  font-size: 0.76rem;
+  color: #ecf3fa;
   margin-bottom: 0.6rem;
   line-height: 1.4;
   display: -webkit-box;
@@ -298,15 +321,17 @@ html { font-size: 15px; }
   touch-action: manipulation;
 }
 .btn-overlay-primary {
-  background: var(--accent);
-  color: var(--bg);
+  background: #f2c14a;
+  color: #1a2229;
+  border: 1px solid rgba(0,0,0,.15);
 }
-.btn-overlay-primary:hover { background: #00e8bb; }
+.btn-overlay-primary:hover { background: #ffd166; }
 .btn-overlay-ghost {
-  background: rgba(255,255,255,0.08);
-  color: var(--fg-secondary);
+  background: rgba(255,255,255,0.18);
+  color: #f5f9fc;
+  border: 1px solid rgba(255,255,255,.35);
 }
-.btn-overlay-ghost:hover { background: rgba(255,255,255,0.14); }
+.btn-overlay-ghost:hover { background: rgba(255,255,255,0.26); }
 
 /* ===== TOOLBAR ===== */
 .toolbar {
@@ -765,6 +790,7 @@ html { font-size: 15px; }
       <div class="material-overlay" id="materialOverlay">
         <div class="overlay-badge"><i class="fa-solid fa-check-circle"></i> Material detectado</div>
         <div class="overlay-name" id="overlayName"></div>
+        <div class="overlay-media" id="overlayMedia"></div>
         <div class="overlay-grid" id="overlayGrid"></div>
         <div class="overlay-notes" id="overlayNotes"></div>
         <div class="overlay-actions">
@@ -837,10 +863,12 @@ html { font-size: 15px; }
     </div>
 
     <!-- CONSOLA -->
+    {% if can_view_ra_tools %}
     <div class="card console-wrapper">
       <div class="card-header"><i class="fa-solid fa-terminal"></i> Consola</div>
       <div class="console-body" id="consoleBody"></div>
     </div>
+    {% endif %}
   </aside>
 </main>
 
@@ -887,6 +915,7 @@ let lastScanTime = 0;
 const consoleBody = document.getElementById('consoleBody');
 
 function logConsole(level, message) {
+  if (!consoleBody) return;
   const now = new Date();
   const ts = now.toTimeString().split(' ')[0] + '.' + String(now.getMilliseconds()).padStart(3, '0');
   const cls = {
@@ -919,6 +948,7 @@ function toUiMaterial(payload) {
   const pieces = m.pieces_text || (m.pieces_qty !== null && m.pieces_qty !== undefined ? `${m.pieces_qty}` : "N/D");
   const careerName = m.career || "Sin carrera";
   const careerShort = m.career_short || careerName.split(/\s+/).filter(Boolean).map((part) => part[0]).join('').slice(0, 6).toUpperCase();
+  const imageUrl = m.image_url || m.image_ref || "";
   return {
     id: m.id,
     name: m.name || "Sin nombre",
@@ -929,7 +959,7 @@ function toUiMaterial(payload) {
     pieces_text: pieces,
     pieces_qty: m.pieces_qty,
     tutorial_url: m.tutorial_url || "",
-    image_ref: m.image_ref || "",
+    image_ref: imageUrl,
     notes: m.notes || "Sin observaciones"
   };
 }
@@ -994,6 +1024,12 @@ function statusBadgeClass(status) {
    ============================================================ */
 function showOverlay(mat) {
   document.getElementById('overlayName').textContent = mat.name;
+  const overlayMedia = document.getElementById('overlayMedia');
+  if (overlayMedia) {
+    overlayMedia.innerHTML = mat.image_ref
+      ? `<img src="${escapeHtml(mat.image_ref)}" alt="Imagen de ${escapeHtml(mat.name)}" onerror="this.closest('.overlay-media').innerHTML='<div class=&quot;overlay-media-fallback&quot;>Sin imagen disponible</div>';">`
+      : '<div class="overlay-media-fallback">Sin imagen disponible</div>';
+  }
   document.getElementById('overlayGrid').innerHTML = `
     <div class="overlay-field"><strong>Carrera:</strong> ${escapeHtml(mat.career)} (${escapeHtml(mat.career_short)})</div>
     <div class="overlay-field"><strong>Ubicacion:</strong> ${escapeHtml(mat.location)}</div>
@@ -1047,8 +1083,12 @@ function openModal() {
   if (!lastDetectedMaterial) return;
   const mat = lastDetectedMaterial;
   document.getElementById('modalTitle').textContent = mat.name;
-  document.getElementById('modalImage').src = mat.image_ref || '';
-  document.getElementById('modalImage').alt = mat.name;
+  const modalImage = document.getElementById('modalImage');
+  modalImage.src = mat.image_ref || '';
+  modalImage.alt = mat.name;
+  modalImage.style.display = mat.image_ref ? 'block' : 'none';
+  modalImage.onerror = () => { modalImage.style.display = 'none'; };
+  modalImage.onload = () => { modalImage.style.display = 'block'; };
   document.getElementById('modalGrid').innerHTML = `
     <span class="modal-detail-label"><i class="fa-solid fa-hashtag"></i> ID</span>
     <span class="modal-detail-value">${mat.id}</span>
