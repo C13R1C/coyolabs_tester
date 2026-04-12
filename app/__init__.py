@@ -2,6 +2,7 @@
 import secrets
 
 import os
+from pathlib import Path, PurePosixPath
 from flask import send_file, current_app, abort
 
 from flask import Flask, redirect, request, session, url_for, abort
@@ -180,22 +181,33 @@ def create_app():
 
     @app.route("/uploads/<path:filename>")
     def upload_file(filename):
-        normalized = filename.replace("\\", "/").replace("uploads/", "").lstrip("/")
+        if not current_user.is_authenticated:
+            abort(403)
 
-        candidates = [
-            os.path.join(current_app.root_path, "uploads", normalized),
-            os.path.join(os.path.dirname(current_app.root_path), "uploads", normalized),
-            os.path.join(current_app.root_path, "static", "uploads", normalized),
+        normalized = filename.replace("\\", "/").replace("uploads/", "").lstrip("/")
+        if not normalized:
+            abort(404)
+
+        posix_path = PurePosixPath(normalized)
+        if posix_path.is_absolute() or ".." in posix_path.parts:
+            abort(404)
+
+        allowed_roots = [
+            Path(current_app.root_path) / "uploads",
+            Path(os.path.dirname(current_app.root_path)) / "uploads",
+            Path(current_app.root_path) / "static" / "uploads",
         ]
 
-        for full_path in candidates:
-            full_path = os.path.normpath(full_path)
-            if os.path.exists(full_path):
-                return send_file(full_path)
+        for root in allowed_roots:
+            root_resolved = root.resolve()
+            candidate = (root / normalized).resolve()
+            try:
+                candidate.relative_to(root_resolved)
+            except ValueError:
+                continue
 
-        print("NO FILE FOUND. Tried:")
-        for path in candidates:
-            print(" -", os.path.normpath(path))
+            if candidate.is_file():
+                return send_file(str(candidate))
 
         abort(404)
 
