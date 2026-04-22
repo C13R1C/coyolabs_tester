@@ -859,24 +859,43 @@
             return;
           }
 
-          const registration = await navigator.serviceWorker.register("{{ url_for('static', filename='sw.js') }}");
-          const existingSub = await registration.pushManager.getSubscription();
-          const subscription = existingSub || await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(keyData.public_key),
-          });
+          await navigator.serviceWorker.register("{{ url_for('static', filename='sw.js') }}");
+          const registration = await navigator.serviceWorker.ready;
 
-          const subscribeResp = await fetch("{{ url_for('notifications.push_subscribe') }}", {
-            method: "POST",
-            credentials: "same-origin",
-            headers: {
-              "Content-Type": "application/json",
-              "X-CSRFToken": csrfToken,
-            },
-            body: JSON.stringify(subscription.toJSON()),
-          });
+          let subscription = await registration.pushManager.getSubscription();
+          if (!subscription) {
+            try {
+              subscription = await registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(keyData.public_key),
+              });
+            } catch (error) {
+              console.error("No se pudo crear la suscripción push", error);
+              createNotification({ title: "Error de activación", message: "No se pudo completar la suscripción push.", type: "error" });
+              return;
+            }
+          }
+
+          let subscribeResp;
+          try {
+            subscribeResp = await fetch("{{ url_for('notifications.push_subscribe') }}", {
+              method: "POST",
+              credentials: "same-origin",
+              headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": csrfToken,
+              },
+              body: JSON.stringify(subscription.toJSON()),
+            });
+          } catch (error) {
+            console.error("No se pudo enviar la suscripción push al backend", error);
+            createNotification({ title: "Error de activación", message: "No se pudo contactar al backend para guardar la suscripción.", type: "error" });
+            return;
+          }
+
           const subscribeData = await subscribeResp.json();
           if (!subscribeResp.ok || !subscribeData.ok) {
+            console.error("Backend rechazó la suscripción push", subscribeData);
             createNotification({ title: "Error de activación", message: "No se pudo guardar la suscripción push.", type: "error" });
             return;
           }
