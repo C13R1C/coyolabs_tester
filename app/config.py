@@ -20,6 +20,13 @@ class Config:
         f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_pre_ping": True,
+        "pool_recycle": int((os.getenv("DB_POOL_RECYCLE") or "1800").strip()),
+        "pool_size": int((os.getenv("DB_POOL_SIZE") or "10").strip()),
+        "max_overflow": int((os.getenv("DB_MAX_OVERFLOW") or "20").strip()),
+        "pool_timeout": int((os.getenv("DB_POOL_TIMEOUT") or "30").strip()),
+    }
 
     RESEND_API_KEY = (os.getenv("RESEND_API_KEY") or "").strip()
     MAIL_DEFAULT_SENDER = (os.getenv("MAIL_DEFAULT_SENDER") or "").strip()

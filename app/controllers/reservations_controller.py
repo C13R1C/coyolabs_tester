@@ -9,7 +9,7 @@ from flask import Blueprint, current_app, render_template, request, redirect, ur
 from flask_login import current_user
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 
 from app.utils.roles import ROLE_STUDENT, ROLE_TEACHER, is_admin_role, normalize_role
 from app.models.reservation_item import ReservationItem
@@ -370,8 +370,8 @@ def my_reservations():
     reservations = (
         Reservation.query
         .options(
-            joinedload(Reservation.items).joinedload(ReservationItem.material),
-            joinedload(Reservation.lab_tickets),
+            selectinload(Reservation.items).selectinload(ReservationItem.material),
+            selectinload(Reservation.lab_tickets),
             joinedload(Reservation.user)
         )
         .filter(Reservation.user_id == current_user.id)
@@ -722,7 +722,7 @@ def admin_queue():
     pending = (
         Reservation.query
         .options(
-            joinedload(Reservation.items).joinedload(ReservationItem.material),
+            selectinload(Reservation.items).selectinload(ReservationItem.material),
             joinedload(Reservation.user)
         )
         .filter(Reservation.status == ReservationStatus.PENDING)
@@ -767,8 +767,8 @@ def admin_approved():
     approved = (
         Reservation.query
         .options(
-            joinedload(Reservation.items).joinedload(ReservationItem.material),
-            joinedload(Reservation.lab_tickets),
+            selectinload(Reservation.items).selectinload(ReservationItem.material),
+            selectinload(Reservation.lab_tickets),
             joinedload(Reservation.user)
         )
         .filter(Reservation.status == ReservationStatus.APPROVED)
@@ -826,8 +826,8 @@ def admin_approved_history():
     query = (
         Reservation.query
         .options(
-            joinedload(Reservation.items).joinedload(ReservationItem.material),
-            joinedload(Reservation.lab_tickets),
+            selectinload(Reservation.items).selectinload(ReservationItem.material),
+            selectinload(Reservation.lab_tickets),
             joinedload(Reservation.user)
         )
         .outerjoin(User, Reservation.user_id == User.id)
@@ -844,13 +844,27 @@ def admin_approved_history():
         )
     if requester_filter:
         query = query.filter(db.func.coalesce(Reservation.teacher_name, "").ilike(f"%{requester_filter}%"))
-    reservations = query.order_by(Reservation.date.desc(), Reservation.start_time.desc()).all()
+    page = request.args.get("page", 1, type=int) or 1
+    per_page = request.args.get("per_page", 50, type=int) or 50
+    if per_page < 1:
+        per_page = 1
+    if per_page > 100:
+        per_page = 100
+
+    ordered_query = query.order_by(Reservation.date.desc(), Reservation.start_time.desc())
+    total = query.order_by(None).count()
+    reservations = ordered_query.offset((page - 1) * per_page).limit(per_page).all()
+    total_pages = (total + per_page - 1) // per_page if total else 1
 
     return render_template(
         "reservations/admin_approved_history.html",
         reservations=reservations,
         user_filter=user_filter,
         requester_filter=requester_filter,
+        page=page,
+        per_page=per_page,
+        total=total,
+        total_pages=total_pages,
         active_page="reservations"
     )
 
