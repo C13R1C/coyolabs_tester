@@ -86,14 +86,15 @@ def build_notification(
         rendered_message = f"{rendered_message} por {actor}"
     rendered_message = f"{rendered_message}{suffix}".strip()
 
-    if _dedupe_recent_notification(
-        user_id=user_id,
-        title=title,
-        message=rendered_message,
-        link=link,
-        dedup_seconds=dedup_seconds,
-    ):
-        return None
+    with db.session.no_autoflush:
+        if _dedupe_recent_notification(
+            user_id=user_id,
+            title=title,
+            message=rendered_message,
+            link=link,
+            dedup_seconds=dedup_seconds,
+        ):
+            return None
 
     notification = Notification(
         user_id=user_id,

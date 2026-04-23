@@ -24,16 +24,29 @@ notifications_bp = Blueprint("notifications", __name__, url_prefix="/notificatio
 @notifications_bp.route("/", methods=["GET"])
 @min_role_required("STUDENT")
 def list_notifications():
-    notifications = (
+    page = request.args.get("page", 1, type=int) or 1
+    per_page = request.args.get("per_page", 50, type=int) or 50
+    if per_page < 1:
+        per_page = 1
+    if per_page > 100:
+        per_page = 100
+
+    base_query = (
         Notification.query
         .filter(Notification.user_id == current_user.id)
         .order_by(Notification.created_at.desc())
-        .all()
     )
+    total = base_query.order_by(None).count()
+    notifications = base_query.offset((page - 1) * per_page).limit(per_page).all()
+    total_pages = (total + per_page - 1) // per_page if total else 1
 
     return render_template(
         "notifications/list.html",
         notifications=notifications,
+        page=page,
+        per_page=per_page,
+        total=total,
+        total_pages=total_pages,
         active_page="notifications"
     )
 
